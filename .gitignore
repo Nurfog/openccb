@@ -1,0 +1,33 @@
+# --- Rust / Cargo ---
+# Ignora la carpeta de compilación (es muy pesada)
+target/
+# Si usas herramientas de profiling o tests adicionales
+**/*.rs.bk
+
+# --- Frontend (web/studio y web/lms) ---
+# Ignora las librerías de Node
+node_modules/
+# Ignora las carpetas de compilación de frontend (dist, build, .next, etc.)
+dist/
+.cache/
+out/
+build/
+.next/
+
+# --- Variables de Entorno (SEGURIDAD) ---
+# Nunca subas tus llaves secretas o credenciales
+.env
+.env*.local
+
+# --- Archivos de Sistema y Editores ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# --- Logs ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

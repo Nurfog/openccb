@@ -1,0 +1,27 @@
+[workspace]
+resolver = "2"
+members = [
+    "services/cms-service",
+    "services/lms-service",
+    "shared/common",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Juan Enrique Allende Cifuentes <juan.allende@gmail.com>"]
+
+[workspace.dependencies]
+axum = { version = "0.8", features = ["multipart"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+jsonwebtoken = "9.3"
+bcrypt = "0.17"
+dotenvy = "0.15"
+tower-http = { version = "0.6", features = ["cors", "trace", "fs"] }

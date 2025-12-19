@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: openccb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  cms-service:
+    build:
+      context: .
+      dockerfile: services/cms-service/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/openccb_cms
+    ports:
+      - "3001:3001"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      - db
+
+  lms-service:
+    build:
+      context: .
+      dockerfile: services/lms-service/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/openccb_lms
+    ports:
+      - "3002:3002"
+    depends_on:
+      - db
+
+  studio:
+    build:
+      context: ./web/studio
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_CMS_API_URL: http://localhost:3001
+volumes:
+  postgres_data:
+  uploads_data:
