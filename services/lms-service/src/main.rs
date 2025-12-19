@@ -21,9 +21,18 @@ async fn main() {
         .await
         .expect("Failed to connect to database");
 
+    // Run migrations automatically
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Failed to run migrations");
+
     let app = Router::new()
         .route("/catalog", get(handlers::get_course_catalog))
         .route("/enroll", post(handlers::enroll_user))
+        .route("/ingest", post(handlers::ingest_course))
+        .route("/courses/{id}/outline", get(handlers::get_course_outline))
+        .route("/lessons/{id}", get(handlers::get_lesson_content))
         .with_state(pool);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3002));

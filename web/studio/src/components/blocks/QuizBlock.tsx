@@ -6,8 +6,8 @@ interface QuizQuestion {
     id: string;
     question: string;
     options: string[];
-    correct: number;
-    type?: 'multiple-choice' | 'true-false';
+    correct: number[];
+    type?: 'multiple-choice' | 'true-false' | 'multiple-select';
 }
 
 interface QuizBlockProps {
@@ -17,11 +17,11 @@ interface QuizBlockProps {
         questions: QuizQuestion[];
     };
     editMode: boolean;
-    onChange: (data: { title?: string; questions?: QuizQuestion[] }) => void;
+    onChange: (data: { title?: string; quiz_data?: { questions: QuizQuestion[] } }) => void;
 }
 
 export default function QuizBlock({ id, title, quizData, editMode, onChange }: QuizBlockProps) {
-    const [userAnswers, setUserAnswers] = useState<Record<string, number>>({});
+    const [userAnswers, setUserAnswers] = useState<Record<string, number[]>>({});
     const [submitted, setSubmitted] = useState(false);
 
     const questions = quizData.questions || [];
@@ -31,21 +31,43 @@ export default function QuizBlock({ id, title, quizData, editMode, onChange }: Q
             id: Math.random().toString(36).substr(2, 9),
             question: "New Question?",
             options: ["Option 1", "Option 2"],
-            correct: 0,
+            correct: [0],
             type: 'multiple-choice'
         };
-        onChange({ questions: [...questions, newQuestion] });
+        onChange({ quiz_data: { questions: [...questions, newQuestion] } });
     };
 
     const updateQuestion = (index: number, updates: Partial<QuizQuestion>) => {
         const newQuestions = [...questions];
         newQuestions[index] = { ...newQuestions[index], ...updates };
-        onChange({ questions: newQuestions });
+        onChange({ quiz_data: { questions: newQuestions } });
     };
 
-    const handleAnswer = (qId: string, optionIndex: number) => {
+    const toggleCorrectOption = (qIdx: number, optIdx: number, isMulti: boolean) => {
+        const current = questions[qIdx].correct || [];
+        if (isMulti) {
+            const next = current.includes(optIdx)
+                ? current.filter(i => i !== optIdx)
+                : [...current, optIdx].sort((a, b) => a - b);
+            updateQuestion(qIdx, { correct: next.length ? next : [0] });
+        } else {
+            updateQuestion(qIdx, { correct: [optIdx] });
+        }
+    };
+
+    const handleAnswer = (qId: string, optionIndex: number, isMulti: boolean) => {
         if (submitted) return;
-        setUserAnswers(prev => ({ ...prev, [qId]: optionIndex }));
+        setUserAnswers(prev => {
+            const current = prev[qId] || [];
+            if (isMulti) {
+                const next = current.includes(optionIndex)
+                    ? current.filter(i => i !== optionIndex)
+                    : [...current, optionIndex].sort((a, b) => a - b);
+                return { ...prev, [qId]: next };
+            } else {
+                return { ...prev, [qId]: [optionIndex] };
+            }
+        });
     };
 
     return (
@@ -77,13 +99,19 @@ export default function QuizBlock({ id, title, quizData, editMode, onChange }: Q
                             <div className="flex items-center justify-between gap-4">
                                 <div className="flex bg-white/5 rounded-lg p-1 border border-white/5">
                                     <button
-                                        onClick={() => updateQuestion(idx, { type: 'multiple-choice' })}
-                                        className={`px-3 py-1.5 text-[9px] uppercase font-black tracking-widest rounded-md transition-all ${q.type !== 'true-false' ? "bg-blue-500 text-white shadow-lg" : "text-gray-500 hover:text-white"}`}
+                                        onClick={() => updateQuestion(idx, { type: 'multiple-choice', correct: [q.correct?.[0] || 0] })}
+                                        className={`px-3 py-1.5 text-[9px] uppercase font-black tracking-widest rounded-md transition-all ${q.type === 'multiple-choice' ? "bg-blue-500 text-white shadow-lg" : "text-gray-500 hover:text-white"}`}
                                     >
                                         MCQ
                                     </button>
                                     <button
-                                        onClick={() => updateQuestion(idx, { type: 'true-false', options: ["True", "False"], correct: 0 })}
+                                        onClick={() => updateQuestion(idx, { type: 'multiple-select', correct: [q.correct?.[0] || 0] })}
+                                        className={`px-3 py-1.5 text-[9px] uppercase font-black tracking-widest rounded-md transition-all ${q.type === 'multiple-select' ? "bg-blue-500 text-white shadow-lg" : "text-gray-500 hover:text-white"}`}
+                                    >
+                                        MSQ
+                                    </button>
+                                    <button
+                                        onClick={() => updateQuestion(idx, { type: 'true-false', options: ["True", "False"], correct: [0] })}
                                         className={`px-3 py-1.5 text-[9px] uppercase font-black tracking-widest rounded-md transition-all ${q.type === 'true-false' ? "bg-blue-500 text-white shadow-lg" : "text-gray-500 hover:text-white"}`}
                                     >
                                         T / F
@@ -92,7 +120,7 @@ export default function QuizBlock({ id, title, quizData, editMode, onChange }: Q
                                 <button
                                     onClick={() => {
                                         const newQuestions = questions.filter((_, i) => i !== idx);
-                                        onChange({ questions: newQuestions });
+                                        onChange({ quiz_data: { questions: newQuestions } });
                                     }}
                                     className="p-2 text-gray-500 hover:text-red-400 transition-colors"
                                 >
@@ -113,8 +141,8 @@ export default function QuizBlock({ id, title, quizData, editMode, onChange }: Q
                                         {["True", "False"].map((opt, oIdx) => (
                                             <button
                                                 key={oIdx}
-                                                onClick={() => updateQuestion(idx, { correct: oIdx })}
-                                                className={`flex-1 py-4 rounded-xl border-2 transition-all font-black text-xs uppercase tracking-widest ${q.correct === oIdx ? "border-blue-500 bg-blue-500/10 text-white" : "border-white/5 bg-white/5 text-gray-500"}`}
+                                                onClick={() => updateQuestion(idx, { correct: [oIdx] })}
+                                                className={`flex-1 py-4 rounded-xl border-2 transition-all font-black text-xs uppercase tracking-widest ${q.correct?.includes(oIdx) ? "border-blue-500 bg-blue-500/10 text-white" : "border-white/5 bg-white/5 text-gray-500"}`}
                                             >
                                                 {opt}
                                             </button>
@@ -124,9 +152,9 @@ export default function QuizBlock({ id, title, quizData, editMode, onChange }: Q
                                     q.options.map((opt, oIdx) => (
                                         <div key={oIdx} className="flex gap-3 items-center group/opt">
                                             <input
-                                                type="radio"
-                                                checked={q.correct === oIdx}
-                                                onChange={() => updateQuestion(idx, { correct: oIdx })}
+                                                type={q.type === 'multiple-select' ? "checkbox" : "radio"}
+                                                checked={q.correct?.includes(oIdx)}
+                                                onChange={() => toggleCorrectOption(idx, oIdx, q.type === 'multiple-select')}
                                                 className="w-5 h-5 accent-blue-500 cursor-pointer"
                                             />
                                             <input
@@ -143,7 +171,8 @@ export default function QuizBlock({ id, title, quizData, editMode, onChange }: Q
                                                 <button
                                                     onClick={() => {
                                                         const newOpts = q.options.filter((_, i) => i !== oIdx);
-                                                        updateQuestion(idx, { options: newOpts, correct: q.correct >= newOpts.length ? 0 : q.correct });
+                                                        const newCorrect = q.correct?.filter(i => i !== oIdx).map(i => i > oIdx ? i - 1 : i);
+                                                        updateQuestion(idx, { options: newOpts, correct: newCorrect?.length ? newCorrect : [0] });
                                                     }}
                                                     className="opacity-0 group-hover/opt:opacity-100 p-2 text-gray-500 hover:text-red-400 transition-all"
                                                 >
@@ -179,12 +208,17 @@ export default function QuizBlock({ id, title, quizData, editMode, onChange }: Q
                             <h4 className="font-bold text-xl text-gray-100 leading-tight">{q.question}</h4>
                             <div className="grid gap-3">
                                 {q.options.map((opt, oIdx) => {
-                                    const isSelected = userAnswers[q.id] === oIdx;
-                                    const isCorrect = q.correct === oIdx;
+                                    const isSelected = userAnswers[q.id]?.includes(oIdx);
+                                    const isCorrect = q.correct?.includes(oIdx);
+                                    const isActuallyCorrect = isCorrect && isSelected;
+                                    const isWrongSelection = !isCorrect && isSelected;
+                                    const missedCorrect = isCorrect && !isSelected;
+
                                     let style = "glass border-white/10 hover:bg-white/5";
                                     if (submitted) {
-                                        if (isCorrect) style = "bg-green-500/20 border-green-500 text-green-400";
-                                        else if (isSelected && !isCorrect) style = "bg-red-500/20 border-red-500 text-red-100";
+                                        if (isActuallyCorrect) style = "bg-green-500/20 border-green-500 text-green-400";
+                                        else if (isWrongSelection) style = "bg-red-500/20 border-red-500 text-red-100";
+                                        else if (missedCorrect) style = "border-orange-500/50 text-orange-400 animate-pulse";
                                         else style = "opacity-50 grayscale border-white/5";
                                     } else if (isSelected) {
                                         style = "bg-blue-500/20 border-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.2)]";
@@ -193,10 +227,15 @@ export default function QuizBlock({ id, title, quizData, editMode, onChange }: Q
                                     return (
                                         <button
                                             key={oIdx}
-                                            onClick={() => handleAnswer(q.id, oIdx)}
+                                            onClick={() => handleAnswer(q.id, oIdx, q.type === 'multiple-select')}
                                             className={`p-5 rounded-xl border transition-all text-left text-sm font-bold ${style}`}
                                         >
-                                            {opt}
+                                            <div className="flex items-center justify-between">
+                                                <span>{opt}</span>
+                                                {submitted && isActuallyCorrect && <span>✅</span>}
+                                                {submitted && isWrongSelection && <span>❌</span>}
+                                                {submitted && missedCorrect && <span className="text-[10px] uppercase font-black tracking-tighter">Correct Answer</span>}
+                                            </div>
                                         </button>
                                     );
                                 })}

@@ -6,6 +6,10 @@ import Link from "next/link";
 import DescriptionBlock from "@/components/blocks/DescriptionBlock";
 import MediaBlock from "@/components/blocks/MediaBlock";
 import QuizBlock from "@/components/blocks/QuizBlock";
+import FillInTheBlanksBlock from "@/components/blocks/FillInTheBlanksBlock";
+import MatchingBlock from "@/components/blocks/MatchingBlock";
+import OrderingBlock from "@/components/blocks/OrderingBlock";
+import ShortAnswerBlock from "@/components/blocks/ShortAnswerBlock";
 
 export default function LessonEditor({ params }: { params: { id: string; lessonId: string } }) {
     const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -58,13 +62,17 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
         }
     };
 
-    const addBlock = (type: 'description' | 'media' | 'quiz') => {
+    const addBlock = (type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer') => {
         const newBlock: Block = {
             id: Math.random().toString(36).substr(2, 9),
             type,
             ...(type === 'description' && { content: "" }),
             ...(type === 'media' && { url: "", media_type: 'video' as const, config: { maxPlays: 0 } }),
             ...(type === 'quiz' && { quiz_data: { questions: [] } }),
+            ...(type === 'fill-in-the-blanks' && { content: "Type your text here with [[blanks]]." }),
+            ...(type === 'matching' && { pairs: [{ left: "Item 1", right: "Match 1" }] }),
+            ...(type === 'ordering' && { items: ["Item A", "Item B"] }),
+            ...(type === 'short-answer' && { prompt: "Question?", correctAnswers: ["Answer"] }),
         };
         setBlocks([...blocks, newBlock]);
     };
@@ -181,6 +189,43 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                     onChange={(updates) => updateBlock(block.id, updates)}
                                 />
                             )}
+                            {block.type === 'fill-in-the-blanks' && (
+                                <FillInTheBlanksBlock
+                                    id={block.id}
+                                    title={block.title}
+                                    content={block.content || ""}
+                                    editMode={editMode}
+                                    onChange={(updates) => updateBlock(block.id, updates)}
+                                />
+                            )}
+                            {block.type === 'matching' && (
+                                <MatchingBlock
+                                    id={block.id}
+                                    title={block.title}
+                                    pairs={block.pairs || []}
+                                    editMode={editMode}
+                                    onChange={(updates) => updateBlock(block.id, updates)}
+                                />
+                            )}
+                            {block.type === 'ordering' && (
+                                <OrderingBlock
+                                    id={block.id}
+                                    title={block.title}
+                                    items={block.items || []}
+                                    editMode={editMode}
+                                    onChange={(updates) => updateBlock(block.id, updates)}
+                                />
+                            )}
+                            {block.type === 'short-answer' && (
+                                <ShortAnswerBlock
+                                    id={block.id}
+                                    title={block.title}
+                                    prompt={block.prompt || ""}
+                                    correctAnswers={block.correctAnswers || []}
+                                    editMode={editMode}
+                                    onChange={(updates) => updateBlock(block.id, updates)}
+                                />
+                            )}
                         </div>
                     </div>
                 ))}
@@ -210,6 +255,34 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 >
                                     <span className="text-2xl group-hover:scale-110 transition-transform">💡</span>
                                     <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Quiz</span>
+                                </button>
+                                <button
+                                    onClick={() => addBlock('fill-in-the-blanks')}
+                                    className="flex flex-col items-center gap-2 p-6 glass hover:border-blue-500/50 transition-all group w-32"
+                                >
+                                    <span className="text-2xl group-hover:scale-110 transition-transform">✍️</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Blanks</span>
+                                </button>
+                                <button
+                                    onClick={() => addBlock('matching')}
+                                    className="flex flex-col items-center gap-2 p-6 glass hover:border-blue-500/50 transition-all group w-32"
+                                >
+                                    <span className="text-2xl group-hover:scale-110 transition-transform">🔗</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Match</span>
+                                </button>
+                                <button
+                                    onClick={() => addBlock('ordering')}
+                                    className="flex flex-col items-center gap-2 p-6 glass hover:border-blue-500/50 transition-all group w-32"
+                                >
+                                    <span className="text-2xl group-hover:scale-110 transition-transform">🔢</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Order</span>
+                                </button>
+                                <button
+                                    onClick={() => addBlock('short-answer')}
+                                    className="flex flex-col items-center gap-2 p-6 glass hover:border-blue-500/50 transition-all group w-32"
+                                >
+                                    <span className="text-2xl group-hover:scale-110 transition-transform">💬</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Short</span>
                                 </button>
                             </div>
                         </div>

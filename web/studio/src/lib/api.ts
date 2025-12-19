@@ -18,7 +18,7 @@ export interface Module {
 
 export interface Block {
     id: string;
-    type: 'description' | 'media' | 'quiz';
+    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer';
     title?: string;
     content?: string;
     url?: string;
@@ -33,9 +33,14 @@ export interface Block {
             id: string;
             question: string;
             options: string[];
-            correct: number;
+            correct: number[];
+            type?: 'multiple-choice' | 'true-false' | 'multiple-select';
         }[];
     };
+    pairs?: { left: string; right: string }[];
+    items?: string[];
+    prompt?: string;
+    correctAnswers?: string[];
 }
 
 export interface Lesson {
@@ -134,5 +139,12 @@ export const cmsApi = {
 
         if (!response.ok) throw new Error('Upload failed');
         return response.json();
+    },
+
+    async publishCourse(courseId: string): Promise<void> {
+        const response = await fetch(`${API_BASE_URL}/courses/${courseId}/publish`, {
+            method: 'POST'
+        });
+        if (!response.ok) throw new Error('Failed to publish course');
     }
 };

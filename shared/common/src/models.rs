@@ -64,3 +64,84 @@ pub struct Asset {
     pub size_bytes: i64,
     pub created_at: DateTime<Utc>,
 }
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PublishedCourse {
+    pub course: Course,
+    pub modules: Vec<PublishedModule>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PublishedModule {
+    pub module: Module,
+    pub lessons: Vec<Lesson>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_published_course_serialization() {
+        let lesson_id = Uuid::new_v4();
+        let module_id = Uuid::new_v4();
+        let course_id = Uuid::new_v4();
+
+        let lesson = Lesson {
+            id: lesson_id,
+            module_id,
+            title: "Test Lesson".to_string(),
+            content_type: "activity".to_string(),
+            content_url: None,
+            transcription: None,
+            metadata: Some(json!({
+                "blocks": [
+                    {
+                        "id": "b1",
+                        "type": "fill-in-the-blanks",
+                        "content": "The capital of France is [[Paris]]."
+                    },
+                    {
+                        "id": "b2",
+                        "type": "matching",
+                        "pairs": [{"left": "Term", "right": "Definition"}]
+                    }
+                ]
+            })),
+            position: 1,
+            created_at: Utc::now(),
+        };
+
+        let pub_module = PublishedModule {
+            module: Module {
+                id: module_id,
+                course_id,
+                title: "Test Module".to_string(),
+                position: 1,
+                created_at: Utc::now(),
+            },
+            lessons: vec![lesson],
+        };
+
+        let pub_course = PublishedCourse {
+            course: Course {
+                id: course_id,
+                title: "Test Course".to_string(),
+                description: None,
+                instructor_id: Uuid::new_v4(),
+                start_date: None,
+                end_date: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            },
+            modules: vec![pub_module],
+        };
+
+        let serialized = serde_json::to_string(&pub_course).unwrap();
+        let deserialized: PublishedCourse = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(pub_course.course.title, deserialized.course.title);
+        assert_eq!(pub_course.modules.len(), deserialized.modules.len());
+        assert_eq!(deserialized.modules[0].lessons[0].title, "Test Lesson");
+    }
+}

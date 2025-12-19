@@ -72,11 +72,28 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
         }
     };
 
+    const [isPublishing, setIsPublishing] = useState(false);
+
+    const handlePublish = async () => {
+        if (!course) return;
+        setIsPublishing(true);
+        try {
+            await cmsApi.publishCourse(params.id);
+            alert("Course published successfully to LMS!");
+        } catch (err) {
+            console.error("Publish failed:", err);
+            alert("Failed to publish course. Check if LMS service is reachable.");
+        } finally {
+            setIsPublishing(false);
+        }
+    };
+
     if (loading) return <div className="py-20 text-center">Loading editor...</div>;
     if (error) return <div className="py-20 text-center text-red-400">{error}</div>;
 
     return (
         <div className="space-y-8">
+            {/* ... navigation ... */}
             <div className="flex items-center gap-4 text-sm text-gray-400">
                 <Link href="/" className="hover:text-white cursor-pointer underline">Courses</Link>
                 <span>/</span>
@@ -90,7 +107,20 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                 </div>
                 <div className="flex gap-3">
                     <button className="px-4 py-2 glass hover:bg-white/10 transition-colors text-sm font-medium">Preview</button>
-                    <button className="btn-premium">Publish</button>
+                    <button
+                        onClick={handlePublish}
+                        disabled={isPublishing}
+                        className={`btn-premium flex items-center gap-2 ${isPublishing ? "opacity-75 cursor-wait" : ""}`}
+                    >
+                        {isPublishing ? (
+                            <>
+                                <span className="animate-spin text-lg">⏳</span>
+                                Publishing...
+                            </>
+                        ) : (
+                            "Publish to LMS"
+                        )}
+                    </button>
                 </div>
             </div>
 

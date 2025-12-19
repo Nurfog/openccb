@@ -22,6 +22,12 @@ async fn main() {
         .await
         .expect("Failed to connect to database");
 
+    // Run migrations automatically
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Failed to run migrations");
+
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
@@ -30,6 +36,7 @@ async fn main() {
     let app = Router::new()
         .route("/courses", get(handlers::get_courses).post(handlers::create_course))
         .route("/courses/{id}", get(handlers::get_course))
+        .route("/courses/{id}/publish", post(handlers::publish_course))
         .route("/modules", get(handlers::get_modules).post(handlers::create_module))
         .route("/lessons", get(handlers::get_lessons).post(handlers::create_lesson))
         .route("/lessons/{id}", get(handlers::get_lesson).put(handlers::update_lesson))

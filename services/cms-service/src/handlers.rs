@@ -3,11 +3,72 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use common::models::{Course, Module, Lesson};
+use common::models::{Course, Module, Lesson, PublishedCourse, PublishedModule};
 use sqlx::PgPool;
 use uuid::Uuid;
 use serde_json::json;
 use serde::{Deserialize, Serialize};
+
+pub async fn publish_course(
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, StatusCode> {
+    // 1. Fetch Course
+    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    // 2. Fetch Modules
+    let modules = sqlx::query_as::<_, Module>("SELECT * FROM modules WHERE course_id = $1 ORDER BY position")
+        .bind(id)
+        .fetch_all(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let mut pub_modules = Vec::new();
+
+    // 3. Fetch Lessons for each Module
+    for module in modules {
+        let lessons = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE module_id = $1 ORDER BY position")
+            .bind(module.id)
+            .fetch_all(&pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        pub_modules.push(PublishedModule {
+            module,
+            lessons,
+        });
+    }
+
+    let payload = PublishedCourse {
+        course,
+        modules: pub_modules,
+    };
+
+    // 4. Send to LMS
+    // Using service name for Docker compatibility
+    let client = reqwest::Client::new();
+    let res = client.post("http://lms-service:3002/ingest")
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to reach LMS service: {}", e);
+            StatusCode::BAD_GATEWAY
+        })?;
+
+    if !res.status().is_success() {
+        tracing::error!("LMS ingestion failed with status: {}", res.status());
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    log_action(&pool, Uuid::new_v4(), "PUBLISH", "Course", id, json!({})).await;
+
+    Ok(StatusCode::OK)
+}
 
 #[derive(Deserialize)]
 pub struct ModuleQuery {
