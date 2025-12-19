@@ -8,7 +8,8 @@ OpenCCB is a high-performance, microservices-based Learning Management System (L
 - **LMS Service (Port 3002)**: Student experience, course consumption, and enrollment.
 - **Shared Library**: Core models and authentication logic.
 - **Database**: PostgreSQL (shared/isolated schemas).
-- **Studio (Frontend)**: Next.js application for instructors and admins.
+- **Studio (Frontend)**: Next.js application with a block-based **Activity Builder** for instructors.
+- **Asset Storage**: Persistent local storage for native video/audio uploads.
 
 ## Getting Started
 
@@ -80,5 +81,10 @@ curl -X POST http://localhost:3002/enroll \
   -d '{"course_id": "YOUR_COURSE_ID"}'
 ```
 
-## Audit Logging
 Every mutation in the CMS (Create Course/Module/Lesson) is automatically recorded in the `audit_logs` table for compliance and debugging.
+
+## Features
+- **Block-Based Activity Builder**: Create lessons using text, media, and interactive quiz blocks.
+- **Native File Uploads**: Drag-and-drop video/audio uploads with persistence.
+- **Playback Constraints**: Limit how many times students can view specific media items.
+- **Dynamic Reordering**: (Coming Soon) Organize content blocks with a single click.

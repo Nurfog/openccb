@@ -77,6 +77,15 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
         setBlocks(blocks.map(b => b.id === id ? { ...b, ...updates } : b));
     };
 
+    const moveBlock = (index: number, direction: 'up' | 'down') => {
+        const newBlocks = [...blocks];
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= newBlocks.length) return;
+
+        [newBlocks[index], newBlocks[targetIndex]] = [newBlocks[targetIndex], newBlocks[index]];
+        setBlocks(newBlocks);
+    };
+
     if (loading) return <div className="py-20 text-center text-gray-500 animate-pulse font-medium">Initializing Activity Builder...</div>;
     if (!lesson) return <div className="py-20 text-center text-red-400">Activity not found.</div>;
 
@@ -114,8 +123,25 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                         {editMode && (
                             <div className="absolute -left-12 top-0 h-full flex flex-col items-center gap-2 opacity-0 group-hover/block:opacity-100 transition-all">
                                 <button
+                                    onClick={() => moveBlock(index, 'up')}
+                                    disabled={index === 0}
+                                    className="w-8 h-8 rounded-lg bg-white/5 text-gray-400 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all border border-white/10 disabled:opacity-20 disabled:cursor-not-allowed"
+                                    title="Move Up"
+                                >
+                                    <span className="text-xs">↑</span>
+                                </button>
+                                <button
+                                    onClick={() => moveBlock(index, 'down')}
+                                    disabled={index === blocks.length - 1}
+                                    className="w-8 h-8 rounded-lg bg-white/5 text-gray-400 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all border border-white/10 disabled:opacity-20 disabled:cursor-not-allowed"
+                                    title="Move Down"
+                                >
+                                    <span className="text-xs">↓</span>
+                                </button>
+                                <div className="h-2"></div>
+                                <button
                                     onClick={() => removeBlock(block.id)}
-                                    className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
+                                    className="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
                                     title="Remove Block"
                                 >
                                     <span className="text-sm">×</span>

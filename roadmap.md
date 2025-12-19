@@ -10,12 +10,13 @@
 
 ## Phase 2: Core CMS Features (Current Focus)
 - [/] Course Outline Editor (Modules & Lessons).
-- [ ] File Upload System (Video/Images/Docs).
-- [ ] Interactive Content (Quizzes/Rubrics).
+- [x] File Upload System (Video/Audio/Native Assets).
+- [/] Interactive Content (**Activity Builder Refinement**).
+  - [ ] Block Reordering (Move Up/Down).
+  - [ ] Rich Text Editor Integration.
+  - [ ] Quiz Refinements (True/False, Multi-Response).
 - [ ] Service-to-Service Communication (CMS -> LMS sync).
-integration for videos, documents, and images.
-- [ ] **Video Player**: Integrated premium video player for lessons.
-- [ ] **Interactivity**: Quizzes, activities, and rubrics implementation.
+- [x] **Video Player**: Integrated premium video player with playback limits.
 - [ ] **Full Studio UI**: Drag-and-drop course builder.
 
 ## Phase 3: Authentication & Security

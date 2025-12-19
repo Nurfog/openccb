@@ -7,6 +7,7 @@ interface QuizQuestion {
     question: string;
     options: string[];
     correct: number;
+    type?: 'multiple-choice' | 'true-false';
 }
 
 interface QuizBlockProps {
@@ -30,7 +31,8 @@ export default function QuizBlock({ id, title, quizData, editMode, onChange }: Q
             id: Math.random().toString(36).substr(2, 9),
             question: "New Question?",
             options: ["Option 1", "Option 2"],
-            correct: 0
+            correct: 0,
+            type: 'multiple-choice'
         };
         onChange({ questions: [...questions, newQuestion] });
     };
@@ -71,34 +73,95 @@ export default function QuizBlock({ id, title, quizData, editMode, onChange }: Q
             {editMode ? (
                 <div className="space-y-6">
                     {questions.map((q, idx) => (
-                        <div key={q.id} className="p-6 glass border-white/5 space-y-4 rounded-2xl">
+                        <div key={q.id} className="p-8 glass border-white/5 space-y-6 rounded-3xl relative group/question animate-in slide-in-from-left-4 duration-500">
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex bg-white/5 rounded-lg p-1 border border-white/5">
+                                    <button
+                                        onClick={() => updateQuestion(idx, { type: 'multiple-choice' })}
+                                        className={`px-3 py-1.5 text-[9px] uppercase font-black tracking-widest rounded-md transition-all ${q.type !== 'true-false' ? "bg-blue-500 text-white shadow-lg" : "text-gray-500 hover:text-white"}`}
+                                    >
+                                        MCQ
+                                    </button>
+                                    <button
+                                        onClick={() => updateQuestion(idx, { type: 'true-false', options: ["True", "False"], correct: 0 })}
+                                        className={`px-3 py-1.5 text-[9px] uppercase font-black tracking-widest rounded-md transition-all ${q.type === 'true-false' ? "bg-blue-500 text-white shadow-lg" : "text-gray-500 hover:text-white"}`}
+                                    >
+                                        T / F
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        const newQuestions = questions.filter((_, i) => i !== idx);
+                                        onChange({ questions: newQuestions });
+                                    }}
+                                    className="p-2 text-gray-500 hover:text-red-400 transition-colors"
+                                >
+                                    <span className="text-xl">×</span>
+                                </button>
+                            </div>
+
                             <input
                                 value={q.question}
                                 onChange={(e) => updateQuestion(idx, { question: e.target.value })}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 font-semibold focus:outline-none focus:border-blue-500/50 transition-all"
-                                placeholder="Enter your question..."
+                                className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-lg font-bold focus:outline-none focus:border-blue-500/50 transition-all placeholder:text-gray-600"
+                                placeholder="What is the question?"
                             />
+
                             <div className="space-y-3">
-                                {q.options.map((opt, oIdx) => (
-                                    <div key={oIdx} className="flex gap-3 items-center">
-                                        <input
-                                            type="radio"
-                                            checked={q.correct === oIdx}
-                                            onChange={() => updateQuestion(idx, { correct: oIdx })}
-                                            className="w-4 h-4 accent-blue-500"
-                                        />
-                                        <input
-                                            value={opt}
-                                            onChange={(e) => {
-                                                const newOpts = [...q.options];
-                                                newOpts[oIdx] = e.target.value;
-                                                updateQuestion(idx, { options: newOpts });
-                                            }}
-                                            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-blue-500/30"
-                                            placeholder={`Option ${oIdx + 1}`}
-                                        />
+                                {q.type === 'true-false' ? (
+                                    <div className="flex gap-4">
+                                        {["True", "False"].map((opt, oIdx) => (
+                                            <button
+                                                key={oIdx}
+                                                onClick={() => updateQuestion(idx, { correct: oIdx })}
+                                                className={`flex-1 py-4 rounded-xl border-2 transition-all font-black text-xs uppercase tracking-widest ${q.correct === oIdx ? "border-blue-500 bg-blue-500/10 text-white" : "border-white/5 bg-white/5 text-gray-500"}`}
+                                            >
+                                                {opt}
+                                            </button>
+                                        ))}
                                     </div>
-                                ))}
+                                ) : (
+                                    q.options.map((opt, oIdx) => (
+                                        <div key={oIdx} className="flex gap-3 items-center group/opt">
+                                            <input
+                                                type="radio"
+                                                checked={q.correct === oIdx}
+                                                onChange={() => updateQuestion(idx, { correct: oIdx })}
+                                                className="w-5 h-5 accent-blue-500 cursor-pointer"
+                                            />
+                                            <input
+                                                value={opt}
+                                                onChange={(e) => {
+                                                    const newOpts = [...q.options];
+                                                    newOpts[oIdx] = e.target.value;
+                                                    updateQuestion(idx, { options: newOpts });
+                                                }}
+                                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-blue-500/30 transition-all"
+                                                placeholder={`Option ${oIdx + 1}`}
+                                            />
+                                            {q.options.length > 2 && (
+                                                <button
+                                                    onClick={() => {
+                                                        const newOpts = q.options.filter((_, i) => i !== oIdx);
+                                                        updateQuestion(idx, { options: newOpts, correct: q.correct >= newOpts.length ? 0 : q.correct });
+                                                    }}
+                                                    className="opacity-0 group-hover/opt:opacity-100 p-2 text-gray-500 hover:text-red-400 transition-all"
+                                                >
+                                                    ×
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+
+                                {q.type !== 'true-false' && (
+                                    <button
+                                        onClick={() => updateQuestion(idx, { options: [...q.options, `Option ${q.options.length + 1}`] })}
+                                        className="text-[10px] font-black uppercase tracking-widest text-blue-500/50 hover:text-blue-500 transition-colors pl-8 mt-2"
+                                    >
+                                        + Add Option
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ))}
