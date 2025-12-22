@@ -18,20 +18,11 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
         const loadData = async () => {
             try {
                 setLoading(true);
-                // 1. Fetch course details
-                const courseData = await fetch(`http://localhost:3001/courses/${params.id}`).then(res => res.json());
-                setCourse(courseData);
+                // Use cmsApi for consistent, typed data fetching
+                const data = await cmsApi.getCourseWithFullOutline(params.id);
 
-                // 2. Fetch modules
-                const modulesData: Module[] = await fetch(`http://localhost:3001/modules?course_id=${params.id}`).then(res => res.json());
-
-                // 3. Fetch lessons for each module
-                const fullModules = await Promise.all(modulesData.map(async (mod) => {
-                    const lessonsData: Lesson[] = await fetch(`http://localhost:3001/lessons?module_id=${mod.id}`).then(res => res.json());
-                    return { ...mod, lessons: lessonsData };
-                }));
-
-                setModules(fullModules);
+                setCourse(data);
+                setModules(data.modules as FullModule[]);
             } catch (err) {
                 console.error("Failed to load course data:", err);
                 setError("Failed to load course details. Is the backend running?");
@@ -126,7 +117,8 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
 
             <div className="glass p-1">
                 <div className="flex border-b border-white/10">
-                    <button className="px-6 py-3 text-sm font-medium border-b-2 border-blue-500 bg-white/5">Outline</button>
+                    <Link href={`/courses/${params.id}`} className="px-6 py-3 text-sm font-medium border-b-2 border-blue-500 bg-white/5">Outline</Link>
+                    <Link href={`/courses/${params.id}/grading`} className="px-6 py-3 text-sm font-medium text-gray-500 hover:text-white transition-colors">Grading</Link>
                     <button className="px-6 py-3 text-sm font-medium text-gray-500 hover:text-white transition-colors">Settings</button>
                     <button className="px-6 py-3 text-sm font-medium text-gray-500 hover:text-white transition-colors">Files</button>
                 </div>

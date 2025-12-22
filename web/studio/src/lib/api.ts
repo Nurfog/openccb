@@ -57,8 +57,35 @@ export interface Lesson {
     metadata?: {
         blocks?: Block[];
     } | null;
+    is_graded: boolean;
+    grading_category_id: string | null;
     position: number;
     created_at: string;
+}
+
+export interface GradingCategory {
+    id: string;
+    course_id: string;
+    name: string;
+    weight: number;
+    drop_count: number;
+    created_at: string;
+}
+export interface User {
+    id: string;
+    email: string;
+    full_name: string;
+}
+
+export interface AuthResponse {
+    user: User;
+    token: string;
+}
+
+export interface AuthPayload {
+    email: string;
+    password?: string;
+    full_name?: string;
 }
 
 export const cmsApi = {
@@ -128,6 +155,35 @@ export const cmsApi = {
         return response.json();
     },
 
+    async getLesson(lessonId: string): Promise<Lesson> {
+        const response = await fetch(`${API_BASE_URL}/lessons/${lessonId}`);
+        if (!response.ok) throw new Error('Failed to fetch lesson');
+        return response.json();
+    },
+
+    async getGradingCategories(courseId: string): Promise<GradingCategory[]> {
+        const response = await fetch(`${API_BASE_URL}/courses/${courseId}/grading`);
+        if (!response.ok) throw new Error('Failed to fetch grading categories');
+        return response.json();
+    },
+
+    async createGradingCategory(courseId: string, name: string, weight: number): Promise<GradingCategory> {
+        const response = await fetch(`${API_BASE_URL}/grading`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ course_id: courseId, name, weight, drop_count: 0 }),
+        });
+        if (!response.ok) throw new Error('Failed to create grading category');
+        return response.json();
+    },
+
+    async deleteGradingCategory(id: string): Promise<void> {
+        const response = await fetch(`${API_BASE_URL}/grading/${id}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) throw new Error('Failed to delete grading category');
+    },
+
     async uploadAsset(file: File): Promise<{ id: string; filename: string; url: string }> {
         const formData = new FormData();
         formData.append('file', file);
@@ -146,5 +202,25 @@ export const cmsApi = {
             method: 'POST'
         });
         if (!response.ok) throw new Error('Failed to publish course');
+    },
+
+    async register(payload: AuthPayload): Promise<AuthResponse> {
+        const response = await fetch(`${API_BASE_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw await response.json();
+        return response.json();
+    },
+
+    async login(payload: AuthPayload): Promise<AuthResponse> {
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw await response.json();
+        return response.json();
     }
 };

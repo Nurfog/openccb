@@ -32,7 +32,30 @@ pub struct Lesson {
     pub content_url: Option<String>,
     pub transcription: Option<serde_json::Value>,
     pub metadata: Option<serde_json::Value>,
+    pub grading_category_id: Option<Uuid>,
+    pub is_graded: bool,
     pub position: i32,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct GradingCategory {
+    pub id: Uuid,
+    pub course_id: Uuid,
+    pub name: String,
+    pub weight: i32, // 0-100
+    pub drop_count: i32,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct UserGrade {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub course_id: Uuid,
+    pub lesson_id: Uuid,
+    pub score: f32, // 0.0 to 1.0
+    pub metadata: Option<serde_json::Value>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -64,9 +87,32 @@ pub struct Asset {
     pub size_bytes: i64,
     pub created_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct User {
+    pub id: Uuid,
+    pub email: String,
+    pub password_hash: String,
+    pub full_name: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserResponse {
+    pub id: Uuid,
+    pub email: String,
+    pub full_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthResponse {
+    pub user: UserResponse,
+    pub token: String,
+}
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PublishedCourse {
     pub course: Course,
+    pub grading_categories: Vec<GradingCategory>,
     pub modules: Vec<PublishedModule>,
 }
 
@@ -108,6 +154,8 @@ mod tests {
                     }
                 ]
             })),
+            grading_category_id: None,
+            is_graded: false,
             position: 1,
             created_at: Utc::now(),
         };
@@ -134,6 +182,7 @@ mod tests {
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
             },
+            grading_categories: vec![],
             modules: vec![pub_module],
         };
 

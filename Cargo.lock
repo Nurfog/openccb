@@ -216,9 +216,11 @@ name = "cms-service"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "bcrypt",
  "chrono",
  "common",
  "dotenvy",
+ "jsonwebtoken",
  "reqwest",
  "serde",
  "serde_json",
@@ -1061,9 +1063,11 @@ name = "lms-service"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "bcrypt",
  "chrono",
  "common",
  "dotenvy",
+ "jsonwebtoken",
  "serde",
  "serde_json",
  "sqlx",

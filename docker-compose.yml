@@ -42,6 +42,16 @@ services:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_CMS_API_URL: http://localhost:3001
+
+  experience:
+    build:
+      context: ./web/experience
+      dockerfile: Dockerfile
+    ports:
+      - "3003:3003"
+    environment:
+      NEXT_PUBLIC_LMS_API_URL: http://localhost:3002
+
 volumes:
   postgres_data:
   uploads_data:

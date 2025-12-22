@@ -1,7 +1,7 @@
 mod handlers;
 
 use axum::{
-    routing::{get, post},
+    routing::{get, post, delete},
     Router,
 };
 use tower_http::cors::{Any, CorsLayer};
@@ -41,6 +41,11 @@ async fn main() {
         .route("/lessons", get(handlers::get_lessons).post(handlers::create_lesson))
         .route("/lessons/{id}", get(handlers::get_lesson).put(handlers::update_lesson))
         .route("/lessons/{id}/transcribe", post(handlers::process_transcription))
+        .route("/auth/register", post(handlers::register))
+        .route("/auth/login", post(handlers::login))
+        .route("/grading", post(handlers::create_grading_category))
+        .route("/grading/{id}", delete(handlers::delete_grading_category))
+        .route("/courses/{id}/grading", get(handlers::get_grading_categories))
         .route("/assets/upload", post(handlers::upload_asset))
         .nest_service("/assets", tower_http::services::ServeDir::new("uploads"))
         .layer(cors)

@@ -3,11 +3,13 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use common::models::{Course, Module, Lesson, PublishedCourse, PublishedModule};
+use common::models::{Course, Module, Lesson, PublishedCourse, PublishedModule, User, UserResponse, AuthResponse};
+use common::auth::create_jwt;
 use sqlx::PgPool;
 use uuid::Uuid;
 use serde_json::json;
 use serde::{Deserialize, Serialize};
+use bcrypt::{hash, verify, DEFAULT_COST};
 
 pub async fn publish_course(
     State(pool): State<PgPool>,
@@ -29,7 +31,16 @@ pub async fn publish_course(
 
     let mut pub_modules = Vec::new();
 
-    // 3. Fetch Lessons for each Module
+    // 3. Fetch Grading Categories
+    let grading_categories = sqlx::query_as::<_, common::models::GradingCategory>(
+        "SELECT * FROM grading_categories WHERE course_id = $1"
+    )
+    .bind(id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // 4. Fetch Lessons for each Module
     for module in modules {
         let lessons = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE module_id = $1 ORDER BY position")
             .bind(module.id)
@@ -45,6 +56,7 @@ pub async fn publish_course(
 
     let payload = PublishedCourse {
         course,
+        grading_categories,
         modules: pub_modules,
     };
 
@@ -78,6 +90,14 @@ pub struct ModuleQuery {
 #[derive(Deserialize)]
 pub struct LessonQuery {
     pub module_id: Option<Uuid>,
+}
+
+#[derive(Deserialize)]
+pub struct GradingPayload {
+    pub course_id: Uuid,
+    pub name: String,
+    pub weight: i32,
+    pub drop_count: i32,
 }
 
 pub async fn create_course(
@@ -149,8 +169,11 @@ pub async fn create_lesson(
     let transcription = payload.get("transcription").cloned();
     let metadata = payload.get("metadata").cloned();
 
+    let is_graded = payload.get("is_graded").and_then(|v| v.as_bool()).unwrap_or(false);
+    let grading_category_id = payload.get("grading_category_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok());
+
     let lesson = sqlx::query_as::<_, Lesson>(
-        "INSERT INTO lessons (module_id, title, content_type, content_url, position, transcription, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *"
+        "INSERT INTO lessons (module_id, title, content_type, content_url, position, transcription, metadata, is_graded, grading_category_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *"
     )
     .bind(module_id)
     .bind(title)
@@ -159,6 +182,8 @@ pub async fn create_lesson(
     .bind(position)
     .bind(transcription)
     .bind(metadata)
+    .bind(is_graded)
+    .bind(grading_category_id)
     .fetch_one(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -226,27 +251,93 @@ pub async fn update_lesson(
     let content_type = payload.get("content_type").and_then(|t| t.as_str());
     let content_url = payload.get("content_url").and_then(|t| t.as_str());
     let position = payload.get("position").and_then(|v| v.as_i64()).map(|v| v as i32);
-
+    let is_graded = payload.get("is_graded").and_then(|v| v.as_bool());
+    let grading_category_id = payload.get("grading_category_id")
+        .and_then(|v| {
+            if v.is_null() {
+                Some(None)
+            } else {
+                v.as_str().and_then(|s| Uuid::parse_str(s).ok()).map(Some)
+            }
+        });
+    
     let updated_lesson = sqlx::query_as::<_, Lesson>(
         "UPDATE lessons 
          SET title = COALESCE($1, title), 
              content_type = COALESCE($2, content_type), 
              content_url = COALESCE($3, content_url),
-             position = COALESCE($4, position)
-         WHERE id = $5 RETURNING *"
+             position = COALESCE($4, position),
+             is_graded = COALESCE($5, is_graded),
+             grading_category_id = CASE WHEN $6 = 'SET_NULL' THEN NULL WHEN $7::UUID IS NOT NULL THEN $7 ELSE grading_category_id END
+         WHERE id = $8 RETURNING *"
     )
     .bind(title)
     .bind(content_type)
     .bind(content_url)
     .bind(position)
+    .bind(is_graded)
+    .bind(if payload.get("grading_category_id").map(|v| v.is_null()).unwrap_or(false) { "SET_NULL" } else { "" })
+    .bind(payload.get("grading_category_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok()))
     .bind(id)
     .fetch_one(&pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!("Update lesson failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     log_action(&pool, Uuid::new_v4(), "UPDATE", "Lesson", id, json!(payload)).await;
 
     Ok(Json(updated_lesson))
+}
+
+// Grading Policies
+pub async fn get_grading_categories(
+    State(pool): State<PgPool>,
+    Path(course_id): Path<Uuid>,
+) -> Result<Json<Vec<common::models::GradingCategory>>, (StatusCode, String)> {
+    let categories = sqlx::query_as::<_, common::models::GradingCategory>(
+        "SELECT * FROM grading_categories WHERE course_id = $1 ORDER BY created_at"
+    )
+    .bind(course_id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(categories))
+}
+
+pub async fn create_grading_category(
+    State(pool): State<PgPool>,
+    Json(payload): Json<GradingPayload>,
+) -> Result<Json<common::models::GradingCategory>, (StatusCode, String)> {
+    let category = sqlx::query_as::<_, common::models::GradingCategory>(
+        "INSERT INTO grading_categories (course_id, name, weight, drop_count) 
+         VALUES ($1, $2, $3, $4) 
+         RETURNING *"
+    )
+    .bind(payload.course_id)
+    .bind(payload.name)
+    .bind(payload.weight)
+    .bind(payload.drop_count)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(category))
+}
+
+pub async fn delete_grading_category(
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    sqlx::query("DELETE FROM grading_categories WHERE id = $1")
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(StatusCode::OK)
 }
 
 async fn log_action(
@@ -390,5 +481,71 @@ pub async fn upload_asset(
         id: asset_id,
         filename,
         url,
+    }))
+}
+
+#[derive(Deserialize)]
+pub struct AuthPayload {
+    pub email: String,
+    pub password: String,
+    pub full_name: Option<String>,
+}
+
+pub async fn register(
+    State(pool): State<PgPool>,
+    Json(payload): Json<AuthPayload>,
+) -> Result<Json<AuthResponse>, (StatusCode, String)> {
+    let password_hash = hash(payload.password, DEFAULT_COST)
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Hashing failed".into()))?;
+
+    let full_name = payload.full_name.unwrap_or_else(|| payload.email.split('@').next().unwrap_or("User").to_string());
+
+    let user = sqlx::query_as::<_, User>(
+        "INSERT INTO users (email, password_hash, full_name) VALUES ($1, $2, $3) RETURNING *"
+    )
+    .bind(&payload.email)
+    .bind(password_hash)
+    .bind(full_name)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| (StatusCode::CONFLICT, format!("User already exists or DB error: {}", e)))?;
+
+    let token = create_jwt(user.id, "instructor")
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "JWT generation failed".into()))?;
+
+    Ok(Json(AuthResponse {
+        user: UserResponse {
+            id: user.id,
+            email: user.email,
+            full_name: user.full_name,
+        },
+        token,
+    }))
+}
+
+pub async fn login(
+    State(pool): State<PgPool>,
+    Json(payload): Json<AuthPayload>,
+) -> Result<Json<AuthResponse>, (StatusCode, String)> {
+    let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE email = $1")
+        .bind(&payload.email)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid credentials".into()))?;
+
+    if !verify(payload.password, &user.password_hash).map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Verification failed".into()))? {
+        return Err((StatusCode::UNAUTHORIZED, "Invalid credentials".into()));
+    }
+
+    let token = create_jwt(user.id, "instructor")
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "JWT generation failed".into()))?;
+
+    Ok(Json(AuthResponse {
+        user: UserResponse {
+            id: user.id,
+            email: user.email,
+            full_name: user.full_name,
+        },
+        token,
     }))
 }

@@ -4,6 +4,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
+use tower_http::cors::{Any, CorsLayer};
 use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
 use dotenvy::dotenv;
@@ -27,12 +28,23 @@ async fn main() {
         .await
         .expect("Failed to run migrations");
 
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     let app = Router::new()
         .route("/catalog", get(handlers::get_course_catalog))
         .route("/enroll", post(handlers::enroll_user))
         .route("/ingest", post(handlers::ingest_course))
+        .route("/auth/register", post(handlers::register))
+        .route("/auth/login", post(handlers::login))
+        .route("/enrollments/{id}", get(handlers::get_user_enrollments))
         .route("/courses/{id}/outline", get(handlers::get_course_outline))
         .route("/lessons/{id}", get(handlers::get_lesson_content))
+        .route("/grades", post(handlers::submit_lesson_score))
+        .route("/users/{user_id}/courses/{course_id}/grades", get(handlers::get_user_course_grades))
+        .layer(cors)
         .with_state(pool);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3002));

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cmsApi, Lesson, Block } from "@/lib/api";
+import { cmsApi, Lesson, Block, GradingCategory } from "@/lib/api";
 import Link from "next/link";
 import DescriptionBlock from "@/components/blocks/DescriptionBlock";
 import MediaBlock from "@/components/blocks/MediaBlock";
@@ -19,12 +19,18 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
 
     // Activity State (Blocks)
     const [blocks, setBlocks] = useState<Block[]>([]);
+    const [gradingCategories, setGradingCategories] = useState<GradingCategory[]>([]);
+    const [isGraded, setIsGraded] = useState(false);
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | "">("");
 
     useEffect(() => {
         const loadData = async () => {
             try {
-                const lessonData: Lesson = await fetch(`http://localhost:3001/lessons/${params.lessonId}`).then(res => res.json());
+                // Use cmsApi for consistency
+                const lessonData = await cmsApi.getLesson(params.lessonId);
                 setLesson(lessonData);
+                setIsGraded(lessonData.is_graded);
+                setSelectedCategoryId(lessonData.grading_category_id || "");
 
                 if (lessonData.metadata?.blocks) {
                     setBlocks(lessonData.metadata.blocks);
@@ -37,8 +43,12 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                         }
                     ]);
                 }
+
+                // Load grading categories
+                const categories = await cmsApi.getGradingCategories(params.id);
+                setGradingCategories(categories);
             } catch {
-                console.error("Failed to load lesson");
+                console.error("Failed to load lesson or categories");
             } finally {
                 setLoading(false);
             }
@@ -51,7 +61,9 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
         setIsSaving(true);
         try {
             const updated = await cmsApi.updateLesson(lesson.id, {
-                metadata: { ...lesson.metadata, blocks }
+                metadata: { ...lesson.metadata, blocks },
+                is_graded: isGraded,
+                grading_category_id: selectedCategoryId || null
             });
             setLesson(updated);
             setEditMode(false);
@@ -124,6 +136,56 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                     )}
                 </div>
             </div>
+
+            {editMode && (
+                <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="text-xl font-bold flex items-center gap-2">
+                                <span className="text-blue-500">⚖️</span> Grading Configuration
+                            </h3>
+                            <p className="text-sm text-gray-500 mt-1">Determine if this activity contributes to the final grade</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer group">
+                            <input
+                                type="checkbox"
+                                checked={isGraded}
+                                onChange={(e) => setIsGraded(e.target.checked)}
+                                className="sr-only peer"
+                            />
+                            <div className="w-14 h-8 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600 group-hover:after:scale-110 transition-all"></div>
+                            <span className="ms-3 text-sm font-bold uppercase tracking-widest text-gray-400 peer-checked:text-blue-400 transition-colors">
+                                {isGraded ? "Graded" : "Not Graded"}
+                            </span>
+                        </label>
+                    </div>
+
+                    {isGraded && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in zoom-in-95 duration-300">
+                            {gradingCategories.length === 0 ? (
+                                <div className="col-span-full py-4 text-center border border-dashed border-white/10 rounded-2xl text-xs text-gray-500 italic">
+                                    No grading categories defined. <Link href={`/courses/${params.id}/grading`} className="text-blue-400 underline ml-1">Go to Grading Policy</Link>
+                                </div>
+                            ) : (
+                                gradingCategories.map((cat) => (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => setSelectedCategoryId(cat.id)}
+                                        className={`p-4 rounded-2xl border transition-all text-left group ${selectedCategoryId === cat.id
+                                            ? "bg-blue-500/10 border-blue-500 text-blue-400"
+                                            : "bg-white/5 border-white/10 text-gray-500 hover:border-white/20"
+                                            }`}
+                                    >
+                                        <div className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-1">Category</div>
+                                        <div className="font-bold truncate">{cat.name}</div>
+                                        <div className="text-xs mt-2 font-medium opacity-80">{cat.weight}% Weight</div>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div className="space-y-16">
                 {blocks.map((block, index) => (
