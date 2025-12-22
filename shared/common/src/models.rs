@@ -34,6 +34,8 @@ pub struct Lesson {
     pub metadata: Option<serde_json::Value>,
     pub grading_category_id: Option<Uuid>,
     pub is_graded: bool,
+    pub max_attempts: Option<i32>,
+    pub allow_retry: bool,
     pub position: i32,
     pub created_at: DateTime<Utc>,
 }
@@ -55,6 +57,7 @@ pub struct UserGrade {
     pub course_id: Uuid,
     pub lesson_id: Uuid,
     pub score: f32, // 0.0 to 1.0
+    pub attempts_count: i32,
     pub metadata: Option<serde_json::Value>,
     pub created_at: DateTime<Utc>,
 }

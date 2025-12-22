@@ -199,8 +199,8 @@ pub async fn ingest_course(
 
         for lesson in pub_module.lessons {
             sqlx::query(
-                "INSERT INTO lessons (id, module_id, title, content_type, content_url, transcription, metadata, position, created_at, is_graded, grading_category_id)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
+                "INSERT INTO lessons (id, module_id, title, content_type, content_url, transcription, metadata, position, created_at, is_graded, grading_category_id, max_attempts, allow_retry)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
             )
             .bind(lesson.id)
             .bind(pub_module.module.id)
@@ -213,6 +213,8 @@ pub async fn ingest_course(
             .bind(lesson.created_at)
             .bind(lesson.is_graded)
             .bind(lesson.grading_category_id)
+            .bind(lesson.max_attempts)
+            .bind(lesson.allow_retry)
             .execute(&mut *tx)
             .await
             .map_err(|e| {
@@ -306,12 +308,43 @@ pub async fn submit_lesson_score(
     State(pool): State<PgPool>,
     Json(payload): Json<GradeSubmissionPayload>,
 ) -> Result<Json<common::models::UserGrade>, (StatusCode, String)> {
+    // 1. Get lesson attempt rules
+    let max_attempts: Option<Option<i32>> = sqlx::query_scalar("SELECT max_attempts FROM lessons WHERE id = $1")
+        .bind(payload.lesson_id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if max_attempts.is_none() {
+        return Err((StatusCode::NOT_FOUND, "Lesson not found".into()));
+    }
+    let max_attempts = max_attempts.flatten();
+
+    // 2. Check existing grade/attempts
+    let existing_attempts: Option<i32> = sqlx::query_scalar("SELECT attempts_count FROM user_grades WHERE user_id = $1 AND lesson_id = $2")
+        .bind(payload.user_id)
+        .bind(payload.lesson_id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if let Some(count) = existing_attempts {
+        if let Some(max) = max_attempts {
+            if count >= max {
+                tracing::warn!("User {} attempted to resubmit lesson {} but reached max_attempts ({})", payload.user_id, payload.lesson_id, max);
+                return Err((StatusCode::FORBIDDEN, "Maximum attempts reached for this assessment".into()));
+            }
+        }
+    }
+
+    // 3. Upsert with increment
     let grade = sqlx::query_as::<_, common::models::UserGrade>(
-        "INSERT INTO user_grades (user_id, course_id, lesson_id, score, metadata)
-         VALUES ($1, $2, $3, $4, $5)
+        "INSERT INTO user_grades (user_id, course_id, lesson_id, score, metadata, attempts_count)
+         VALUES ($1, $2, $3, $4, $5, 1)
          ON CONFLICT (user_id, lesson_id) DO UPDATE SET
             score = EXCLUDED.score,
             metadata = EXCLUDED.metadata,
+            attempts_count = user_grades.attempts_count + 1,
             created_at = CURRENT_TIMESTAMP
          RETURNING *"
     )

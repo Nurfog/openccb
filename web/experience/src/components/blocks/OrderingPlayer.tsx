@@ -6,9 +6,10 @@ interface OrderingPlayerProps {
     id: string;
     title?: string;
     items: string[];
+    allowRetry?: boolean;
 }
 
-export default function OrderingPlayer({ id, title, items }: OrderingPlayerProps) {
+export default function OrderingPlayer({ id, title, items, allowRetry = true }: OrderingPlayerProps) {
     const [userOrder, setUserOrder] = useState<number[]>([]);
     const [submitted, setSubmitted] = useState(false);
 
@@ -53,7 +54,7 @@ export default function OrderingPlayer({ id, title, items }: OrderingPlayerProps
                                         disabled={isPicked || submitted}
                                         onClick={() => handlePick(item.originalIdx)}
                                         className={`px-6 py-3 rounded-full border text-sm font-bold transition-all ${isPicked ? "opacity-20 grayscale border-white/5 bg-white/5" :
-                                                "border-white/10 bg-white/5 text-gray-200 hover:border-blue-500/50 hover:bg-blue-500/5"
+                                            "border-white/10 bg-white/5 text-gray-200 hover:border-blue-500/50 hover:bg-blue-500/5"
                                             }`}
                                     >
                                         {item.value}
@@ -76,8 +77,8 @@ export default function OrderingPlayer({ id, title, items }: OrderingPlayerProps
                                         key={i}
                                         onClick={() => !submitted && handlePick(idx)}
                                         className={`flex items-center gap-4 p-4 rounded-xl border text-sm font-bold transition-all cursor-pointer ${isItemCorrect ? "border-green-500 bg-green-500/20 text-green-400" :
-                                                isItemWrong ? "border-red-500 bg-red-500/20 text-red-100" :
-                                                    "border-blue-500/30 bg-blue-500/5 text-blue-400 hover:bg-blue-500/10"
+                                            isItemWrong ? "border-red-500 bg-red-500/20 text-red-100" :
+                                                "border-blue-500/30 bg-blue-500/5 text-blue-400 hover:bg-blue-500/10"
                                             }`}
                                     >
                                         <span className="opacity-50 text-xs">{i + 1}.</span>
@@ -92,24 +93,26 @@ export default function OrderingPlayer({ id, title, items }: OrderingPlayerProps
                     </div>
                 </div>
 
-                <div className="pt-8 border-t border-white/5">
-                    {!submitted && userOrder.length === (items || []).length && (
-                        <button
-                            onClick={() => setSubmitted(true)}
-                            className="btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20"
-                        >
-                            Validate Sequence
-                        </button>
-                    )}
-                    {submitted && (
-                        <button
-                            onClick={handleReset}
-                            className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-2xl border-white/5"
-                        >
-                            Try Again
-                        </button>
-                    )}
-                </div>
+                {allowRetry && (
+                    <div className="pt-8 border-t border-white/5">
+                        {!submitted && userOrder.length === (items || []).length && (
+                            <button
+                                onClick={() => setSubmitted(true)}
+                                className="btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20"
+                            >
+                                Validate Sequence
+                            </button>
+                        )}
+                        {submitted && (
+                            <button
+                                onClick={handleReset}
+                                className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-2xl border-white/5"
+                            >
+                                Try Again
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

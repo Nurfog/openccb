@@ -16,9 +16,10 @@ interface QuizPlayerProps {
     quizData: {
         questions: QuizQuestion[];
     };
+    allowRetry?: boolean;
 }
 
-export default function QuizPlayer({ id, title, quizData }: QuizPlayerProps) {
+export default function QuizPlayer({ id, title, quizData, allowRetry = true }: QuizPlayerProps) {
     const [userAnswers, setUserAnswers] = useState<Record<string, number[]>>({});
     const [submitted, setSubmitted] = useState(false);
 
@@ -88,21 +89,25 @@ export default function QuizPlayer({ id, title, quizData }: QuizPlayerProps) {
                     </div>
                 ))}
 
-                {!submitted && questions.length > 0 && (
-                    <button
-                        onClick={() => setSubmitted(true)}
-                        className="btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20"
-                    >
-                        Validate Answers
-                    </button>
-                )}
-                {submitted && (
-                    <button
-                        onClick={() => { setSubmitted(false); setUserAnswers({}); }}
-                        className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-3xl border-white/5"
-                    >
-                        Try Again
-                    </button>
+                {allowRetry && (
+                    <>
+                        {!submitted && questions.length > 0 && (
+                            <button
+                                onClick={() => setSubmitted(true)}
+                                className="btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20"
+                            >
+                                Validate Answers
+                            </button>
+                        )}
+                        {submitted && (
+                            <button
+                                onClick={() => { setSubmitted(false); setUserAnswers({}); }}
+                                className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-3xl border-white/5"
+                            >
+                                Try Again
+                            </button>
+                        )}
+                    </>
                 )}
             </div>
         </div>

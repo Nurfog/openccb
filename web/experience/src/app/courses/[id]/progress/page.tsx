@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { lmsApi, GradingCategory, UserGrade, Course, Module } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import {
     Award,
     BarChart3,
@@ -26,17 +27,15 @@ export default function StudentProgressPage() {
     const [course, setCourse] = useState<(Course & { modules: Module[], grading_categories?: GradingCategory[] }) | null>(null);
     const [userGrades, setUserGrades] = useState<UserGrade[]>([]);
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<any>(null);
+    const { user } = useAuth();
 
     const loadData = React.useCallback(async () => {
         try {
             const courseData = await lmsApi.getCourseOutline(id);
-            setCourse(courseData as any);
+            setCourse(courseData);
 
-            const userData = localStorage.getItem("user");
-            if (userData) {
-                const u = JSON.parse(userData);
-                const grades = await lmsApi.getUserGrades(u.id, id);
+            if (user) {
+                const grades = await lmsApi.getUserGrades(user.id, id);
                 setUserGrades(grades);
             }
         } catch (err) {
@@ -44,13 +43,11 @@ export default function StudentProgressPage() {
         } finally {
             setLoading(false);
         }
-    }, [id]);
+    }, [id, user]);
 
     useEffect(() => {
-        const userData = localStorage.getItem("user");
-        if (userData) setUser(JSON.parse(userData));
         loadData();
-    }, [id, loadData]);
+    }, [loadData]);
 
     if (loading) return (
         <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -70,7 +67,7 @@ export default function StudentProgressPage() {
         const count = catLessons.length;
         const completedCount = catGrades.length;
         const avgScore = completedCount > 0
-            ? catGrades.reduce((sum, g) => sum + g.score, 0) / completedCount
+            ? (catGrades.reduce((sum, g) => sum + g.score, 0) / completedCount) * 100
             : 0;
 
         const weightedScore = (avgScore * cat.weight) / 100;

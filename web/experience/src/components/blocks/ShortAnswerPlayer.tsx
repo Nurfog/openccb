@@ -7,9 +7,10 @@ interface ShortAnswerPlayerProps {
     title?: string;
     prompt: string;
     correctAnswers: string[];
+    allowRetry?: boolean;
 }
 
-export default function ShortAnswerPlayer({ id, title, prompt, correctAnswers }: ShortAnswerPlayerProps) {
+export default function ShortAnswerPlayer({ id, title, prompt, correctAnswers, allowRetry = true }: ShortAnswerPlayerProps) {
     const [userAnswer, setUserAnswer] = useState("");
     const [submitted, setSubmitted] = useState(false);
 
@@ -38,8 +39,8 @@ export default function ShortAnswerPlayer({ id, title, prompt, correctAnswers }:
                         onChange={(e) => setUserAnswer(e.target.value)}
                         disabled={submitted}
                         className={`w-full bg-white/5 border-2 rounded-2xl px-6 py-4 text-lg transition-all focus:outline-none ${submitted
-                                ? (isCorrect ? "border-green-500 bg-green-500/10 text-green-400" : "border-red-500 bg-red-500/10 text-red-100")
-                                : "border-white/10 focus:border-blue-500 text-white"
+                            ? (isCorrect ? "border-green-500 bg-green-500/10 text-green-400" : "border-red-500 bg-red-500/10 text-red-100")
+                            : "border-white/10 focus:border-blue-500 text-white"
                             }`}
                         placeholder="Type your answer..."
                     />
@@ -52,23 +53,27 @@ export default function ShortAnswerPlayer({ id, title, prompt, correctAnswers }:
                     )}
                 </div>
 
-                {!submitted && (
-                    <button
-                        onClick={() => setSubmitted(true)}
-                        disabled={!userAnswer.trim()}
-                        className="btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20 disabled:opacity-50 disabled:grayscale"
-                    >
-                        Submit Answer
-                    </button>
-                )}
+                {allowRetry && (
+                    <>
+                        {!submitted && (
+                            <button
+                                onClick={() => setSubmitted(true)}
+                                disabled={!userAnswer.trim()}
+                                className="btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20 disabled:opacity-50 disabled:grayscale"
+                            >
+                                Submit Answer
+                            </button>
+                        )}
 
-                {submitted && (
-                    <button
-                        onClick={handleReset}
-                        className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-2xl border-white/5"
-                    >
-                        Try Again
-                    </button>
+                        {submitted && (
+                            <button
+                                onClick={handleReset}
+                                className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-3xl border-white/5"
+                            >
+                                Try Again
+                            </button>
+                        )}
+                    </>
                 )}
             </div>
         </div>

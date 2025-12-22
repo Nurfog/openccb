@@ -6,9 +6,10 @@ interface FillInTheBlanksPlayerProps {
     id: string;
     title?: string;
     content: string;
+    allowRetry?: boolean;
 }
 
-export default function FillInTheBlanksPlayer({ id, title, content }: FillInTheBlanksPlayerProps) {
+export default function FillInTheBlanksPlayer({ id, title, content, allowRetry = true }: FillInTheBlanksPlayerProps) {
     const [userAnswers, setUserAnswers] = useState<string[]>([]);
     const [submitted, setSubmitted] = useState(false);
 
@@ -66,8 +67,8 @@ export default function FillInTheBlanksPlayer({ id, title, content }: FillInTheB
                                 }}
                                 disabled={submitted}
                                 className={`mx-1 px-2 py-0 border-b-2 bg-transparent transition-all focus:outline-none text-center rounded-t-sm ${submitted
-                                        ? (isCorrect(part.index!) ? "border-green-500 text-green-400 bg-green-500/10" : "border-red-500 text-red-100 bg-red-500/10")
-                                        : "border-blue-500/30 focus:border-blue-500 text-blue-400 focus:bg-blue-500/5"
+                                    ? (isCorrect(part.index!) ? "border-green-500 text-green-400 bg-green-500/10" : "border-red-500 text-red-100 bg-red-500/10")
+                                    : "border-blue-500/30 focus:border-blue-500 text-blue-400 focus:bg-blue-500/5"
                                     }`}
                                 style={{ width: `${Math.max((part.answer?.length || 5) * 12, 60)}px` }}
                                 placeholder="..."
@@ -76,22 +77,26 @@ export default function FillInTheBlanksPlayer({ id, title, content }: FillInTheB
                     ))}
                 </div>
 
-                {!submitted && parsed.answers.length > 0 && (
-                    <button
-                        onClick={() => setSubmitted(true)}
-                        className="btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20"
-                    >
-                        Validate Answers
-                    </button>
-                )}
+                {allowRetry && (
+                    <>
+                        {!submitted && parsed.answers.length > 0 && (
+                            <button
+                                onClick={() => setSubmitted(true)}
+                                className="btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20"
+                            >
+                                Validate Answers
+                            </button>
+                        )}
 
-                {submitted && (
-                    <button
-                        onClick={handleReset}
-                        className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-2xl border-white/5"
-                    >
-                        Try Again
-                    </button>
+                        {submitted && (
+                            <button
+                                onClick={handleReset}
+                                className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-3xl border-white/5"
+                            >
+                                Try Again
+                            </button>
+                        )}
+                    </>
                 )}
             </div>
         </div>

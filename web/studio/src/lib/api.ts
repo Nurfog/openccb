@@ -59,6 +59,8 @@ export interface Lesson {
     } | null;
     is_graded: boolean;
     grading_category_id: string | null;
+    max_attempts: number | null;
+    allow_retry: boolean;
     position: number;
     created_at: string;
 }

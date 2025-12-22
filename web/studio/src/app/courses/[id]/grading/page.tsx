@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { cmsApi, GradingCategory } from "@/lib/api";
 import {
@@ -29,11 +29,7 @@ export default function GradingPolicyPage() {
     const [newWeight, setNewWeight] = useState<number>(0);
     const [submitting, setSubmitting] = useState(false);
 
-    useEffect(() => {
-        loadCategories();
-    }, [id]);
-
-    async function loadCategories() {
+    const loadCategories = useCallback(async () => {
         try {
             const data = await cmsApi.getGradingCategories(id);
             setCategories(data);
@@ -42,7 +38,11 @@ export default function GradingPolicyPage() {
         } finally {
             setLoading(false);
         }
-    }
+    }, [id]);
+
+    useEffect(() => {
+        loadCategories();
+    }, [loadCategories]);
 
     async function handleAdd() {
         if (!newName || newWeight <= 0) return;

@@ -22,6 +22,8 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
     const [gradingCategories, setGradingCategories] = useState<GradingCategory[]>([]);
     const [isGraded, setIsGraded] = useState(false);
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | "">("");
+    const [maxAttempts, setMaxAttempts] = useState<number | null>(null);
+    const [allowRetry, setAllowRetry] = useState(true);
 
     useEffect(() => {
         const loadData = async () => {
@@ -31,6 +33,8 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                 setLesson(lessonData);
                 setIsGraded(lessonData.is_graded);
                 setSelectedCategoryId(lessonData.grading_category_id || "");
+                setMaxAttempts(lessonData.max_attempts);
+                setAllowRetry(lessonData.allow_retry);
 
                 if (lessonData.metadata?.blocks) {
                     setBlocks(lessonData.metadata.blocks);
@@ -63,7 +67,9 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
             const updated = await cmsApi.updateLesson(lesson.id, {
                 metadata: { ...lesson.metadata, blocks },
                 is_graded: isGraded,
-                grading_category_id: selectedCategoryId || null
+                grading_category_id: selectedCategoryId || null,
+                max_attempts: maxAttempts,
+                allow_retry: allowRetry
             });
             setLesson(updated);
             setEditMode(false);
@@ -161,28 +167,63 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                     </div>
 
                     {isGraded && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in zoom-in-95 duration-300">
-                            {gradingCategories.length === 0 ? (
-                                <div className="col-span-full py-4 text-center border border-dashed border-white/10 rounded-2xl text-xs text-gray-500 italic">
-                                    No grading categories defined. <Link href={`/courses/${params.id}/grading`} className="text-blue-400 underline ml-1">Go to Grading Policy</Link>
+                        <>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in zoom-in-95 duration-300">
+                                {gradingCategories.length === 0 ? (
+                                    <div className="col-span-full py-4 text-center border border-dashed border-white/10 rounded-2xl text-xs text-gray-500 italic">
+                                        No grading categories defined. <Link href={`/courses/${params.id}/grading`} className="text-blue-400 underline ml-1">Go to Grading Policy</Link>
+                                    </div>
+                                ) : (
+                                    gradingCategories.map((cat) => (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => setSelectedCategoryId(cat.id)}
+                                            className={`p-4 rounded-2xl border transition-all text-left group ${selectedCategoryId === cat.id
+                                                ? "bg-blue-500/10 border-blue-500 text-blue-400"
+                                                : "bg-white/5 border-white/10 text-gray-500 hover:border-white/20"
+                                                }`}
+                                        >
+                                            <div className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-1">Category</div>
+                                            <div className="font-bold truncate">{cat.name}</div>
+                                            <div className="text-xs mt-2 font-medium opacity-80">{cat.weight}% Weight</div>
+                                        </button>
+                                    ))
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-white/5 animate-in fade-in duration-500">
+                                <div className="space-y-4">
+                                    <label className="block">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Maximum Attempts</span>
+                                        <div className="flex items-center gap-3">
+                                            <input
+                                                type="number"
+                                                value={maxAttempts || ""}
+                                                onChange={(e) => setMaxAttempts(e.target.value ? parseInt(e.target.value) : null)}
+                                                placeholder="Unlimited"
+                                                className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all w-32"
+                                            />
+                                            <span className="text-xs text-gray-500">Leave empty for unlimited</span>
+                                        </div>
+                                    </label>
                                 </div>
-                            ) : (
-                                gradingCategories.map((cat) => (
-                                    <button
-                                        key={cat.id}
-                                        onClick={() => setSelectedCategoryId(cat.id)}
-                                        className={`p-4 rounded-2xl border transition-all text-left group ${selectedCategoryId === cat.id
-                                            ? "bg-blue-500/10 border-blue-500 text-blue-400"
-                                            : "bg-white/5 border-white/10 text-gray-500 hover:border-white/20"
-                                            }`}
-                                    >
-                                        <div className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-1">Category</div>
-                                        <div className="font-bold truncate">{cat.name}</div>
-                                        <div className="text-xs mt-2 font-medium opacity-80">{cat.weight}% Weight</div>
-                                    </button>
-                                ))
-                            )}
-                        </div>
+
+                                <div className="space-y-2">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-2">After Submission</span>
+                                    <label className="flex items-center gap-3 cursor-pointer group relative">
+                                        <input
+                                            type="checkbox"
+                                            checked={allowRetry}
+                                            onChange={(e) => setAllowRetry(e.target.checked)}
+                                            className="sr-only peer"
+                                        />
+                                        <div className="w-10 h-6 bg-gray-700 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-4"></div>
+                                        <span className="text-sm font-bold text-gray-400 peer-checked:text-white transition-colors">Allow Instant Corrections</span>
+                                    </label>
+                                    <p className="text-[10px] text-gray-600 italic">Enables &quot;Check Answer&quot; buttons for individual blocks</p>
+                                </div>
+                            </div>
+                        </>
                     )}
                 </div>
             )}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { lmsApi, Lesson, Course, Module } from "@/lib/api";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Menu, CheckCircle2 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 import DescriptionPlayer from "@/components/blocks/DescriptionPlayer";
 import MediaPlayer from "@/components/blocks/MediaPlayer";
@@ -18,6 +19,8 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
     const [course, setCourse] = useState<(Course & { modules: Module[] }) | null>(null);
     const [loading, setLoading] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [userGrade, setUserGrade] = useState<any | null>(null);
+    const { user } = useAuth();
 
     useEffect(() => {
         const fetchAll = async () => {
@@ -28,8 +31,14 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                 ]);
                 setLesson(lessonData);
                 setCourse(courseData);
+
+                if (user) {
+                    const grades = await lmsApi.getUserGrades(user.id, params.id);
+                    const currentGrade = grades.find((g: any) => g.lesson_id === params.lessonId);
+                    setUserGrade(currentGrade || null);
+                }
             } catch (err) {
-                console.error(err);
+                console.error("Failed to load lesson data", err);
             } finally {
                 setLoading(false);
             }
@@ -116,16 +125,16 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                             />
                                         )}
                                         {block.type === 'quiz' && (
-                                            <QuizPlayer id={block.id} title={block.title} quizData={block.quiz_data || { questions: [] }} />
+                                            <QuizPlayer id={block.id} title={block.title} quizData={block.quiz_data || { questions: [] }} allowRetry={lesson.allow_retry} />
                                         )}
                                         {block.type === 'fill-in-the-blanks' && (
-                                            <FillInTheBlanksPlayer id={block.id} title={block.title} content={block.content || ""} />
+                                            <FillInTheBlanksPlayer id={block.id} title={block.title} content={block.content || ""} allowRetry={lesson.allow_retry} />
                                         )}
                                         {block.type === 'matching' && (
-                                            <MatchingPlayer id={block.id} title={block.title} pairs={block.pairs || []} />
+                                            <MatchingPlayer id={block.id} title={block.title} pairs={block.pairs || []} allowRetry={lesson.allow_retry} />
                                         )}
                                         {block.type === 'ordering' && (
-                                            <OrderingPlayer id={block.id} title={block.title} items={block.items || []} />
+                                            <OrderingPlayer id={block.id} title={block.title} items={block.items || []} allowRetry={lesson.allow_retry} />
                                         )}
                                         {block.type === 'short-answer' && (
                                             <ShortAnswerPlayer
@@ -133,6 +142,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                                 title={block.title}
                                                 prompt={block.prompt || ""}
                                                 correctAnswers={block.correctAnswers || []}
+                                                allowRetry={lesson.allow_retry}
                                             />
                                         )}
                                     </div>
@@ -146,41 +156,53 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
 
                         {lesson.is_graded && (
                             <div className="pt-20 border-t border-white/5 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                                <div className="bg-blue-600/10 border border-blue-500/20 rounded-[2rem] p-12 text-center relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/20 transition-all duration-700"></div>
-                                    <h3 className="text-2xl font-black mb-4">Complete & Submit</h3>
-                                    <p className="text-gray-400 max-w-sm mx-auto mb-8 text-sm">
-                                        This activity is graded. Make sure you&apos;ve completed all blocks before submitting your work for evaluation.
-                                    </p>
-
-                                    <button
-                                        onClick={async () => {
-                                            const userData = localStorage.getItem("user");
-                                            if (userData) {
-                                                const u = JSON.parse(userData);
-                                                try {
-                                                    // In a real scenario, we'd calculate the actual score from blocks
-                                                    await lmsApi.submitScore(u.id, params.id, params.lessonId, 100);
-                                                    alert("Score submitted successfully!");
-                                                } catch (err) {
-                                                    console.error("Submission failed", err);
+                                {userGrade && lesson.max_attempts && userGrade.attempts_count >= lesson.max_attempts ? (
+                                    <div className="space-y-4">
+                                        <div className="inline-flex items-center gap-2 px-6 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full text-xs font-black uppercase tracking-widest">
+                                            Locked: Maximum attempts reached ({lesson.max_attempts})
+                                        </div>
+                                        <div className="text-4xl font-black text-white">
+                                            Score: <span className="text-blue-500">{userGrade.score * 100}%</span>
+                                        </div>
+                                        <p className="text-gray-500 text-xs italic">This assessment is now closed for further submissions.</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={async () => {
+                                                if (user) {
+                                                    try {
+                                                        // In a real scenario, we'd calculate the actual score from blocks
+                                                        const res = await lmsApi.submitScore(user.id, params.id, params.lessonId, 1.0);
+                                                        setUserGrade(res);
+                                                        alert("Score submitted successfully!");
+                                                    } catch (err) {
+                                                        console.error("Submission failed", err);
+                                                        alert("Failed to submit score. Please try again.");
+                                                    }
                                                 }
-                                            }
-                                        }}
-                                        className="btn-premium px-12 py-4 rounded-2xl shadow-blue-500/40 shadow-xl group/btn"
-                                    >
-                                        <span className="flex items-center gap-2 font-black italic">
-                                            SUBMIT FOR GRADING <CheckCircle2 className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
-                                        </span>
-                                    </button>
-                                </div>
+                                            }}
+                                            className="btn-premium px-12 py-4 rounded-2xl shadow-blue-500/40 shadow-xl group/btn"
+                                        >
+                                            <span className="flex items-center gap-2 font-black italic">
+                                                {userGrade ? `SUBMIT ATTEMPT ${userGrade.attempts_count + 1}` : 'SUBMIT FOR GRADING'}
+                                                <CheckCircle2 className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
+                                            </span>
+                                        </button>
+                                        {lesson.max_attempts && (
+                                            <p className="mt-4 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                                                Attempt {userGrade ? userGrade.attempts_count : 0} of {lesson.max_attempts} used
+                                            </p>
+                                        )}
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>
                 </div>
 
                 {/* Footer Controls */}
-                <footer className="h-20 glass border-t border-white/5 px-6 flex items-center justify-between bg-black/60 backdrop-blur-3xl">
+                <footer className="h-20 glass border-t border-white/5 px-6 flex items-center justify-between bg-black/60 backdrop-blur-3xl shrink-0">
                     {prevLesson ? (
                         <Link href={`/courses/${params.id}/lessons/${prevLesson.id}`} className="group flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl glass border-white/10 flex items-center justify-center group-hover:bg-white/5 transition-all text-gray-400 group-hover:text-white">

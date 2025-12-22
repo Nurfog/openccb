@@ -43,7 +43,10 @@ export interface Lesson {
     };
     is_graded: boolean;
     grading_category_id: string | null;
+    max_attempts: number | null;
+    allow_retry: boolean;
     position: number;
+    created_at: string;
 }
 
 export interface GradingCategory {
@@ -60,7 +63,8 @@ export interface UserGrade {
     course_id: string;
     lesson_id: string;
     score: number;
-    metadata?: any;
+    attempts_count: number;
+    metadata: any;
     created_at: string;
 }
 
@@ -104,7 +108,7 @@ export const lmsApi = {
         return response.json();
     },
 
-    async getCourseOutline(courseId: string): Promise<Course & { modules: Module[] }> {
+    async getCourseOutline(courseId: string): Promise<Course & { modules: Module[], grading_categories: GradingCategory[] }> {
         const response = await fetch(`${API_BASE_URL}/courses/${courseId}/outline`);
         if (!response.ok) throw new Error('Failed to fetch course outline');
         return response.json();

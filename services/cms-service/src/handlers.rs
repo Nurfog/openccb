@@ -171,9 +171,12 @@ pub async fn create_lesson(
 
     let is_graded = payload.get("is_graded").and_then(|v| v.as_bool()).unwrap_or(false);
     let grading_category_id = payload.get("grading_category_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok());
+    let max_attempts = payload.get("max_attempts").and_then(|v| v.as_i64()).map(|v| v as i32);
+    let allow_retry = payload.get("allow_retry").and_then(|v| v.as_bool()).unwrap_or(true);
 
     let lesson = sqlx::query_as::<_, Lesson>(
-        "INSERT INTO lessons (module_id, title, content_type, content_url, position, transcription, metadata, is_graded, grading_category_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *"
+        "INSERT INTO lessons (module_id, title, content_type, content_url, position, transcription, metadata, is_graded, grading_category_id, max_attempts, allow_retry) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *"
     )
     .bind(module_id)
     .bind(title)
@@ -184,6 +187,8 @@ pub async fn create_lesson(
     .bind(metadata)
     .bind(is_graded)
     .bind(grading_category_id)
+    .bind(max_attempts)
+    .bind(allow_retry)
     .fetch_one(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -261,6 +266,10 @@ pub async fn update_lesson(
             }
         });
     
+    let max_attempts = payload.get("max_attempts").and_then(|v| v.as_i64()).map(|v| v as i32);
+    let allow_retry = payload.get("allow_retry").and_then(|v| v.as_bool());
+    let metadata = payload.get("metadata");
+    
     let updated_lesson = sqlx::query_as::<_, Lesson>(
         "UPDATE lessons 
          SET title = COALESCE($1, title), 
@@ -268,8 +277,11 @@ pub async fn update_lesson(
              content_url = COALESCE($3, content_url),
              position = COALESCE($4, position),
              is_graded = COALESCE($5, is_graded),
-             grading_category_id = CASE WHEN $6 = 'SET_NULL' THEN NULL WHEN $7::UUID IS NOT NULL THEN $7 ELSE grading_category_id END
-         WHERE id = $8 RETURNING *"
+             grading_category_id = CASE WHEN $6 = 'SET_NULL' THEN NULL WHEN $7::UUID IS NOT NULL THEN $7 ELSE grading_category_id END,
+             metadata = COALESCE($8, metadata),
+             max_attempts = COALESCE($9, max_attempts),
+             allow_retry = COALESCE($10, allow_retry)
+         WHERE id = $11 RETURNING *"
     )
     .bind(title)
     .bind(content_type)
@@ -278,6 +290,9 @@ pub async fn update_lesson(
     .bind(is_graded)
     .bind(if payload.get("grading_category_id").map(|v| v.is_null()).unwrap_or(false) { "SET_NULL" } else { "" })
     .bind(payload.get("grading_category_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok()))
+    .bind(metadata)
+    .bind(max_attempts)
+    .bind(allow_retry)
     .bind(id)
     .fetch_one(&pool)
     .await

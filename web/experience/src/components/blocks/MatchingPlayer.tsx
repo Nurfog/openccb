@@ -11,9 +11,10 @@ interface MatchingPlayerProps {
     id: string;
     title?: string;
     pairs: MatchingPair[];
+    allowRetry?: boolean;
 }
 
-export default function MatchingPlayer({ id, title, pairs }: MatchingPlayerProps) {
+export default function MatchingPlayer({ id, title, pairs, allowRetry = true }: MatchingPlayerProps) {
     const [selectedLeft, setSelectedLeft] = useState<number | null>(null);
     const [matches, setMatches] = useState<Record<number, number>>({});
     const [submitted, setSubmitted] = useState(false);
@@ -52,8 +53,8 @@ export default function MatchingPlayer({ id, title, pairs }: MatchingPlayerProps
                             key={i}
                             onClick={() => !submitted && setSelectedLeft(i)}
                             className={`w-full p-4 rounded-xl border text-left text-sm font-bold transition-all ${selectedLeft === i ? "border-blue-500 bg-blue-500/10 text-white shadow-lg" :
-                                    matches[i] !== undefined ? "border-blue-500/20 bg-blue-500/5 text-blue-400" :
-                                        "border-white/5 bg-white/5 text-gray-200 hover:border-white/20"
+                                matches[i] !== undefined ? "border-blue-500/20 bg-blue-500/5 text-blue-400" :
+                                    "border-white/5 bg-white/5 text-gray-200 hover:border-white/20"
                                 }`}
                         >
                             {pair.left}
@@ -90,24 +91,26 @@ export default function MatchingPlayer({ id, title, pairs }: MatchingPlayerProps
                     })}
                 </div>
 
-                <div className="md:col-span-2 pt-8 border-t border-white/5">
-                    {!submitted && Object.keys(matches).length === (pairs || []).length && (
-                        <button
-                            onClick={() => setSubmitted(true)}
-                            className="btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20"
-                        >
-                            Validate Matching
-                        </button>
-                    )}
-                    {submitted && (
-                        <button
-                            onClick={handleReset}
-                            className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-2xl border-white/5"
-                        >
-                            Try Again
-                        </button>
-                    )}
-                </div>
+                {allowRetry && (
+                    <div className="md:col-span-2 pt-8 border-t border-white/5">
+                        {!submitted && Object.keys(matches).length === (pairs || []).length && (
+                            <button
+                                onClick={() => setSubmitted(true)}
+                                className="btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20"
+                            >
+                                Validate Matching
+                            </button>
+                        )}
+                        {submitted && (
+                            <button
+                                onClick={handleReset}
+                                className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-2xl border-white/5"
+                            >
+                                Try Again
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
