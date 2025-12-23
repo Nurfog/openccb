@@ -130,8 +130,8 @@ pub async fn ingest_course(
 
     // 1. Upsert Course
     sqlx::query(
-        "INSERT INTO courses (id, title, description, instructor_id, start_date, end_date, passing_percentage, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        "INSERT INTO courses (id, title, description, instructor_id, start_date, end_date, passing_percentage, certificate_template, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          ON CONFLICT (id) DO UPDATE SET
             title = EXCLUDED.title,
             description = EXCLUDED.description,
@@ -139,6 +139,7 @@ pub async fn ingest_course(
             start_date = EXCLUDED.start_date,
             end_date = EXCLUDED.end_date,
             passing_percentage = EXCLUDED.passing_percentage,
+            certificate_template = EXCLUDED.certificate_template,
             updated_at = EXCLUDED.updated_at"
     )
     .bind(payload.course.id)
@@ -148,6 +149,7 @@ pub async fn ingest_course(
     .bind(payload.course.start_date)
     .bind(payload.course.end_date)
     .bind(payload.course.passing_percentage)
+    .bind(&payload.course.certificate_template)
     .bind(payload.course.updated_at)
     .execute(&mut *tx)
     .await

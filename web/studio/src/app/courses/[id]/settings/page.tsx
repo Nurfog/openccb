@@ -3,13 +3,29 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { cmsApi, Course } from "@/lib/api";
-import { ArrowLeft, Save, Settings as SettingsIcon } from "lucide-react";
+import { ArrowLeft, Save, Settings as SettingsIcon, BookOpen } from "lucide-react";
+
+const DEFAULT_CERTIFICATE_TEMPLATE = `
+<div style="width: 800px; height: 600px; padding: 40px; text-align: center; border: 10px solid #787878; font-family: 'Times New Roman', serif; background-color: #fff; color: #333;">
+    <div style="width: 100%; height: 100%; padding: 20px; text-align: center; border: 5px solid #787878; display: flex; flex-direction: column; justify-content: center;">
+       <span style="font-size: 50px; font-weight: bold; margin-bottom: 30px; display: block;">Certificate of Completion</span>
+       <span style="font-size: 25px; display: block; margin-bottom: 20px;"><i>This is to certify that</i></span>
+       <span style="font-size: 30px; font-weight: bold; display: block; margin-bottom: 20px; text-decoration: underline;">{{student_name}}</span>
+       <span style="font-size: 25px; display: block; margin-bottom: 20px;"><i>has successfully completed the course</i></span>
+       <span style="font-size: 30px; font-weight: bold; display: block; margin-bottom: 20px;">{{course_title}}</span>
+       <span style="font-size: 20px; display: block; margin-bottom: 40px;">with a score of <b>{{score}}%</b></span>
+       <span style="font-size: 25px; display: block; margin-bottom: 10px;"><i>Dated</i></span>
+       <span style="font-size: 20px; display: block;">{{date}}</span>
+    </div>
+</div>
+`;
 
 export default function CourseSettingsPage() {
     const { id } = useParams() as { id: string };
     const router = useRouter();
     const [course, setCourse] = useState<Course | null>(null);
     const [passingPercentage, setPassingPercentage] = useState(70);
+    const [certificateTemplate, setCertificateTemplate] = useState("");
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -19,6 +35,7 @@ export default function CourseSettingsPage() {
                 const data = await cmsApi.getCourse(id);
                 setCourse(data);
                 setPassingPercentage(data.passing_percentage || 70);
+                setCertificateTemplate(data.certificate_template || DEFAULT_CERTIFICATE_TEMPLATE);
             } catch (err) {
                 console.error("Failed to load course", err);
             } finally {
@@ -31,7 +48,10 @@ export default function CourseSettingsPage() {
     const handleSave = async () => {
         setSaving(true);
         try {
-            const updated = await cmsApi.updateCourse(id, { passing_percentage: passingPercentage });
+            const updated = await cmsApi.updateCourse(id, {
+                passing_percentage: passingPercentage,
+                certificate_template: certificateTemplate
+            });
             setCourse(updated);
             alert("Course settings updated successfully!");
         } catch (err) {
@@ -137,6 +157,58 @@ export default function CourseSettingsPage() {
                                     <div className="w-16 h-4 bg-blue-500 rounded"></div>
                                     <span className="text-blue-400 font-bold">Excelente:</span>
                                     <span className="text-gray-400">91% - 100%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Certificate Template Section */}
+                <section className="bg-white/5 border border-white/10 rounded-3xl p-8">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                            <BookOpen size={24} />
+                        </div>
+                        <h2 className="text-2xl font-black">Certificate Template</h2>
+                    </div>
+
+                    <div className="space-y-6">
+                        <p className="text-gray-400">
+                            Design the HTML certificate that students will receive upon passing the course.
+                            Available variables: <code className="text-blue-400">{"{{student_name}}"}</code>, <code className="text-blue-400">{"{{course_title}}"}</code>, <code className="text-blue-400">{"{{date}}"}</code>, <code className="text-blue-400">{"{{score}}"}</code>.
+                        </p>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div className="space-y-2">
+                                <label className="block text-sm font-bold text-gray-300">HTML Template</label>
+                                <textarea
+                                    value={certificateTemplate}
+                                    onChange={(e) => setCertificateTemplate(e.target.value)}
+                                    className="w-full h-[400px] bg-black/30 border border-white/10 rounded-xl p-4 font-mono text-sm text-gray-300 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                                    placeholder="Enter HTML code here..."
+                                />
+                                <button
+                                    onClick={() => setCertificateTemplate(DEFAULT_CERTIFICATE_TEMPLATE)}
+                                    className="text-xs text-blue-400 hover:text-blue-300 underline"
+                                >
+                                    Reset to Default Template
+                                </button>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="block text-sm font-bold text-gray-300">Live Preview</label>
+                                <div className="w-full h-[400px] bg-white rounded-xl overflow-hidden relative group">
+                                    <iframe
+                                        srcDoc={certificateTemplate
+                                            .replace(/{{student_name}}/g, "Jane Doe")
+                                            .replace(/{{course_title}}/g, course?.title || "Demo Course")
+                                            .replace(/{{date}}/g, new Date().toLocaleDateString())
+                                            .replace(/{{score}}/g, "95")
+                                        }
+                                        className="w-full h-full transform scale-75 origin-top-left w-[133%] h-[133%]"
+                                        style={{ border: "none" }}
+                                    />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 pointer-events-none transition-colors" />
                                 </div>
                             </div>
                         </div>

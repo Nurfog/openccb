@@ -6,6 +6,7 @@ export interface Course {
     description?: string;
     instructor_id: string;
     passing_percentage: number;
+    certificate_template?: string;
     created_at: string;
 }
 

@@ -167,17 +167,26 @@ pub async fn update_course(
     let title = payload.get("title").and_then(|v| v.as_str()).unwrap_or(&existing.title);
     let description = payload.get("description").and_then(|v| v.as_str()).unwrap_or(existing.description.as_deref().unwrap_or(""));
     let passing_percentage = payload.get("passing_percentage").and_then(|v| v.as_i64()).unwrap_or(existing.passing_percentage as i64) as i32;
+    
+    // Check if certificate_template is in payload (even if null to unset?)
+    // For simplicity: if provided as string, use it. If not provided, keep existing.
+    // To unset, user can send empty string maybe? 
+    let certificate_template = payload.get("certificate_template")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .or(existing.certificate_template);
 
     let course = sqlx::query_as::<_, Course>(
-        "UPDATE courses SET title = $1, description = $2, passing_percentage = $3, updated_at = NOW() WHERE id = $4 RETURNING *"
+        "UPDATE courses SET title = $1, description = $2, passing_percentage = $3, certificate_template = $4, updated_at = NOW() WHERE id = $5 RETURNING *"
     )
     .bind(title)
     .bind(description)
     .bind(passing_percentage)
+    .bind(certificate_template)
     .bind(id)
     .fetch_one(&pool)
     .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update course".into()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to update course: {}", e)))?;
 
     Ok(Json(course))
 }
@@ -672,4 +681,60 @@ pub async fn get_course_analytics(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(analytics))
+}
+
+#[derive(Deserialize)]
+pub struct AuditQuery {
+    pub page: Option<i64>,
+    pub limit: Option<i64>,
+}
+
+pub async fn get_audit_logs(
+    State(pool): State<PgPool>,
+    headers: HeaderMap,
+    Query(query): Query<AuditQuery>,
+) -> Result<Json<Vec<common::models::AuditLogResponse>>, (StatusCode, String)> {
+    // 1. Auth check
+    let auth_header = headers.get("Authorization")
+        .and_then(|h| h.to_str().ok())
+        .ok_or((StatusCode::UNAUTHORIZED, "Missing Authorization header".into()))?;
+
+    if !auth_header.starts_with("Bearer ") {
+        return Err((StatusCode::UNAUTHORIZED, "Invalid Authorization header".into()));
+    }
+
+    let token = &auth_header[7..];
+    let token_data = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret("secret".as_ref()),
+        &Validation::default(),
+    ).map_err(|e| {
+        tracing::error!("JWT decode failed: {}", e);
+        (StatusCode::UNAUTHORIZED, "Invalid token".into())
+    })?;
+
+    if token_data.claims.role != "admin" {
+        return Err((StatusCode::FORBIDDEN, "Only admins can view audit logs".into()));
+    }
+
+    // 2. Query
+    let limit = query.limit.unwrap_or(50);
+    let offset = (query.page.unwrap_or(1) - 1) * limit;
+
+    let logs = sqlx::query_as::<_, common::models::AuditLogResponse>(
+        r#"
+        SELECT a.id, a.user_id, u.full_name as user_full_name, a.action, a.entity_type, a.entity_id, a.changes, a.created_at
+        FROM audit_logs a
+        LEFT JOIN users u ON a.user_id = u.id
+        ORDER BY a.created_at DESC
+        LIMIT $1 OFFSET $2
+        "#
+    )
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(logs))
 }

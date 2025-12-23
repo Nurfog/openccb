@@ -11,6 +11,7 @@ pub struct Course {
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
     pub passing_percentage: i32,
+    pub certificate_template: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -67,6 +68,18 @@ pub struct UserGrade {
 pub struct AuditLog {
     pub id: Uuid,
     pub user_id: Uuid,
+    pub action: String,
+    pub entity_type: String, 
+    pub entity_id: Uuid,
+    pub changes: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct AuditLogResponse {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub user_full_name: Option<String>,
     pub action: String,
     pub entity_type: String, 
     pub entity_id: Uuid,
@@ -204,6 +217,7 @@ mod tests {
                 start_date: None,
                 end_date: None,
                 passing_percentage: 70,
+                certificate_template: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
             },

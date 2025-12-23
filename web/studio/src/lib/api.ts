@@ -6,6 +6,7 @@ export interface Course {
     description: string;
     instructor_id: string;
     passing_percentage: number;
+    certificate_template?: string;
     created_at: string;
 }
 
@@ -106,6 +107,18 @@ export interface AuthPayload {
     password?: string;
     full_name?: string;
     role?: string;
+}
+
+export interface AuditLog {
+    id: string;
+    user_id: string;
+    user_full_name?: string;
+    action: string;
+    entity_type: string;
+    entity_id: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    changes: any;
+    created_at: string;
 }
 
 export const cmsApi = {
@@ -276,6 +289,17 @@ export const cmsApi = {
             body: JSON.stringify(data)
         });
         if (!response.ok) throw new Error('Failed to update course');
+        return response.json();
+    },
+
+    async getAuditLogs(page: number = 1, limit: number = 50): Promise<AuditLog[]> {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('studio_token') : null;
+        const response = await fetch(`${API_BASE_URL}/audit-logs?page=${page}&limit=${limit}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) throw new Error('Failed to fetch audit logs');
         return response.json();
     }
 };

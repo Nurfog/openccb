@@ -27,27 +27,20 @@ export default function AnalyticsPage() {
         const fetchData = async () => {
             // Wait for auth to load
             if (!user) {
-                console.log("AnalyticsPage: No user found yet.");
                 return;
             }
 
-            console.log("AnalyticsPage: User found:", user);
-            console.log("AnalyticsPage: User Role:", user.role);
-
             // Check authorization
             if (user.role !== 'admin' && user.role !== 'instructor') {
-                console.warn("AnalyticsPage: Unauthorized role. Redirecting to home.", user.role);
                 router.push('/');
                 return;
             }
 
             try {
-                console.log("AnalyticsPage: Fetching data for course:", id);
                 const [courseData, analyticsData] = await Promise.all([
                     cmsApi.getCourseWithFullOutline(id),
                     cmsApi.getCourseAnalytics(id)
                 ]);
-                console.log("AnalyticsPage: Data fetched successfully", { courseData, analyticsData });
                 setCourse(courseData);
                 setAnalytics(analyticsData);
             } catch (err: unknown) {

@@ -47,6 +47,7 @@ async fn main() {
         .route("/grading", post(handlers::create_grading_category))
         .route("/grading/{id}", delete(handlers::delete_grading_category))
         .route("/courses/{id}/grading", get(handlers::get_grading_categories))
+        .route("/audit-logs", get(handlers::get_audit_logs))
         .route("/assets/upload", post(handlers::upload_asset))
         .nest_service("/assets", tower_http::services::ServeDir::new("uploads"))
         .layer(cors)

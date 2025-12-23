@@ -1,0 +1,13 @@
+target/
+.git/
+node_modules/
+.next/
+web/studio/node_modules/
+web/experience/node_modules/
+web/studio/.next/
+web/experience/.next/
+services/*/target/
+*.log
+.env
+.DS_Store
+.vscode/

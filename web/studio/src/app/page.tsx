@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cmsApi, Course } from "@/lib/api";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Home() {
   const router = useRouter();
+  const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -15,17 +17,13 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
 
-    // Check authentication
-    const savedUser = localStorage.getItem("studio_user");
-    if (!savedUser) {
+    // Authentication handled by AuthContext or manual check
+    // We keep this manual check as a legacy safe-guard or rely on AuthContext if we trust it fully.
+    // Given previous edits, we know AuthContext works.
+    if (typeof window !== 'undefined' && !localStorage.getItem("studio_user")) {
       router.push("/auth/login");
       return;
     }
-
-    // The `setUser` function was not defined, causing a linting error.
-    // If user data needs to be stored in state, a `useState` for `user` should be added.
-    // For now, removing the call to fix the linting error.
-    // setUser(JSON.parse(savedUser));
 
     // Fetch courses
     const loadCourses = async () => {
@@ -44,7 +42,6 @@ export default function Home() {
 
     loadCourses();
   }, [router]);
-
 
 
   const handleCreateCourse = async () => {
@@ -66,6 +63,7 @@ export default function Home() {
       description: "A demo course to get started",
       instructor_id: "demo",
       passing_percentage: 70,
+      certificate_template: undefined,
       created_at: new Date().toISOString()
     },
   ];
@@ -79,9 +77,18 @@ export default function Home() {
           <h2 className="text-3xl font-bold">My Courses</h2>
           <p className="text-gray-400">Manage and create your learning content</p>
         </div>
-        <button onClick={handleCreateCourse} className="btn-premium">
-          + New Course
-        </button>
+        <div className="flex items-center gap-4">
+          {user?.role === 'admin' && (
+            <Link href="/admin/audit">
+              <button className="px-4 py-2 text-sm font-bold text-gray-400 hover:text-white border border-white/10 hover:border-white/30 rounded-lg transition-colors flex items-center gap-2">
+                🛡️ Audit Logs
+              </button>
+            </Link>
+          )}
+          <button onClick={handleCreateCourse} className="btn-premium">
+            + New Course
+          </button>
+        </div>
       </div>
 
       {error && (

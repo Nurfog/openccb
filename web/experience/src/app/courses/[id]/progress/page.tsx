@@ -214,18 +214,67 @@ export default function StudentProgressPage() {
                         </div>
                     </section>
 
-                    <section className="bg-indigo-600/10 border border-indigo-500/20 rounded-[2rem] p-8 flex items-center justify-between">
-                        <div className="flex items-center gap-6">
-                            <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
-                                <TrendingUp className="w-8 h-8" />
+                    {/* Certificate Section */}
+                    {totalWeightedGrade >= (course.passing_percentage || 70) ? (
+                        <section className="bg-green-500/10 border border-green-500/20 rounded-[2rem] p-8 flex items-center justify-between">
+                            <div className="flex items-center gap-6">
+                                <div className="w-16 h-16 rounded-2xl bg-green-500/20 flex items-center justify-center text-green-400">
+                                    <Award className="w-8 h-8" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-green-400">Course Completed!</h3>
+                                    <p className="text-sm text-green-300/60 mt-0.5">
+                                        Congratulations! You have passed <b>{course.title}</b>.
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-lg font-bold">Certification Track</h3>
-                                <p className="text-sm text-indigo-300/60 mt-0.5">Maintain 60% or higher to earn your verified certificate.</p>
+                            <button
+                                onClick={() => {
+                                    if (!course.certificate_template || !user) {
+                                        alert("Certificate template not available.");
+                                        return;
+                                    }
+                                    const filledTemplate = course.certificate_template
+                                        .replace(/{{student_name}}/g, user.full_name)
+                                        .replace(/{{course_title}}/g, course.title)
+                                        .replace(/{{date}}/g, new Date().toLocaleDateString())
+                                        .replace(/{{score}}/g, Math.round(totalWeightedGrade).toString());
+
+                                    const win = window.open('', '_blank');
+                                    if (win) {
+                                        win.document.write(filledTemplate);
+                                        win.document.close();
+                                        // Wait visuals to render then print
+                                        setTimeout(() => {
+                                            win.focus();
+                                            win.print();
+                                        }, 500);
+                                    }
+                                }}
+                                className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl transition-colors shadow-lg shadow-green-900/20 flex items-center gap-2"
+                            >
+                                <Award className="w-4 h-4" />
+                                Download Certificate
+                            </button>
+                        </section>
+                    ) : (
+                        <section className="bg-indigo-600/10 border border-indigo-500/20 rounded-[2rem] p-8 flex items-center justify-between">
+                            <div className="flex items-center gap-6">
+                                <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                                    <TrendingUp className="w-8 h-8" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold">Certification Track</h3>
+                                    <p className="text-sm text-indigo-300/60 mt-0.5">
+                                        Maintain {course.passing_percentage || 70}% or higher to earn your verified certificate.
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                        <ChevronRight className="w-6 h-6 text-indigo-500/50" />
-                    </section>
+                            <div className="text-indigo-400 font-bold text-sm">
+                                {Math.max(0, (course.passing_percentage || 70) - Math.round(totalWeightedGrade))}% to go
+                            </div>
+                        </section>
+                    )}
                 </div>
             </div>
         </div>
