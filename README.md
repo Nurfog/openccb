@@ -62,7 +62,12 @@ docker compose up -d --build
     - **Rendimiento Bajo (Orange)**: P% to P+9%
     - **Rendimiento Medio (Yellow)**: P+10% to P+15%
     - **Buen Rendimiento (Green)**: P+16% to 90%
+    - **Buen Rendimiento (Green)**: P+16% to 90%
     - **Excelente (Blue)**: 91%+
+- **Automated Certificate Generation**:
+  - HTML-based customizable certificate templates
+  - Automatic download button upon passing a course
+  - PDF generation for print/save
 
 ### 📈 Analytics & Insights
 - **Instructor Analytics Dashboard**:
@@ -85,6 +90,10 @@ docker compose up -d --build
   - **Students**: Course enrollment, lesson consumption, progress tracking
 - **Service-to-Service Authorization**: Secure internal API calls with token validation
 - **Audit Logging**: All CMS mutations recorded for compliance and debugging
+- **Admin Audit Dashboard**: 
+  - Visual interface to view system logs
+  - Diff viewer for JSON changes
+  - Advanced filtering by user and action
 
 ### 🚀 Service Integration
 - **Automatic Sync**: One-click publish from CMS to LMS
@@ -218,6 +227,8 @@ openccb/
 - ✅ **Dynamic Passing Thresholds**: Customizable pass marks with 5-tier performance visualization
 - ✅ **Role-Based Access Control**: Admin, Instructor, and Student roles with granular permissions
 - ✅ **Enhanced Progress Dashboard**: Real-time weighted grades and visual performance bars
+- ✅ **Certificate System**: Custom HTML templates and automated generation
+- ✅ **Quality Assurance**: Automated End-to-End (E2E) testing pipeline with Playwright
 
 ## Contributing
 

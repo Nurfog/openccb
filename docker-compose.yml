@@ -52,6 +52,20 @@ services:
     environment:
       NEXT_PUBLIC_LMS_API_URL: http://localhost:3002
 
+  e2e:
+    build:
+      context: ./e2e
+    environment:
+      - STUDIO_URL=http://studio:3000
+      - EXPERIENCE_URL=http://experience:3003
+    depends_on:
+      - studio
+      - experience
+    volumes:
+      - ./e2e/tests:/e2e/tests
+      - ./e2e/playwright-report:/e2e/playwright-report
+    profiles: [ "test" ]
+
 volumes:
   postgres_data:
   uploads_data:
