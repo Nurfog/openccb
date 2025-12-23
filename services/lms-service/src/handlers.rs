@@ -3,11 +3,11 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use common::models::{Course, Enrollment, Module, Lesson, User, UserResponse, AuthResponse};
+use common::models::{Course, Enrollment, Module, Lesson, User, UserResponse, AuthResponse, CourseAnalytics, LessonAnalytics};
 use common::auth::create_jwt;
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use uuid::Uuid;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use bcrypt::{hash, verify, DEFAULT_COST};
 
 pub async fn enroll_user(
@@ -77,6 +77,7 @@ pub async fn register(
             id: user.id,
             email: user.email,
             full_name: user.full_name,
+            role: user.role,
         },
         token,
     }))
@@ -104,6 +105,7 @@ pub async fn login(
             id: user.id,
             email: user.email,
             full_name: user.full_name,
+            role: user.role,
         },
         token,
     }))
@@ -128,14 +130,15 @@ pub async fn ingest_course(
 
     // 1. Upsert Course
     sqlx::query(
-        "INSERT INTO courses (id, title, description, instructor_id, start_date, end_date, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        "INSERT INTO courses (id, title, description, instructor_id, start_date, end_date, passing_percentage, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          ON CONFLICT (id) DO UPDATE SET
             title = EXCLUDED.title,
             description = EXCLUDED.description,
             instructor_id = EXCLUDED.instructor_id,
             start_date = EXCLUDED.start_date,
             end_date = EXCLUDED.end_date,
+            passing_percentage = EXCLUDED.passing_percentage,
             updated_at = EXCLUDED.updated_at"
     )
     .bind(payload.course.id)
@@ -144,6 +147,7 @@ pub async fn ingest_course(
     .bind(payload.course.instructor_id)
     .bind(payload.course.start_date)
     .bind(payload.course.end_date)
+    .bind(payload.course.passing_percentage)
     .bind(payload.course.updated_at)
     .execute(&mut *tx)
     .await
@@ -374,4 +378,59 @@ pub async fn get_user_course_grades(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(grades))
+}
+pub async fn get_course_analytics(
+    State(pool): State<PgPool>,
+    Path(course_id): Path<Uuid>,
+) -> Result<Json<CourseAnalytics>, (StatusCode, String)> {
+    // 1. Total Enrollments
+    let total_enrollments: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM enrollments WHERE course_id = $1")
+        .bind(course_id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // 2. Average Course Score (Overall)
+    let average_score: Option<f32> = sqlx::query_scalar("SELECT AVG(score)::float4 FROM user_grades WHERE course_id = $1")
+        .bind(course_id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // 3. Per-Lesson Analytics
+    // Note: We cast AVG to float4 for PostgreSQL compatibility
+    let rows = sqlx::query(
+        r#"
+        SELECT 
+            l.id, 
+            l.title, 
+            COALESCE(AVG(g.score), 0)::float4 as average_score, 
+            COUNT(g.id) as submission_count
+        FROM lessons l
+        LEFT JOIN user_grades g ON l.id = g.lesson_id
+        WHERE l.module_id IN (SELECT id FROM modules WHERE course_id = $1)
+        GROUP BY l.id, l.title, l.position
+        ORDER BY l.position
+        "#
+    )
+    .bind(course_id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let lessons = rows.into_iter().map(|row| {
+        LessonAnalytics {
+            lesson_id: row.get("id"),
+            lesson_title: row.get("title"),
+            average_score: row.get("average_score"),
+            submission_count: row.get("submission_count"),
+        }
+    }).collect();
+
+    Ok(Json(CourseAnalytics {
+        course_id,
+        total_enrollments,
+        average_score: average_score.unwrap_or(0.0),
+        lessons,
+    }))
 }

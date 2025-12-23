@@ -35,8 +35,9 @@ async fn main() {
 
     let app = Router::new()
         .route("/courses", get(handlers::get_courses).post(handlers::create_course))
-        .route("/courses/{id}", get(handlers::get_course))
+        .route("/courses/{id}", get(handlers::get_course).put(handlers::update_course))
         .route("/courses/{id}/publish", post(handlers::publish_course))
+        .route("/courses/{id}/analytics", get(handlers::get_course_analytics))
         .route("/modules", get(handlers::get_modules).post(handlers::create_module))
         .route("/lessons", get(handlers::get_lessons).post(handlers::create_lesson))
         .route("/lessons/{id}", get(handlers::get_lesson).put(handlers::update_lesson))

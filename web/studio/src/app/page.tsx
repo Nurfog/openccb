@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { cmsApi, Course } from "@/lib/api";
 import Link from "next/link";
 
 export default function Home() {
+  const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -12,22 +14,38 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true);
-    fetchCourses();
-  }, []);
 
-  const fetchCourses = async () => {
-    try {
-      setLoading(true);
-      const data = await cmsApi.getCourses();
-      setCourses(data);
-      setError(null);
-    } catch (err) {
-      console.error("Failed to fetch courses:", err);
-      setError("Could not connect to CMS service. showing offline mode.");
-    } finally {
-      setLoading(false);
+    // Check authentication
+    const savedUser = localStorage.getItem("studio_user");
+    if (!savedUser) {
+      router.push("/auth/login");
+      return;
     }
-  };
+
+    // The `setUser` function was not defined, causing a linting error.
+    // If user data needs to be stored in state, a `useState` for `user` should be added.
+    // For now, removing the call to fix the linting error.
+    // setUser(JSON.parse(savedUser));
+
+    // Fetch courses
+    const loadCourses = async () => {
+      try {
+        setLoading(true);
+        const data = await cmsApi.getCourses();
+        setCourses(data);
+        setError(null);
+      } catch (err) {
+        console.error("Failed to fetch courses:", err);
+        setError("Could not connect to CMS service. showing offline mode.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCourses();
+  }, [router]);
+
+
 
   const handleCreateCourse = async () => {
     const title = prompt("Enter course title:");
@@ -42,7 +60,14 @@ export default function Home() {
   };
 
   const placeholderCourses: Course[] = [
-    { id: "p1", title: "Introduction to Rust (Demo)", instructor_id: "demo", created_at: new Date().toISOString() },
+    {
+      id: "p1",
+      title: "Introduction to Rust (Demo)",
+      description: "A demo course to get started",
+      instructor_id: "demo",
+      passing_percentage: 70,
+      created_at: new Date().toISOString()
+    },
   ];
 
   const displayCourses = courses.length > 0 ? courses : (loading ? [] : placeholderCourses);

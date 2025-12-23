@@ -3,13 +3,15 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use common::models::{Course, Module, Lesson, PublishedCourse, PublishedModule, User, UserResponse, AuthResponse};
-use common::auth::create_jwt;
+use common::models::{Course, Module, Lesson, PublishedCourse, PublishedModule, User, UserResponse, AuthResponse, CourseAnalytics};
+use common::auth::{create_jwt, Claims};
 use sqlx::PgPool;
 use uuid::Uuid;
 use serde_json::json;
 use serde::{Deserialize, Serialize};
 use bcrypt::{hash, verify, DEFAULT_COST};
+use axum::http::HeaderMap;
+use jsonwebtoken::{decode, DecodingKey, Validation};
 
 pub async fn publish_course(
     State(pool): State<PgPool>,
@@ -120,7 +122,6 @@ pub async fn create_course(
 
     Ok(Json(course))
 }
-
 pub async fn get_courses(
     State(pool): State<PgPool>,
 ) -> Result<Json<Vec<Course>>, StatusCode> {
@@ -130,6 +131,55 @@ pub async fn get_courses(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(courses))
+}
+
+pub async fn update_course(
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<Json<Course>, (StatusCode, String)> {
+    // 1. RBAC check (simplified: must be owner or admin)
+    let auth_header = headers.get("Authorization")
+        .and_then(|h| h.to_str().ok())
+        .ok_or((StatusCode::UNAUTHORIZED, "Missing Authorization header".into()))?;
+    
+    let token = &auth_header[7..];
+    let token_data = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret("secret".as_ref()),
+        &Validation::default(),
+    ).map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid token".into()))?;
+
+    let claims = token_data.claims;
+
+    let existing = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| (StatusCode::NOT_FOUND, "Course not found".into()))?;
+
+    if claims.role != "admin" && existing.instructor_id != claims.sub {
+        return Err((StatusCode::FORBIDDEN, "Not authorized".into()));
+    }
+
+    // 2. Update fields
+    let title = payload.get("title").and_then(|v| v.as_str()).unwrap_or(&existing.title);
+    let description = payload.get("description").and_then(|v| v.as_str()).unwrap_or(existing.description.as_deref().unwrap_or(""));
+    let passing_percentage = payload.get("passing_percentage").and_then(|v| v.as_i64()).unwrap_or(existing.passing_percentage as i64) as i32;
+
+    let course = sqlx::query_as::<_, Course>(
+        "UPDATE courses SET title = $1, description = $2, passing_percentage = $3, updated_at = NOW() WHERE id = $4 RETURNING *"
+    )
+    .bind(title)
+    .bind(description)
+    .bind(passing_percentage)
+    .bind(id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update course".into()))?;
+
+    Ok(Json(course))
 }
 
 pub async fn create_module(
@@ -504,6 +554,7 @@ pub struct AuthPayload {
     pub email: String,
     pub password: String,
     pub full_name: Option<String>,
+    pub role: Option<String>,
 }
 
 pub async fn register(
@@ -514,18 +565,20 @@ pub async fn register(
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Hashing failed".into()))?;
 
     let full_name = payload.full_name.unwrap_or_else(|| payload.email.split('@').next().unwrap_or("User").to_string());
+    let role = payload.role.unwrap_or_else(|| "instructor".to_string());
 
     let user = sqlx::query_as::<_, User>(
-        "INSERT INTO users (email, password_hash, full_name) VALUES ($1, $2, $3) RETURNING *"
+        "INSERT INTO users (email, password_hash, full_name, role) VALUES ($1, $2, $3, $4) RETURNING *"
     )
     .bind(&payload.email)
     .bind(password_hash)
     .bind(full_name)
+    .bind(&role)
     .fetch_one(&pool)
     .await
     .map_err(|e| (StatusCode::CONFLICT, format!("User already exists or DB error: {}", e)))?;
 
-    let token = create_jwt(user.id, "instructor")
+    let token = create_jwt(user.id, &user.role)
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "JWT generation failed".into()))?;
 
     Ok(Json(AuthResponse {
@@ -533,6 +586,7 @@ pub async fn register(
             id: user.id,
             email: user.email,
             full_name: user.full_name,
+            role: user.role,
         },
         token,
     }))
@@ -552,7 +606,7 @@ pub async fn login(
         return Err((StatusCode::UNAUTHORIZED, "Invalid credentials".into()));
     }
 
-    let token = create_jwt(user.id, "instructor")
+    let token = create_jwt(user.id, &user.role)
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "JWT generation failed".into()))?;
 
     Ok(Json(AuthResponse {
@@ -560,7 +614,62 @@ pub async fn login(
             id: user.id,
             email: user.email,
             full_name: user.full_name,
+            role: user.role,
         },
         token,
     }))
+}
+pub async fn get_course_analytics(
+    State(pool): State<PgPool>,
+    headers: HeaderMap,
+    Path(id): Path<Uuid>,
+) -> Result<Json<CourseAnalytics>, (StatusCode, String)> {
+    // 1. Extract and verify token
+    let auth_header = headers.get("Authorization")
+        .and_then(|h| h.to_str().ok())
+        .ok_or((StatusCode::UNAUTHORIZED, "Missing Authorization header".into()))?;
+
+    if !auth_header.starts_with("Bearer ") {
+        return Err((StatusCode::UNAUTHORIZED, "Invalid Authorization header".into()));
+    }
+
+    let token = &auth_header[7..];
+    let token_data = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret("secret".as_ref()),
+        &Validation::default(),
+    ).map_err(|e| {
+        tracing::error!("JWT decode failed: {}", e);
+        (StatusCode::UNAUTHORIZED, "Invalid token".into())
+    })?;
+
+    let claims = token_data.claims;
+
+    // 2. Fetch Course to check ownership
+    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| (StatusCode::NOT_FOUND, "Course not found".into()))?;
+
+    // 3. Enforce RBAC
+    if claims.role != "admin" && course.instructor_id != claims.sub {
+        return Err((StatusCode::FORBIDDEN, "You do not have permission to view stats for a course you don't own".into()));
+    }
+
+    // 4. Fetch from LMS
+    let client = reqwest::Client::new();
+    let res = client.get(format!("http://lms-service:3002/courses/{}/analytics", id))
+        .send()
+        .await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+
+    if !res.status().is_success() {
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch analytics from LMS".into()));
+    }
+
+    let analytics = res.json::<CourseAnalytics>().await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(analytics))
 }

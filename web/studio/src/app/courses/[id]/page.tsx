@@ -119,7 +119,8 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                 <div className="flex border-b border-white/10">
                     <Link href={`/courses/${params.id}`} className="px-6 py-3 text-sm font-medium border-b-2 border-blue-500 bg-white/5">Outline</Link>
                     <Link href={`/courses/${params.id}/grading`} className="px-6 py-3 text-sm font-medium text-gray-500 hover:text-white transition-colors">Grading</Link>
-                    <button className="px-6 py-3 text-sm font-medium text-gray-500 hover:text-white transition-colors">Settings</button>
+                    <Link href={`/courses/${params.id}/analytics`} className="px-6 py-3 text-sm font-medium text-gray-500 hover:text-white transition-colors">Analytics</Link>
+                    <Link href={`/courses/${params.id}/settings`} className="px-6 py-3 text-sm font-medium text-gray-500 hover:text-white transition-colors">Settings</Link>
                     <button className="px-6 py-3 text-sm font-medium text-gray-500 hover:text-white transition-colors">Files</button>
                 </div>
 

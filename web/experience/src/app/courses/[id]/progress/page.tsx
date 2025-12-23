@@ -14,6 +14,7 @@ import {
     ArrowLeft,
     TrendingUp
 } from "lucide-react";
+import PerformanceBar from "@/components/PerformanceBar";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -134,9 +135,12 @@ export default function StudentProgressPage() {
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-center gap-2 text-green-400 bg-green-400/10 py-2 px-4 rounded-full w-fit mx-auto border border-green-400/20">
-                            <Award className="w-4 h-4" />
-                            <span className="text-sm font-bold">Passing Standing</span>
+                        {/* Performance Bar */}
+                        <div className="mt-8">
+                            <PerformanceBar
+                                score={Math.round(totalWeightedGrade)}
+                                passingPercentage={course.passing_percentage || 70}
+                            />
                         </div>
                     </div>
 

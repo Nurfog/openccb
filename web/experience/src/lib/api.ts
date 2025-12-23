@@ -5,6 +5,7 @@ export interface Course {
     title: string;
     description?: string;
     instructor_id: string;
+    passing_percentage: number;
     created_at: string;
 }
 
@@ -72,6 +73,7 @@ export interface User {
     id: string;
     email: string;
     full_name: string;
+    role: string;
 }
 
 export interface AuthResponse {

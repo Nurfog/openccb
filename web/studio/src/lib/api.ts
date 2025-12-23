@@ -3,8 +3,24 @@ export const API_BASE_URL = "http://localhost:3001";
 export interface Course {
     id: string;
     title: string;
+    description: string;
     instructor_id: string;
+    passing_percentage: number;
     created_at: string;
+}
+
+export interface CourseAnalytics {
+    course_id: string;
+    total_enrollments: number;
+    average_score: number;
+    lessons: LessonAnalytics[];
+}
+
+export interface LessonAnalytics {
+    lesson_id: string;
+    lesson_title: string;
+    average_score: number;
+    submission_count: number;
 }
 
 export interface Module {
@@ -77,6 +93,7 @@ export interface User {
     id: string;
     email: string;
     full_name: string;
+    role: string;
 }
 
 export interface AuthResponse {
@@ -88,6 +105,7 @@ export interface AuthPayload {
     email: string;
     password?: string;
     full_name?: string;
+    role?: string;
 }
 
 export const cmsApi = {
@@ -200,8 +218,12 @@ export const cmsApi = {
     },
 
     async publishCourse(courseId: string): Promise<void> {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('studio_token') : null;
         const response = await fetch(`${API_BASE_URL}/courses/${courseId}/publish`, {
-            method: 'POST'
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
         });
         if (!response.ok) throw new Error('Failed to publish course');
     },
@@ -223,6 +245,37 @@ export const cmsApi = {
             body: JSON.stringify(payload)
         });
         if (!response.ok) throw await response.json();
+        return response.json();
+    },
+
+    async getCourseAnalytics(courseId: string): Promise<CourseAnalytics> {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('studio_token') : null;
+        const response = await fetch(`${API_BASE_URL}/courses/${courseId}/analytics`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) throw new Error('Failed to fetch course analytics');
+        return response.json();
+    },
+
+    async getCourse(id: string): Promise<Course> {
+        const response = await fetch(`${API_BASE_URL}/courses/${id}`);
+        if (!response.ok) throw new Error('Failed to fetch course');
+        return response.json();
+    },
+
+    async updateCourse(id: string, data: Partial<Course>): Promise<Course> {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('studio_token') : null;
+        const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error('Failed to update course');
         return response.json();
     }
 };

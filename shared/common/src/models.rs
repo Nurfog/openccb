@@ -10,6 +10,7 @@ pub struct Course {
     pub instructor_id: Uuid,
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
+    pub passing_percentage: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -97,6 +98,7 @@ pub struct User {
     pub email: String,
     pub password_hash: String,
     pub full_name: String,
+    pub role: String, // admin, instructor, student
     pub created_at: DateTime<Utc>,
 }
 
@@ -105,6 +107,7 @@ pub struct UserResponse {
     pub id: Uuid,
     pub email: String,
     pub full_name: String,
+    pub role: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -123,6 +126,22 @@ pub struct PublishedCourse {
 pub struct PublishedModule {
     pub module: Module,
     pub lessons: Vec<Lesson>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CourseAnalytics {
+    pub course_id: Uuid,
+    pub total_enrollments: i64,
+    pub average_score: f32, // 0.0-1.0
+    pub lessons: Vec<LessonAnalytics>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LessonAnalytics {
+    pub lesson_id: Uuid,
+    pub lesson_title: String,
+    pub average_score: f32, // 0.0-1.0
+    pub submission_count: i64,
 }
 
 #[cfg(test)]
@@ -159,6 +178,8 @@ mod tests {
             })),
             grading_category_id: None,
             is_graded: false,
+            max_attempts: None,
+            allow_retry: true,
             position: 1,
             created_at: Utc::now(),
         };
@@ -182,6 +203,7 @@ mod tests {
                 instructor_id: Uuid::new_v4(),
                 start_date: None,
                 end_date: None,
+                passing_percentage: 70,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
             },

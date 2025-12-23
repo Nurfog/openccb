@@ -44,6 +44,7 @@ async fn main() {
         .route("/lessons/{id}", get(handlers::get_lesson_content))
         .route("/grades", post(handlers::submit_lesson_score))
         .route("/users/{user_id}/courses/{course_id}/grades", get(handlers::get_user_course_grades))
+        .route("/courses/{id}/analytics", get(handlers::get_course_analytics))
         .layer(cors)
         .with_state(pool);
 
