@@ -3,13 +3,14 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { lmsApi } from "@/lib/api";
-import { GraduationCap, Lock, Mail, User } from "lucide-react";
+import { GraduationCap, Lock, Mail, User, Building2 } from "lucide-react";
 
 export default function ExperienceLoginPage() {
     const router = useRouter();
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [organizationName, setOrganizationName] = useState("");
     const [fullName, setFullName] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -37,7 +38,8 @@ export default function ExperienceLoginPage() {
                 const response = await lmsApi.register({
                     email,
                     password,
-                    full_name: fullName
+                    full_name: fullName,
+                    organization_name: organizationName,
                 });
 
                 localStorage.setItem("experience_token", response.token);
@@ -99,6 +101,24 @@ export default function ExperienceLoginPage() {
                                         required
                                     />
                                 </div>
+                            </div>
+                        )}
+                        {!isLogin && (
+                            <div>
+                                <label className="block text-sm font-bold text-gray-300 mb-2">
+                                    Organization Name (Optional)
+                                </label>
+                                <div className="relative">
+                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        value={organizationName}
+                                        onChange={(e) => setOrganizationName(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        placeholder="Your School or Company"
+                                    />
+                                </div>
+                                <p className="text-xs text-gray-500 mt-2 pl-1">If left blank, an organization will be created based on your email domain.</p>
                             </div>
                         )}
 

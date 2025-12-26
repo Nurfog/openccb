@@ -5,6 +5,7 @@ edition.workspace = true
 authors.workspace = true
 
 [dependencies]
+axum = { workspace = true, features = ["macros"] }
 serde.workspace = true
 serde_json.workspace = true
 sqlx.workspace = true

@@ -1,239 +1,154 @@
-# OpenCCB - Open Comprehensive Course Backbone
+# OpenCCB: Open Comprehensive Course Backbone
 
-OpenCCB is a high-performance, microservices-based Learning Management System (LMS) and Content Management System (CMS) built with Rust (Edition 2024) and Next.js. The name stands for **Open Comprehensive Course Backbone**, representing the solid foundation for modern educational platforms.
+OpenCCB es una infraestructura de código abierto para plataformas de gestión de aprendizaje y contenido (LMS/CMS), construida con rendimiento, seguridad y escalabilidad en mente.
 
-## Architecture
+## 🚀 Estado del Proyecto
 
-- **CMS Service (Port 3001)**: Course management, content creation, grading policies, and administrative configurations.
-- **LMS Service (Port 3002)**: Student experience, course consumption, enrollment, and grade tracking.
-- **Shared Library**: Core models, authentication logic, and cross-service data contracts.
-- **Database**: PostgreSQL with separate databases for CMS and LMS.
-- **Studio (Frontend)**: Next.js application for instructors with block-based Activity Builder.
-- **Experience (Frontend)**: Next.js student portal with interactive lesson player and progress dashboard.
-- **Asset Storage**: Persistent local storage for native video/audio uploads.
+El sistema se encuentra en una fase madura (**Phase 5 completada**), con una API robusta para la gestión de cursos, autenticación segura y análisis de datos.
 
-## Getting Started
+Consulta el archivo [ROADMAP.md](./roadmap.md) para ver el desglose detallado de funcionalidades.
 
-### Prerequisites
-- Docker & Docker Compose
-- Rust (Edition 2024)
-- Node.js (v18+)
+## 🛠 Stack Tecnológico
 
-### Running with Docker
+- **Core**: Rust (Edition 2024)
+- **API Framework**: Axum
+- **Base de Datos**: PostgreSQL (con `sqlx`)
+- **Autenticación**: JWT + RBAC (Roles: Admin, Instructor, Student)
+- **Infraestructura**: Docker & Docker Compose
 
-```bash
-docker compose up -d --build
-```
+## 🔌 API Reference (CMS Service)
 
-### Access Points
-- **Studio (Instructors)**: http://localhost:3000
-- **Experience (Students)**: http://localhost:3003
-- **CMS API**: http://localhost:3001
-- **LMS API**: http://localhost:3002
+El servicio CMS expone una API RESTful en el puerto `3001`. A continuación se detallan los contratos de los endpoints principales.
 
-## Core Features
+### 🔐 Autenticación
 
-### 🎨 Content Creation & Management
-- **Block-Based Activity Builder**: Create rich lessons using text, media, and interactive assessment blocks
-- **Advanced Assessment Types**: 
-  - Multiple Choice & True/False
-  - Fill-in-the-Blanks
-  - Matching Pairs
-  - Ordering/Sequencing
-  - Short Answer (with configurable correct answers)
-- **Native File Uploads**: Drag-and-drop video/audio uploads with persistent storage
-- **Playback Constraints**: Limit media views per student
-- **Dynamic Content Reordering**: Organize blocks with move up/down controls
-- **Course Settings**: Configure passing percentages and grading criteria
+#### Registrar Usuario
+- **URL**: `POST /auth/register`
+- **Descripción**: Crea una nueva cuenta de usuario.
+- **Body (JSON)**:
+  ```json
+  {
+    "email": "string (email format)",
+    "password": "string (min 8 chars)",
+    "role": "string ('instructor' | 'student')",
+    "organization_name": "string (optional)"
+  }
+  ```
 
-### 📊 Advanced Grading System
-- **Holistic Grading Policy**: 
-  - Create weighted grading categories (e.g., Homework 30%, Exams 70%)
-  - Drop lowest N scores per category
-  - Automatic weighted grade calculation
-- **Configurable Assessment Policies**:
-  - Set maximum attempts per lesson (1-10 or unlimited)
-  - Enable/disable instant corrections and retries
-  - Atomic attempt tracking with enforcement
-- **Dynamic Passing Thresholds**:
-  - Instructors set custom passing percentages (0-100%)
-  - 5-tier performance visualization for students:
-    - **Reprobado (Red)**: 0% to P-1%
-    - **Rendimiento Bajo (Orange)**: P% to P+9%
-    - **Rendimiento Medio (Yellow)**: P+10% to P+15%
-    - **Buen Rendimiento (Green)**: P+16% to 90%
-    - **Buen Rendimiento (Green)**: P+16% to 90%
-    - **Excelente (Blue)**: 91%+
-- **Automated Certificate Generation**:
-  - HTML-based customizable certificate templates
-  - Automatic download button upon passing a course
-  - PDF generation for print/save
+#### Iniciar Sesión
+- **URL**: `POST /auth/login`
+- **Descripción**: Autentica un usuario y devuelve un token JWT.
+- **Body (JSON)**:
+  ```json
+  {
+    "email": "string",
+    "password": "string"
+  }
+  ```
 
-### 📈 Analytics & Insights
-- **Instructor Analytics Dashboard**:
-  - Total enrollments per course
-  - Overall average score across all assessments
-  - Per-lesson performance breakdown
-  - Automatic detection of "struggling lessons" (avg score < 70%)
-  - Visual performance charts
-- **Student Progress Dashboard**:
-  - Real-time weighted grade calculation
-  - Category-by-category breakdown
-  - Interactive performance bar with tier visualization
-  - Lesson completion tracking
+### 📚 Gestión de Cursos
 
-### 🔐 Authentication & Security
-- **JWT-Based Authentication**: Secure token-based auth across all services
-- **Role-Based Access Control (RBAC)**:
-  - **Administrators**: Full platform access, global analytics, all course management
-  - **Instructors**: Course creation, analytics for assigned courses only
-  - **Students**: Course enrollment, lesson consumption, progress tracking
-- **Service-to-Service Authorization**: Secure internal API calls with token validation
-- **Audit Logging**: All CMS mutations recorded for compliance and debugging
-- **Admin Audit Dashboard**: 
-  - Visual interface to view system logs
-  - Diff viewer for JSON changes
-  - Advanced filtering by user and action
+#### Listar Cursos
+- **URL**: `GET /courses`
+- **Descripción**: Obtiene la lista de cursos visibles para el usuario.
 
-### 🚀 Service Integration
-- **Automatic Sync**: One-click publish from CMS to LMS
-- **Cross-Service Data Flow**: Courses, modules, lessons, and grading policies synchronized
-- **Real-Time Updates**: Student progress immediately reflected in analytics
+#### Crear Curso
+- **URL**: `POST /courses`
+- **Descripción**: Inicializa un nuevo curso.
+- **Body (JSON)**:
+  ```json
+  {
+    "title": "string",
+    "description": "string (optional)",
+    "passing_percentage": "integer (0-100, default: 70)"
+  }
+  ```
 
-## API Documentation
+#### Actualizar Curso
+- **URL**: `PUT /courses/{id}`
+- **Descripción**: Modifica metadatos del curso.
+- **Body (JSON)**:
+  ```json
+  {
+    "title": "string",
+    "description": "string",
+    "passing_percentage": "integer",
+    "certificate_template": "string (HTML content)"
+  }
+  ```
 
-### CMS Service (`:3001`)
+#### Publicar Curso
+- **URL**: `POST /courses/{id}/publish`
+- **Descripción**: Sincroniza el curso y su contenido con el servicio LMS.
+- **Body**: `{}` (Vacío)
 
-#### Authentication
-```bash
-# Register (Instructor/Admin)
-curl -X POST http://localhost:3001/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email": "instructor@example.com", "password": "secure123", "full_name": "John Doe", "role": "instructor"}'
+### 📦 Contenido (Módulos y Lecciones)
 
-# Login
-curl -X POST http://localhost:3001/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "instructor@example.com", "password": "secure123"}'
-```
+#### Crear Módulo
+- **URL**: `POST /modules`
+- **Body (JSON)**:
+  ```json
+  {
+    "course_id": "uuid",
+    "title": "string",
+    "order_index": "integer"
+  }
+  ```
 
-#### Course Management
-```bash
-# Create Course
-curl -X POST http://localhost:3001/courses \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Advanced Rust 2024"}'
+#### Crear Lección
+- **URL**: `POST /lessons`
+- **Body (JSON)**:
+  ```json
+  {
+    "module_id": "uuid",
+    "title": "string",
+    "content_type": "string ('video' | 'article' | 'quiz')",
+    "max_attempts": "integer (optional, null = unlimited)",
+    "allow_retry": "boolean (default: true)"
+  }
+  ```
 
-# Update Course Settings
-curl -X PUT http://localhost:3001/courses/{id} \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -d '{"passing_percentage": 75}'
+#### Actualizar Lección
+- **URL**: `PUT /lessons/{id}`
+- **Body (JSON)**:
+  ```json
+  {
+    "title": "string",
+    "content_blocks": "array (JSON objects)",
+    "max_attempts": "integer",
+    "allow_retry": "boolean"
+  }
+  ```
 
-# Publish Course to LMS
-curl -X POST http://localhost:3001/courses/{id}/publish \
-  -H "Authorization: Bearer YOUR_TOKEN"
+#### Transcripción AI (Simulado)
+- **URL**: `POST /lessons/{id}/transcribe`
+- **Descripción**: Inicia el proceso de generación de subtítulos/resumen.
+- **Body**: `{}` (Vacío)
 
-# Get Course Analytics (RBAC enforced)
-curl http://localhost:3001/courses/{id}/analytics \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
+### 📂 Sistema & Assets
 
-### LMS Service (`:3002`)
+#### Subir Archivo
+- **URL**: `POST /assets/upload`
+- **Tipo**: `multipart/form-data`
+- **Campo**: `file` (Binary)
 
-#### Student Operations
-```bash
-# Register Student
-curl -X POST http://localhost:3002/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email": "student@example.com", "password": "secure123", "full_name": "Jane Smith"}'
+#### Logs de Auditoría
+- **URL**: `GET /audit-logs`
+- **Query Params**: `?page=1&limit=50`
 
-# Get Course Catalog
-curl http://localhost:3002/catalog
+## 📦 Configuración y Ejecución
 
-# Enroll in Course
-curl -X POST http://localhost:3002/enroll \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": "USER_UUID", "course_id": "COURSE_UUID"}'
+1. **Variables de Entorno**:
+   Asegúrate de tener configurado `DATABASE_URL` en tu archivo `.env`.
 
-# Submit Lesson Score
-curl -X POST http://localhost:3002/grades \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": "USER_UUID", "lesson_id": "LESSON_UUID", "score": 0.85}'
+2. **Base de Datos**:
+   El sistema utiliza migraciones automáticas de `sqlx` al iniciar.
 
-# Get Student Grades
-curl http://localhost:3002/users/{user_id}/courses/{course_id}/grades
-```
-
-## Technology Stack
-
-### Backend
-- **Rust 2024**: High-performance, memory-safe backend services
-- **Axum 0.8**: Modern async web framework
-- **SQLx**: Compile-time verified SQL queries
-- **PostgreSQL**: Robust relational database
-- **JWT**: Secure authentication tokens
-
-### Frontend
-- **Next.js 14**: React framework with App Router
-- **TypeScript**: Type-safe frontend development
-- **Tailwind CSS**: Utility-first styling
-- **Lucide React**: Modern icon library
-
-### DevOps
-- **Docker**: Containerized deployment
-- **Docker Compose**: Multi-service orchestration
-
-## Project Structure
-
-```
-openccb/
-├── services/
-│   ├── cms-service/          # Course management backend
-│   │   ├── src/
-│   │   │   ├── handlers.rs   # API handlers
-│   │   │   └── main.rs       # Service entry point
-│   │   └── migrations/       # Database migrations
-│   └── lms-service/          # Learning management backend
-│       ├── src/
-│       │   ├── handlers.rs   # API handlers
-│       │   └── main.rs       # Service entry point
-│       └── migrations/       # Database migrations
-├── shared/
-│   └── common/               # Shared models and auth
-│       └── src/
-│           ├── models.rs     # Data models
-│           └── auth.rs       # JWT utilities
-├── web/
-│   ├── studio/               # Instructor frontend
-│   │   └── src/
-│   │       ├── app/          # Next.js pages
-│   │       ├── components/   # React components
-│   │       └── lib/          # API client
-│   └── experience/           # Student frontend
-│       └── src/
-│           ├── app/          # Next.js pages
-│           ├── components/   # React components
-│           └── lib/          # API client
-└── docker-compose.yml        # Service orchestration
-```
-
-## Recent Enhancements
-
-### December 2024
-- ✅ **Holistic Grading System**: Weighted categories, drop policies, and automatic calculation
-- ✅ **Attempt Tracking**: Configurable max attempts and retry policies per lesson
-- ✅ **Instructor Analytics**: Course-level insights with RBAC enforcement
-- ✅ **Dynamic Passing Thresholds**: Customizable pass marks with 5-tier performance visualization
-- ✅ **Role-Based Access Control**: Admin, Instructor, and Student roles with granular permissions
-- ✅ **Enhanced Progress Dashboard**: Real-time weighted grades and visual performance bars
-- ✅ **Certificate System**: Custom HTML templates and automated generation
-- ✅ **Quality Assurance**: Automated End-to-End (E2E) testing pipeline with Playwright
-
-## Contributing
-
-Contributions are welcome! Please ensure all tests pass and follow the existing code style.
-
-## License
-
-MIT License - see LICENSE file for details.
+3. **Ejecutar Servicio**:
+   ```bash
+   cargo run --bin cms-service
+   ```
+   O mediante Docker:
+   ```bash
+   docker-compose up --build
+   ```

@@ -3,48 +3,65 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 10, 10, 20;
+  --foreground-rgb: 229, 231, 235;
+  /* text-gray-200 */
+  --background-start-rgb: 15, 17, 21;
+  /* #0f1115 */
   --background-end-rgb: 0, 0, 0;
 
   --accent-primary: #3b82f6;
-  --accent-secondary: #8b5cf6;
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  /* blue-500 */
+  --accent-secondary: #6366f1;
+  /* indigo-500 */
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: blur(16px);
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-  min-height: 100vh;
+  background: var(--background-start-rgb);
 }
 
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
-  border-radius: 12px;
 }
 
-.gradient-text {
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.glass-card {
+  @apply glass rounded-2xl p-6;
 }
 
 .btn-premium {
-  @apply relative px-6 py-2 rounded-full font-medium transition-all duration-300;
+  @apply relative px-6 py-2.5 rounded-xl font-bold transition-all duration-300;
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
 }
 
 .btn-premium:hover {
-  @apply scale-105;
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+  @apply scale-[1.02] -translate-y-0.5 shadow-blue-500/40;
+}
+
+.btn-premium:active {
+  @apply scale-95;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }

@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Course {
     pub id: Uuid,
+    pub organization_id: Uuid,
     pub title: String,
     pub description: Option<String>,
     pub instructor_id: Uuid,
@@ -68,6 +69,7 @@ pub struct UserGrade {
 pub struct AuditLog {
     pub id: Uuid,
     pub user_id: Uuid,
+    pub organization_id: Option<Uuid>,
     pub action: String,
     pub entity_type: String, 
     pub entity_id: Uuid,
@@ -91,6 +93,7 @@ pub struct AuditLogResponse {
 pub struct Enrollment {
     pub id: Uuid,
     pub user_id: Uuid,
+    pub organization_id: Uuid,
     pub course_id: Uuid,
     pub enroled_at: DateTime<Utc>,
 }
@@ -98,6 +101,7 @@ pub struct Enrollment {
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Asset {
     pub id: Uuid,
+    pub organization_id: Uuid,
     pub filename: String,
     pub storage_path: String,
     pub mimetype: String,
@@ -108,6 +112,7 @@ pub struct Asset {
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct User {
     pub id: Uuid,
+    pub organization_id: Uuid,
     pub email: String,
     pub password_hash: String,
     pub full_name: String,

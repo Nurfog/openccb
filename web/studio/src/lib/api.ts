@@ -1,27 +1,15 @@
-export const API_BASE_URL = "http://localhost:3001";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_CMS_API_URL || "http://localhost:3001";
 
 export interface Course {
     id: string;
     title: string;
-    description: string;
+    description?: string;
     instructor_id: string;
     passing_percentage: number;
     certificate_template?: string;
     created_at: string;
-}
-
-export interface CourseAnalytics {
-    course_id: string;
-    total_enrollments: number;
-    average_score: number;
-    lessons: LessonAnalytics[];
-}
-
-export interface LessonAnalytics {
-    lesson_id: string;
-    lesson_title: string;
-    average_score: number;
-    submission_count: number;
+    updated_at: string;
+    modules?: Module[];
 }
 
 export interface Module {
@@ -29,7 +17,6 @@ export interface Module {
     course_id: string;
     title: string;
     position: number;
-    created_at: string;
     lessons: Lesson[];
 }
 
@@ -40,19 +27,9 @@ export interface Block {
     content?: string;
     url?: string;
     media_type?: 'video' | 'audio';
-    config?: {
-        maxPlays?: number;
-        currentPlays?: number;
-        allowDownload?: boolean;
-    };
+    config?: any;
     quiz_data?: {
-        questions: {
-            id: string;
-            question: string;
-            options: string[];
-            correct: number[];
-            type?: 'multiple-choice' | 'true-false' | 'multiple-select';
-        }[];
+        questions: any[];
     };
     pairs?: { left: string; right: string }[];
     items?: string[];
@@ -65,31 +42,16 @@ export interface Lesson {
     module_id: string;
     title: string;
     content_type: string;
-    content_url: string | null;
-    transcription?: {
-        en?: string;
-        es?: string;
-        cues?: { start: number; end: number; text: string }[];
-    } | null;
     metadata?: {
-        blocks?: Block[];
-    } | null;
+        blocks: Block[];
+    };
     is_graded: boolean;
     grading_category_id: string | null;
     max_attempts: number | null;
     allow_retry: boolean;
-    position: number;
-    created_at: string;
+    transcription?: any;
 }
 
-export interface GradingCategory {
-    id: string;
-    course_id: string;
-    name: string;
-    weight: number;
-    drop_count: number;
-    created_at: string;
-}
 export interface User {
     id: string;
     email: string;
@@ -106,200 +68,114 @@ export interface AuthPayload {
     email: string;
     password?: string;
     full_name?: string;
-    role?: string;
+    role?: 'instructor' | 'admin';
+    organization_name?: string;
+}
+
+export interface UploadResponse {
+    id: string;
+    filename: string;
+    url: string;
+}
+
+export interface GradingCategory {
+    id: string;
+    course_id: string;
+    name: string;
+    weight: number;
+    drop_count: number;
 }
 
 export interface AuditLog {
     id: string;
     user_id: string;
-    user_full_name?: string;
+    user_full_name: string | null;
     action: string;
     entity_type: string;
     entity_id: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     changes: any;
     created_at: string;
 }
 
+export interface CourseAnalytics {
+    course_id: string;
+    total_enrollments: number;
+    average_score: number;
+    lessons: {
+        lesson_id: string;
+        lesson_title: string;
+        average_score: number;
+        submission_count: number;
+    }[];
+}
+
+const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('studio_token') : null;
+
+const apiFetch = (url: string, options: RequestInit = {}) => {
+    const token = getToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+
+    return fetch(`${API_BASE_URL}${url}`, { ...options, headers }).then(res => {
+        if (!res.ok) {
+            return res.json().then(err => Promise.reject(err.message || 'An error occurred'));
+        }
+        // Handle no-content responses
+        if (res.status === 204) return;
+        return res.json();
+    });
+};
+
 export const cmsApi = {
-    async getCourses(): Promise<Course[]> {
-        const response = await fetch(`${API_BASE_URL}/courses`);
-        if (!response.ok) throw new Error('Failed to fetch courses');
-        return response.json();
-    },
+    // Auth
+    register: (payload: AuthPayload): Promise<AuthResponse> => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+    login: (payload: AuthPayload): Promise<AuthResponse> => apiFetch('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
 
-    async createCourse(title: string): Promise<Course> {
-        const response = await fetch(`${API_BASE_URL}/courses`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title }),
-        });
-        if (!response.ok) throw new Error('Failed to create course');
-        return response.json();
-    },
+    // Courses
+    getCourses: (): Promise<Course[]> => apiFetch('/courses'),
+    createCourse: (title: string): Promise<Course> => apiFetch('/courses', { method: 'POST', body: JSON.stringify({ title }) }),
+    getCourse: (id: string): Promise<Course> => apiFetch(`/courses/${id}`),
+    getCourseWithFullOutline: (id: string): Promise<Course> => apiFetch(`/courses/${id}/outline`),
+    updateCourse: (id: string, payload: Partial<Course>): Promise<Course> => apiFetch(`/courses/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    publishCourse: (id: string): Promise<void> => apiFetch(`/courses/${id}/publish`, { method: 'POST' }),
 
-    async getCourseWithFullOutline(courseId: string): Promise<Course & { modules: Module[] }> {
-        const course = await fetch(`${API_BASE_URL}/courses/${courseId}`).then(res => res.json());
-        const modules = await fetch(`${API_BASE_URL}/modules?course_id=${courseId}`).then(res => res.json());
+    // Modules & Lessons
+    createModule: (course_id: string, title: string, position: number): Promise<Module> => apiFetch('/modules', { method: 'POST', body: JSON.stringify({ course_id, title, position }) }),
+    createLesson: (module_id: string, title: string, content_type: string, position: number): Promise<Lesson> => apiFetch('/lessons', { method: 'POST', body: JSON.stringify({ module_id, title, content_type, position }) }),
+    getLesson: (id: string): Promise<Lesson> => apiFetch(`/lessons/${id}`),
+    updateLesson: (id: string, payload: Partial<Lesson>): Promise<Lesson> => apiFetch(`/lessons/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
 
-        const modulesWithLessons = await Promise.all(modules.map(async (m: Module) => {
-            const lessons = await fetch(`${API_BASE_URL}/lessons?module_id=${m.id}`).then(res => res.json());
-            return { ...m, lessons };
-        }));
+    // Grading
+    getGradingCategories: (courseId: string): Promise<GradingCategory[]> => apiFetch(`/courses/${courseId}/grading`),
+    createGradingCategory: (course_id: string, name: string, weight: number): Promise<GradingCategory> => apiFetch('/grading', { method: 'POST', body: JSON.stringify({ course_id, name, weight, drop_count: 0 }) }),
+    deleteGradingCategory: (id: string): Promise<void> => apiFetch(`/grading/${id}`, { method: 'DELETE' }),
 
-        return { ...course, modules: modulesWithLessons };
-    },
+    // Admin & Analytics
+    getAuditLogs: (): Promise<AuditLog[]> => apiFetch('/audit-logs'),
+    getCourseAnalytics: (id: string): Promise<CourseAnalytics> => apiFetch(`/courses/${id}/analytics`),
 
-    async createModule(courseId: string, title: string, position: number): Promise<Module> {
-        const response = await fetch(`${API_BASE_URL}/modules`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ course_id: courseId, title, position }),
-        });
-        if (!response.ok) throw new Error('Failed to create module');
-        return response.json();
-    },
-
-    async createLesson(moduleId: string, title: string, contentType: string, position: number): Promise<Lesson> {
-        const response = await fetch(`${API_BASE_URL}/lessons`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ module_id: moduleId, title, content_type: contentType, position }),
-        });
-        if (!response.ok) throw new Error('Failed to create lesson');
-        return response.json();
-    },
-
-    async transcribeLesson(lessonId: string): Promise<Lesson> {
-        const response = await fetch(`${API_BASE_URL}/lessons/${lessonId}/transcribe`, {
-            method: 'POST'
-        });
-        if (!response.ok) throw new Error('Failed to transcribe lesson');
-        return response.json();
-    },
-
-    async updateLesson(lessonId: string, updates: Partial<Lesson>): Promise<Lesson> {
-        const response = await fetch(`${API_BASE_URL}/lessons/${lessonId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updates),
-        });
-        if (!response.ok) throw new Error('Failed to update lesson');
-        return response.json();
-    },
-
-    async getLesson(lessonId: string): Promise<Lesson> {
-        const response = await fetch(`${API_BASE_URL}/lessons/${lessonId}`);
-        if (!response.ok) throw new Error('Failed to fetch lesson');
-        return response.json();
-    },
-
-    async getGradingCategories(courseId: string): Promise<GradingCategory[]> {
-        const response = await fetch(`${API_BASE_URL}/courses/${courseId}/grading`);
-        if (!response.ok) throw new Error('Failed to fetch grading categories');
-        return response.json();
-    },
-
-    async createGradingCategory(courseId: string, name: string, weight: number): Promise<GradingCategory> {
-        const response = await fetch(`${API_BASE_URL}/grading`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ course_id: courseId, name, weight, drop_count: 0 }),
-        });
-        if (!response.ok) throw new Error('Failed to create grading category');
-        return response.json();
-    },
-
-    async deleteGradingCategory(id: string): Promise<void> {
-        const response = await fetch(`${API_BASE_URL}/grading/${id}`, {
-            method: 'DELETE'
-        });
-        if (!response.ok) throw new Error('Failed to delete grading category');
-    },
-
-    async uploadAsset(file: File): Promise<{ id: string; filename: string; url: string }> {
+    // Assets
+    uploadAsset: (file: File): Promise<UploadResponse> => {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch(`${API_BASE_URL}/assets/upload`, {
+        const token = getToken();
+        const headers: Record<string, string> = {
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+
+        // Note: We don't set 'Content-Type' for multipart/form-data.
+        // The browser will set it automatically with the correct boundary.
+        return fetch(`${API_BASE_URL}/assets/upload`, {
             method: 'POST',
+            headers,
             body: formData,
+        }).then(res => {
+            if (!res.ok) return res.json().then(err => Promise.reject(new Error(err.message || 'Upload failed')));
+            return res.json();
         });
-
-        if (!response.ok) throw new Error('Upload failed');
-        return response.json();
     },
-
-    async publishCourse(courseId: string): Promise<void> {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('studio_token') : null;
-        const response = await fetch(`${API_BASE_URL}/courses/${courseId}/publish`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        if (!response.ok) throw new Error('Failed to publish course');
-    },
-
-    async register(payload: AuthPayload): Promise<AuthResponse> {
-        const response = await fetch(`${API_BASE_URL}/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if (!response.ok) throw await response.json();
-        return response.json();
-    },
-
-    async login(payload: AuthPayload): Promise<AuthResponse> {
-        const response = await fetch(`${API_BASE_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if (!response.ok) throw await response.json();
-        return response.json();
-    },
-
-    async getCourseAnalytics(courseId: string): Promise<CourseAnalytics> {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('studio_token') : null;
-        const response = await fetch(`${API_BASE_URL}/courses/${courseId}/analytics`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        if (!response.ok) throw new Error('Failed to fetch course analytics');
-        return response.json();
-    },
-
-    async getCourse(id: string): Promise<Course> {
-        const response = await fetch(`${API_BASE_URL}/courses/${id}`);
-        if (!response.ok) throw new Error('Failed to fetch course');
-        return response.json();
-    },
-
-    async updateCourse(id: string, data: Partial<Course>): Promise<Course> {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('studio_token') : null;
-        const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(data)
-        });
-        if (!response.ok) throw new Error('Failed to update course');
-        return response.json();
-    },
-
-    async getAuditLogs(page: number = 1, limit: number = 50): Promise<AuditLog[]> {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('studio_token') : null;
-        const response = await fetch(`${API_BASE_URL}/audit-logs?page=${page}&limit=${limit}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        if (!response.ok) throw new Error('Failed to fetch audit logs');
-        return response.json();
-    }
 };

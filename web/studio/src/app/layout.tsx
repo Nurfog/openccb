@@ -1,14 +1,40 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/context/AuthContext";
+import Link from "next/link";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { BookOpen, LogOut, ShieldAlert } from "lucide-react";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "OpenCCB Studio | modern Course Management",
-  description: "Advanced LMS Content Management System inspired by Open edX",
+  title: "OpenCCB | Studio",
+  description: "Create and manage high-fidelity educational content.",
 };
+
+function AuthHeader() {
+  "use client";
+  const { user, logout } = useAuth();
+  return (
+    <div className="flex items-center gap-4">
+      {user?.role === 'admin' && (
+        <Link href="/admin/audit" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors flex items-center gap-2">
+          <ShieldAlert size={16} /> Audit
+        </Link>
+      )}
+      {user && (
+        <>
+          <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-xs">
+            {user.full_name.charAt(0)}
+          </div>
+          <button onClick={logout} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+            <LogOut size={16} />
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function RootLayout({
   children,
@@ -17,24 +43,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.className} bg-[#050505] text-[#e5e5e5] min-h-screen`}>
+      <body className={`${inter.className} bg-gray-950 text-gray-200 min-h-screen flex flex-col`}>
         <AuthProvider>
-          <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.15),transparent_50%)] pointer-events-none" />
-          <nav className="fixed top-0 w-full z-50 glass border-b border-white/10 bg-black/20">
-            <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-              <h1 className="text-xl font-bold tracking-tight">
-                Open<span className="gradient-text">CCB</span> Studio
-              </h1>
-              <div className="flex gap-4">
-                <button className="text-sm font-medium hover:text-blue-400 transition-colors">Courses</button>
-                <button className="text-sm font-medium hover:text-blue-400 transition-colors">Settings</button>
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 border border-white/20" />
+          <header className="h-20 glass sticky top-0 z-50 px-8 flex items-center justify-between border-b border-white/5 backdrop-blur-xl bg-black/40">
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
+                <BookOpen size={20} />
               </div>
-            </div>
-          </nav>
-          <main className="pt-24 pb-12 px-4 max-w-7xl mx-auto">
-            {children}
-          </main>
+              <span className="font-black text-2xl tracking-tighter text-white">STUDIO</span>
+            </Link>
+            <AuthHeader />
+          </header>
+          <main className="flex-1">{children}</main>
         </AuthProvider>
       </body>
     </html>

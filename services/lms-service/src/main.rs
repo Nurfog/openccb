@@ -1,8 +1,9 @@
 mod handlers;
 
 use axum::{
-    routing::{get, post},
+    routing::{get, post, put},
     Router,
+    middleware,
 };
 use tower_http::cors::{Any, CorsLayer};
 use sqlx::postgres::PgPoolOptions;
@@ -33,23 +34,27 @@ async fn main() {
         .allow_methods(Any)
         .allow_headers(Any);
 
-    let app = Router::new()
-        .route("/catalog", get(handlers::get_course_catalog))
+    let protected_routes = Router::new()
         .route("/enroll", post(handlers::enroll_user))
-        .route("/ingest", post(handlers::ingest_course))
-        .route("/auth/register", post(handlers::register))
-        .route("/auth/login", post(handlers::login))
-        .route("/enrollments/{id}", get(handlers::get_user_enrollments))
+        .route("/enrollments/:id", get(handlers::get_user_enrollments))
         .route("/courses/{id}/outline", get(handlers::get_course_outline))
-        .route("/lessons/{id}", get(handlers::get_lesson_content))
+        .route("/lessons/:id", get(handlers::get_lesson_content))
         .route("/grades", post(handlers::submit_lesson_score))
         .route("/users/{user_id}/courses/{course_id}/grades", get(handlers::get_user_course_grades))
         .route("/courses/{id}/analytics", get(handlers::get_course_analytics))
+        .route_layer(middleware::from_fn(common::middleware::org_extractor_middleware));
+
+    let public_routes = Router::new()
+        .route("/catalog", get(handlers::get_course_catalog))
+        .route("/ingest", post(handlers::ingest_course))
+        .route("/auth/register", post(handlers::register))
+        .route("/auth/login", post(handlers::login))
+        .merge(protected_routes)
         .layer(cors)
         .with_state(pool);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3002));
     tracing::info!("LMS Service listening on {}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, public_routes).await.unwrap();
 }

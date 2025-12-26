@@ -3,23 +3,24 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use common::models::{Course, Module, Lesson, PublishedCourse, PublishedModule, User, UserResponse, AuthResponse, CourseAnalytics};
-use common::auth::{create_jwt, Claims};
+use common::models::{Course, Module, Lesson, PublishedCourse, PublishedModule, User, UserResponse, AuthResponse, CourseAnalytics, Organization};
+use common::auth::create_jwt;
+use common::middleware::Org;
 use sqlx::PgPool;
 use uuid::Uuid;
 use serde_json::json;
 use serde::{Deserialize, Serialize};
 use bcrypt::{hash, verify, DEFAULT_COST};
-use axum::http::HeaderMap;
-use jsonwebtoken::{decode, DecodingKey, Validation};
 
 pub async fn publish_course(
+    Org(org_ctx): Org,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, StatusCode> {
     // 1. Fetch Course
-    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1")
+    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
         .bind(id)
+        .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
         .map_err(|_| StatusCode::NOT_FOUND)?;
@@ -103,17 +104,20 @@ pub struct GradingPayload {
 }
 
 pub async fn create_course(
+    Org(org_ctx): Org,
+    claims: common::auth::Claims,
     State(pool): State<PgPool>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Course>, StatusCode> {
     let title = payload.get("title").and_then(|t| t.as_str()).ok_or(StatusCode::BAD_REQUEST)?;
-    let instructor_id = Uuid::new_v4(); 
+    let instructor_id = claims.sub;
 
     let course = sqlx::query_as::<_, Course>(
-        "INSERT INTO courses (title, instructor_id) VALUES ($1, $2) RETURNING *"
+        "INSERT INTO courses (title, instructor_id, organization_id) VALUES ($1, $2, $3) RETURNING *"
     )
     .bind(title)
     .bind(instructor_id)
+    .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -123,9 +127,11 @@ pub async fn create_course(
     Ok(Json(course))
 }
 pub async fn get_courses(
+    Org(org_ctx): Org,
     State(pool): State<PgPool>,
 ) -> Result<Json<Vec<Course>>, StatusCode> {
-    let courses = sqlx::query_as::<_, Course>("SELECT * FROM courses")
+    let courses = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE organization_id = $1")
+        .bind(org_ctx.id)
         .fetch_all(&pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -134,27 +140,16 @@ pub async fn get_courses(
 }
 
 pub async fn update_course(
+    Org(org_ctx): Org,
+    claims: common::auth::Claims,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
-    headers: HeaderMap,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Course>, (StatusCode, String)> {
-    // 1. RBAC check (simplified: must be owner or admin)
-    let auth_header = headers.get("Authorization")
-        .and_then(|h| h.to_str().ok())
-        .ok_or((StatusCode::UNAUTHORIZED, "Missing Authorization header".into()))?;
-    
-    let token = &auth_header[7..];
-    let token_data = decode::<Claims>(
-        token,
-        &DecodingKey::from_secret("secret".as_ref()),
-        &Validation::default(),
-    ).map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid token".into()))?;
-
-    let claims = token_data.claims;
-
-    let existing = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1")
+    // 1. Fetch course and check ownership/role
+    let existing = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
         .bind(id)
+        .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
         .map_err(|_| (StatusCode::NOT_FOUND, "Course not found".into()))?;
@@ -177,13 +172,14 @@ pub async fn update_course(
         .or(existing.certificate_template);
 
     let course = sqlx::query_as::<_, Course>(
-        "UPDATE courses SET title = $1, description = $2, passing_percentage = $3, certificate_template = $4, updated_at = NOW() WHERE id = $5 RETURNING *"
+        "UPDATE courses SET title = $1, description = $2, passing_percentage = $3, certificate_template = $4, updated_at = NOW() WHERE id = $5 AND organization_id = $6 RETURNING *"
     )
     .bind(title)
     .bind(description)
     .bind(passing_percentage)
     .bind(certificate_template)
     .bind(id)
+    .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to update course: {}", e)))?;
@@ -192,6 +188,7 @@ pub async fn update_course(
 }
 
 pub async fn create_module(
+    claims: common::auth::Claims,
     State(pool): State<PgPool>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Module>, StatusCode> {
@@ -210,12 +207,13 @@ pub async fn create_module(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    log_action(&pool, Uuid::new_v4(), "CREATE", "Module", module.id, json!({ "title": title, "course_id": course_id })).await;
+    log_action(&pool, claims.sub, "CREATE", "Module", module.id, json!({ "title": title, "course_id": course_id })).await;
 
     Ok(Json(module))
 }
 
 pub async fn create_lesson(
+    claims: common::auth::Claims,
     State(pool): State<PgPool>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Lesson>, StatusCode> {
@@ -252,12 +250,13 @@ pub async fn create_lesson(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    log_action(&pool, Uuid::new_v4(), "CREATE", "Lesson", lesson.id, json!({ "title": title, "module_id": module_id })).await;
+    log_action(&pool, claims.sub, "CREATE", "Lesson", lesson.id, json!({ "title": title, "module_id": module_id })).await;
 
     Ok(Json(lesson))
 }
 
 pub async fn process_transcription(
+    claims: common::auth::Claims,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Lesson>, StatusCode> {
@@ -288,17 +287,20 @@ pub async fn process_transcription(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    log_action(&pool, Uuid::new_v4(), "TRANSCRIPTION_PROCESSED", "Lesson", id, json!({})).await;
+    log_action(&pool, claims.sub, "TRANSCRIPTION_PROCESSED", "Lesson", id, json!({})).await;
 
     Ok(Json(updated_lesson))
 }
 
 pub async fn get_lesson(
+    Org(org_ctx): Org,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Lesson>, StatusCode> {
-    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1")
+    // Join to ensure lesson belongs to the organization
+    let lesson = sqlx::query_as::<_, Lesson>("SELECT l.* FROM lessons l JOIN modules m ON l.module_id = m.id JOIN courses c ON m.course_id = c.id WHERE l.id = $1 AND c.organization_id = $2")
         .bind(id)
+        .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
         .map_err(|_| StatusCode::NOT_FOUND)?;
@@ -307,6 +309,7 @@ pub async fn get_lesson(
 }
 
 pub async fn update_lesson(
+    claims: common::auth::Claims,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
     Json(payload): Json<serde_json::Value>,
@@ -360,20 +363,22 @@ pub async fn update_lesson(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    log_action(&pool, Uuid::new_v4(), "UPDATE", "Lesson", id, json!(payload)).await;
+    log_action(&pool, claims.sub, "UPDATE", "Lesson", id, json!(payload)).await;
 
     Ok(Json(updated_lesson))
 }
 
 // Grading Policies
 pub async fn get_grading_categories(
+    Org(org_ctx): Org,
     State(pool): State<PgPool>,
     Path(course_id): Path<Uuid>,
 ) -> Result<Json<Vec<common::models::GradingCategory>>, (StatusCode, String)> {
     let categories = sqlx::query_as::<_, common::models::GradingCategory>(
-        "SELECT * FROM grading_categories WHERE course_id = $1 ORDER BY created_at"
+        "SELECT * FROM grading_categories WHERE course_id = $1 AND course_id IN (SELECT id FROM courses WHERE organization_id = $2) ORDER BY created_at"
     )
     .bind(course_id)
+    .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -435,11 +440,13 @@ async fn log_action(
 }
 
 pub async fn get_course(
+    Org(org_ctx): Org,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Course>, StatusCode> {
-    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1")
+    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
         .bind(id)
+        .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
         .map_err(|_| StatusCode::NOT_FOUND)?;
@@ -448,18 +455,21 @@ pub async fn get_course(
 }
 
 pub async fn get_modules(
+    Org(org_ctx): Org,
     State(pool): State<PgPool>,
     Query(query): Query<ModuleQuery>,
 ) -> Result<Json<Vec<Module>>, StatusCode> {
     let modules = match query.course_id {
         Some(course_id) => {
-            sqlx::query_as::<_, Module>("SELECT * FROM modules WHERE course_id = $1 ORDER BY position")
+            sqlx::query_as::<_, Module>("SELECT * FROM modules WHERE course_id = $1 AND course_id IN (SELECT id FROM courses WHERE organization_id = $2) ORDER BY position")
                 .bind(course_id)
+                .bind(org_ctx.id)
                 .fetch_all(&pool)
                 .await
         }
         None => {
-            sqlx::query_as::<_, Module>("SELECT * FROM modules ORDER BY position")
+            sqlx::query_as::<_, Module>("SELECT m.* FROM modules m JOIN courses c ON m.course_id = c.id WHERE c.organization_id = $1 ORDER BY m.position")
+                .bind(org_ctx.id)
                 .fetch_all(&pool)
                 .await
         }
@@ -470,18 +480,21 @@ pub async fn get_modules(
 }
 
 pub async fn get_lessons(
+    Org(org_ctx): Org,
     State(pool): State<PgPool>,
     Query(query): Query<LessonQuery>,
 ) -> Result<Json<Vec<Lesson>>, StatusCode> {
     let lessons = match query.module_id {
         Some(module_id) => {
-            sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE module_id = $1 ORDER BY position")
+            sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE module_id = $1 AND module_id IN (SELECT m.id FROM modules m JOIN courses c ON m.course_id = c.id WHERE c.organization_id = $2) ORDER BY position")
                 .bind(module_id)
+                .bind(org_ctx.id)
                 .fetch_all(&pool)
                 .await
         }
         None => {
-            sqlx::query_as::<_, Lesson>("SELECT * FROM lessons ORDER BY position")
+            sqlx::query_as::<_, Lesson>("SELECT l.* FROM lessons l JOIN modules m ON l.module_id = m.id JOIN courses c ON m.course_id = c.id WHERE c.organization_id = $1 ORDER BY l.position")
+                .bind(org_ctx.id)
                 .fetch_all(&pool)
                 .await
         }
@@ -499,6 +512,7 @@ pub struct UploadResponse {
 }
 
 pub async fn upload_asset(
+    Org(org_ctx): Org,
     State(pool): State<PgPool>,
     mut multipart: axum::extract::Multipart,
 ) -> Result<Json<UploadResponse>, (StatusCode, String)> {
@@ -538,13 +552,14 @@ pub async fn upload_asset(
     let size_bytes = tokio::fs::metadata(&storage_path).await.map(|m| m.len() as i64).unwrap_or(0);
     
     sqlx::query(
-        "INSERT INTO assets (id, filename, storage_path, mimetype, size_bytes) VALUES ($1, $2, $3, $4, $5)"
+        "INSERT INTO assets (id, filename, storage_path, mimetype, size_bytes, organization_id) VALUES ($1, $2, $3, $4, $5, $6)"
     )
     .bind(asset_id)
     .bind(&filename)
     .bind(storage_path)
     .bind(mimetype)
     .bind(size_bytes)
+    .bind(org_ctx.id)
     .execute(&pool)
     .await
     .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -564,6 +579,7 @@ pub struct AuthPayload {
     pub password: String,
     pub full_name: Option<String>,
     pub role: Option<String>,
+    pub organization_name: Option<String>,
 }
 
 pub async fn register(
@@ -576,18 +592,37 @@ pub async fn register(
     let full_name = payload.full_name.unwrap_or_else(|| payload.email.split('@').next().unwrap_or("User").to_string());
     let role = payload.role.unwrap_or_else(|| "instructor".to_string());
 
+    // Find or create organization based on email domain
+    let org_name = payload.organization_name.unwrap_or_else(|| {
+        let parts: Vec<&str> = payload.email.split('@').collect();
+        parts.get(1).unwrap_or(&"default.com").to_string()
+    });
+
+    let mut tx = pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let organization = sqlx::query_as::<_, Organization>(
+        "INSERT INTO organizations (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *"
+    )
+    .bind(&org_name)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to find or create organization: {}", e)))?;
+
     let user = sqlx::query_as::<_, User>(
-        "INSERT INTO users (email, password_hash, full_name, role) VALUES ($1, $2, $3, $4) RETURNING *"
+        "INSERT INTO users (email, password_hash, full_name, role, organization_id) VALUES ($1, $2, $3, $4, $5) RETURNING *"
     )
     .bind(&payload.email)
     .bind(password_hash)
     .bind(full_name)
     .bind(&role)
-    .fetch_one(&pool)
+    .bind(organization.id)
+    .fetch_one(&mut *tx)
     .await
     .map_err(|e| (StatusCode::CONFLICT, format!("User already exists or DB error: {}", e)))?;
 
-    let token = create_jwt(user.id, &user.role)
+    tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let token = create_jwt(user.id, user.organization_id, &user.role)
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "JWT generation failed".into()))?;
 
     Ok(Json(AuthResponse {
@@ -615,7 +650,7 @@ pub async fn login(
         return Err((StatusCode::UNAUTHORIZED, "Invalid credentials".into()));
     }
 
-    let token = create_jwt(user.id, &user.role)
+    let token = create_jwt(user.id, user.organization_id, &user.role)
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "JWT generation failed".into()))?;
 
     Ok(Json(AuthResponse {
@@ -629,39 +664,20 @@ pub async fn login(
     }))
 }
 pub async fn get_course_analytics(
+    Org(org_ctx): Org,
+    claims: common::auth::Claims,
     State(pool): State<PgPool>,
-    headers: HeaderMap,
     Path(id): Path<Uuid>,
 ) -> Result<Json<CourseAnalytics>, (StatusCode, String)> {
-    // 1. Extract and verify token
-    let auth_header = headers.get("Authorization")
-        .and_then(|h| h.to_str().ok())
-        .ok_or((StatusCode::UNAUTHORIZED, "Missing Authorization header".into()))?;
-
-    if !auth_header.starts_with("Bearer ") {
-        return Err((StatusCode::UNAUTHORIZED, "Invalid Authorization header".into()));
-    }
-
-    let token = &auth_header[7..];
-    let token_data = decode::<Claims>(
-        token,
-        &DecodingKey::from_secret("secret".as_ref()),
-        &Validation::default(),
-    ).map_err(|e| {
-        tracing::error!("JWT decode failed: {}", e);
-        (StatusCode::UNAUTHORIZED, "Invalid token".into())
-    })?;
-
-    let claims = token_data.claims;
-
-    // 2. Fetch Course to check ownership
-    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1")
+    // 1. Fetch Course to check ownership
+    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
         .bind(id)
+        .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
         .map_err(|_| (StatusCode::NOT_FOUND, "Course not found".into()))?;
 
-    // 3. Enforce RBAC
+    // 2. Enforce RBAC
     if claims.role != "admin" && course.instructor_id != claims.sub {
         return Err((StatusCode::FORBIDDEN, "You do not have permission to view stats for a course you don't own".into()));
     }
@@ -690,34 +706,17 @@ pub struct AuditQuery {
 }
 
 pub async fn get_audit_logs(
+    Org(org_ctx): Org,
+    claims: common::auth::Claims,
     State(pool): State<PgPool>,
-    headers: HeaderMap,
     Query(query): Query<AuditQuery>,
 ) -> Result<Json<Vec<common::models::AuditLogResponse>>, (StatusCode, String)> {
-    // 1. Auth check
-    let auth_header = headers.get("Authorization")
-        .and_then(|h| h.to_str().ok())
-        .ok_or((StatusCode::UNAUTHORIZED, "Missing Authorization header".into()))?;
-
-    if !auth_header.starts_with("Bearer ") {
-        return Err((StatusCode::UNAUTHORIZED, "Invalid Authorization header".into()));
-    }
-
-    let token = &auth_header[7..];
-    let token_data = decode::<Claims>(
-        token,
-        &DecodingKey::from_secret("secret".as_ref()),
-        &Validation::default(),
-    ).map_err(|e| {
-        tracing::error!("JWT decode failed: {}", e);
-        (StatusCode::UNAUTHORIZED, "Invalid token".into())
-    })?;
-
-    if token_data.claims.role != "admin" {
+    // 1. RBAC check
+    if claims.role != "admin" {
         return Err((StatusCode::FORBIDDEN, "Only admins can view audit logs".into()));
     }
 
-    // 2. Query
+    // 2. Query (filtered by organization)
     let limit = query.limit.unwrap_or(50);
     let offset = (query.page.unwrap_or(1) - 1) * limit;
 
@@ -726,12 +725,14 @@ pub async fn get_audit_logs(
         SELECT a.id, a.user_id, u.full_name as user_full_name, a.action, a.entity_type, a.entity_id, a.changes, a.created_at
         FROM audit_logs a
         LEFT JOIN users u ON a.user_id = u.id
+        WHERE a.organization_id = $3
         ORDER BY a.created_at DESC
         LIMIT $1 OFFSET $2
         "#
     )
     .bind(limit)
     .bind(offset)
+    .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;

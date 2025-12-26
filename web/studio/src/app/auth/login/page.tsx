@@ -3,13 +3,16 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cmsApi } from "@/lib/api";
-import { BookOpen, Lock, Mail, User } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { BookOpen, Lock, Mail, User, Building2 } from "lucide-react";
 
 export default function StudioLoginPage() {
     const router = useRouter();
+    const { login } = useAuth();
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [organizationName, setOrganizationName] = useState("");
     const [fullName, setFullName] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -30,19 +33,18 @@ export default function StudioLoginPage() {
                     return;
                 }
 
-                localStorage.setItem("studio_token", response.token);
-                localStorage.setItem("studio_user", JSON.stringify(response.user));
+                login(response.user, response.token);
                 router.push("/");
             } else {
                 const response = await cmsApi.register({
                     email,
                     password,
                     full_name: fullName,
-                    role: "instructor"
+                    role: "instructor",
+                    organization_name: organizationName,
                 });
 
-                localStorage.setItem("studio_token", response.token);
-                localStorage.setItem("studio_user", JSON.stringify(response.user));
+                login(response.user, response.token);
                 router.push("/");
             }
         } catch (err) {
@@ -85,22 +87,42 @@ export default function StudioLoginPage() {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {!isLogin && (
-                            <div>
-                                <label className="block text-sm font-bold text-gray-300 mb-2">
-                                    Full Name
-                                </label>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        value={fullName}
-                                        onChange={(e) => setFullName(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="John Doe"
-                                        required
-                                    />
+                            <>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-300 mb-2">
+                                        Full Name
+                                    </label>
+                                    <div className="relative">
+                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            value={fullName}
+                                            onChange={(e) => setFullName(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="John Doe"
+                                            required
+                                        />
+                                    </div>
                                 </div>
-                            </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-300 mb-2">
+                                        Organization Name (Optional)
+                                    </label>
+                                    <div className="relative">
+                                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            value={organizationName}
+                                            onChange={(e) => setOrganizationName(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="Your School or Company"
+                                        />
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-2 pl-1">
+                                        If left blank, an organization will be created based on your email domain.
+                                    </p>
+                                </div>
+                            </>
                         )}
 
                         <div>

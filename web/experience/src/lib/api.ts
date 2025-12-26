@@ -86,6 +86,7 @@ export interface AuthPayload {
     email: string;
     password?: string;
     full_name?: string;
+    organization_name?: string;
 }
 
 export interface Enrollment {
