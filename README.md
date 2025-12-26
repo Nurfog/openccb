@@ -4,7 +4,7 @@ OpenCCB es una infraestructura de código abierto para plataformas de gestión d
 
 ## 🚀 Estado del Proyecto
 
-El sistema se encuentra en una fase madura (**Phase 5 completada**), con una API robusta para la gestión de cursos, autenticación segura y análisis de datos.
+El sistema se encuentra en una fase madura (**Phase 6 en progreso**), con una API robusta para la gestión de cursos, autenticación segura, multi-tenencia y análisis de datos.
 
 Consulta el archivo [ROADMAP.md](./roadmap.md) para ver el desglose detallado de funcionalidades.
 
