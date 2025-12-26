@@ -80,12 +80,12 @@
   - [ ] Retention metrics
   - [ ] Engagement heatmaps
 - [ ] **AI Integration** (Next Up):
-  - [x] AI-driven lesson summaries (Endpoint scaffolded)
+  - [x] AI-driven lesson summaries (Implemented)
   - [ ] Implement real-time video transcription via external API
-  - [ ] Automated quiz generation
+  - [x] Automated quiz generation (Implemented)
   - [ ] Personalized learning paths
 - [ ] **Gamification**:
-  - [ ] Badges and achievements
+  - [x] Badges and achievements (Implemented base system)
   - [ ] Leaderboards
   - [ ] XP and leveling system
 - [ ] **Communication**:

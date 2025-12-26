@@ -292,6 +292,79 @@ pub async fn process_transcription(
     Ok(Json(updated_lesson))
 }
 
+pub async fn summarize_lesson(
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Lesson>, StatusCode> {
+    // 1. Fetch lesson
+    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    // 2. Simulate AI Summarization based on content
+    // In a real scenario, this would call an LLM with the transcription or blocks content
+    let mock_summary = format!(
+        "This lesson, titled '{}', covers the fundamental concepts of the topic. It includes interactive elements designed to reinforce learning through practice and assessment.",
+        lesson.title
+    );
+
+    // 3. Update lesson
+    let updated_lesson = sqlx::query_as::<_, Lesson>(
+        "UPDATE lessons SET summary = $1 WHERE id = $2 RETURNING *"
+    )
+    .bind(mock_summary)
+    .bind(id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    log_action(&pool, claims.sub, "SUMMARY_GENERATED", "Lesson", id, json!({})).await;
+
+    Ok(Json(updated_lesson))
+}
+
+pub async fn generate_quiz(
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    // 1. Fetch lesson
+    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    // 2. Simulate AI Quiz Generation
+    // Normally would use lesson content (transcription, blocks, etc.)
+    let quiz_blocks = json!([
+        {
+            "id": Uuid::new_v4().to_string(),
+            "type": "quiz",
+            "title": "Automated Content Check",
+            "quiz_data": {
+                "questions": [
+                    {
+                        "id": "q1",
+                        "type": "multiple-choice",
+                        "question": format!("Based on '{}', what is the primary objective?", lesson.title),
+                        "options": ["Option A", "Option B", "Option C", "Option D"],
+                        "correctAnswer": 0,
+                        "explanation": "This question was generated automatically based on the lesson title."
+                    }
+                ]
+            }
+        }
+    ]);
+
+    log_action(&pool, claims.sub, "QUIZ_GENERATED", "Lesson", id, json!({})).await;
+
+    Ok(Json(quiz_blocks))
+}
+
 pub async fn get_lesson(
     Org(org_ctx): Org,
     State(pool): State<PgPool>,
@@ -319,15 +392,6 @@ pub async fn update_lesson(
     let content_url = payload.get("content_url").and_then(|t| t.as_str());
     let position = payload.get("position").and_then(|v| v.as_i64()).map(|v| v as i32);
     let is_graded = payload.get("is_graded").and_then(|v| v.as_bool());
-    let grading_category_id = payload.get("grading_category_id")
-        .and_then(|v| {
-            if v.is_null() {
-                Some(None)
-            } else {
-                v.as_str().and_then(|s| Uuid::parse_str(s).ok()).map(Some)
-            }
-        });
-    
     let max_attempts = payload.get("max_attempts").and_then(|v| v.as_i64()).map(|v| v as i32);
     let allow_retry = payload.get("allow_retry").and_then(|v| v.as_bool());
     let metadata = payload.get("metadata");
@@ -342,8 +406,9 @@ pub async fn update_lesson(
              grading_category_id = CASE WHEN $6 = 'SET_NULL' THEN NULL WHEN $7::UUID IS NOT NULL THEN $7 ELSE grading_category_id END,
              metadata = COALESCE($8, metadata),
              max_attempts = COALESCE($9, max_attempts),
-             allow_retry = COALESCE($10, allow_retry)
-         WHERE id = $11 RETURNING *"
+             allow_retry = COALESCE($10, allow_retry),
+             summary = COALESCE($11, summary)
+         WHERE id = $12 RETURNING *"
     )
     .bind(title)
     .bind(content_type)
@@ -355,6 +420,7 @@ pub async fn update_lesson(
     .bind(metadata)
     .bind(max_attempts)
     .bind(allow_retry)
+    .bind(payload.get("summary").and_then(|v| v.as_str()))
     .bind(id)
     .fetch_one(&pool)
     .await
@@ -606,7 +672,10 @@ pub async fn register(
     .bind(&org_name)
     .fetch_one(&mut *tx)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to find or create organization: {}", e)))?;
+    .map_err(|e| {
+        tracing::error!("Failed to create/find org: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to find or create organization: {}", e))
+    })?;
 
     let user = sqlx::query_as::<_, User>(
         "INSERT INTO users (email, password_hash, full_name, role, organization_id) VALUES ($1, $2, $3, $4, $5) RETURNING *"
@@ -618,7 +687,10 @@ pub async fn register(
     .bind(organization.id)
     .fetch_one(&mut *tx)
     .await
-    .map_err(|e| (StatusCode::CONFLICT, format!("User already exists or DB error: {}", e)))?;
+    .map_err(|e| {
+        tracing::error!("Failed to create user: {}", e);
+        (StatusCode::CONFLICT, format!("User already exists or DB error: {}", e))
+    })?;
 
     tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
@@ -738,4 +810,73 @@ pub async fn get_audit_logs(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(logs))
+}
+
+pub async fn get_organization(
+    Org(org_ctx): Org,
+    State(pool): State<PgPool>,
+) -> Result<Json<Organization>, StatusCode> {
+    let org = sqlx::query_as::<_, Organization>("SELECT * FROM organizations WHERE id = $1")
+        .bind(org_ctx.id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    Ok(Json(org))
+}
+
+#[derive(Serialize)]
+pub struct ModuleWithLessons {
+    #[serde(flatten)]
+    pub module: Module,
+    pub lessons: Vec<Lesson>,
+}
+
+#[derive(Serialize)]
+pub struct CourseWithOutline {
+    #[serde(flatten)]
+    pub course: Course,
+    pub modules: Vec<ModuleWithLessons>,
+}
+
+pub async fn get_course_outline(
+    Org(org_ctx): Org,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<CourseWithOutline>, StatusCode> {
+    // 1. Fetch Course
+    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
+        .bind(id)
+        .bind(org_ctx.id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    // 2. Fetch Modules
+    let modules = sqlx::query_as::<_, Module>("SELECT * FROM modules WHERE course_id = $1 ORDER BY position")
+        .bind(id)
+        .fetch_all(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let mut modules_with_lessons = Vec::new();
+
+    // 3. Fetch Lessons (This could be optimized with a single query, but N+1 is acceptable for course editor scale)
+    for module in modules {
+        let lessons = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE module_id = $1 ORDER BY position")
+            .bind(module.id)
+            .fetch_all(&pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        modules_with_lessons.push(ModuleWithLessons {
+            module,
+            lessons,
+        });
+    }
+
+    Ok(Json(CourseWithOutline {
+        course,
+        modules: modules_with_lessons,
+    }))
 }

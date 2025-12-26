@@ -33,6 +33,7 @@ pub struct Lesson {
     pub title: String,
     pub content_type: String, 
     pub content_url: Option<String>,
+    pub summary: Option<String>,
     pub transcription: Option<serde_json::Value>,
     pub metadata: Option<serde_json::Value>,
     pub grading_category_id: Option<Uuid>,
@@ -126,6 +127,14 @@ pub struct UserResponse {
     pub email: String,
     pub full_name: String,
     pub role: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct Organization {
+    pub id: Uuid,
+    pub name: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

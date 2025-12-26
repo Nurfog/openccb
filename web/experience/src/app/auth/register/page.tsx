@@ -110,7 +110,7 @@ export default function RegisterPage() {
                                     className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-all"
                                 />
                             </div>
-                            <p className="text-[10px] text-gray-600 px-1">If blank, we'll use your email domain.</p>
+                            <p className="text-[10px] text-gray-600 px-1">If blank, we&apos;ll use your email domain.</p>
                         </div>
 
                         <button

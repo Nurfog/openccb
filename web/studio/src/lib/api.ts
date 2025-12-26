@@ -20,6 +20,14 @@ export interface Module {
     lessons: Lesson[];
 }
 
+export interface QuizQuestion {
+    id: string;
+    question: string;
+    options: string[];
+    correct: number[];
+    type?: 'multiple-choice' | 'true-false' | 'multiple-select';
+}
+
 export interface Block {
     id: string;
     type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer';
@@ -27,9 +35,9 @@ export interface Block {
     content?: string;
     url?: string;
     media_type?: 'video' | 'audio';
-    config?: any;
+    config?: Record<string, unknown>;
     quiz_data?: {
-        questions: any[];
+        questions: QuizQuestion[];
     };
     pairs?: { left: string; right: string }[];
     items?: string[];
@@ -49,7 +57,19 @@ export interface Lesson {
     grading_category_id: string | null;
     max_attempts: number | null;
     allow_retry: boolean;
-    transcription?: any;
+    summary?: string;
+    transcription?: {
+        en?: string;
+        es?: string;
+        cues?: { start: number; end: number; text: string }[];
+    } | null;
+}
+
+export interface Organization {
+    id: string;
+    name: string;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface User {
@@ -93,7 +113,7 @@ export interface AuditLog {
     action: string;
     entity_type: string;
     entity_id: string;
-    changes: any;
+    changes: Record<string, unknown>;
     created_at: string;
 }
 
@@ -130,6 +150,9 @@ const apiFetch = (url: string, options: RequestInit = {}) => {
 };
 
 export const cmsApi = {
+    // Organization
+    getOrganization: (): Promise<Organization> => apiFetch('/organization'),
+
     // Auth
     register: (payload: AuthPayload): Promise<AuthResponse> => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
     login: (payload: AuthPayload): Promise<AuthResponse> => apiFetch('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
@@ -147,6 +170,8 @@ export const cmsApi = {
     createLesson: (module_id: string, title: string, content_type: string, position: number): Promise<Lesson> => apiFetch('/lessons', { method: 'POST', body: JSON.stringify({ module_id, title, content_type, position }) }),
     getLesson: (id: string): Promise<Lesson> => apiFetch(`/lessons/${id}`),
     updateLesson: (id: string, payload: Partial<Lesson>): Promise<Lesson> => apiFetch(`/lessons/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    summarizeLesson: (id: string): Promise<Lesson> => apiFetch(`/lessons/${id}/summarize`, { method: 'POST' }),
+    generateQuiz: (id: string): Promise<Block[]> => apiFetch(`/lessons/${id}/generate-quiz`, { method: 'POST' }),
 
     // Grading
     getGradingCategories: (courseId: string): Promise<GradingCategory[]> => apiFetch(`/courses/${courseId}/grading`),

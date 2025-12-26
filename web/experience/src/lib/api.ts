@@ -10,6 +10,14 @@ export interface Course {
     created_at: string;
 }
 
+export interface QuizQuestion {
+    id: string;
+    question: string;
+    options: string[];
+    correct: number[];
+    type?: 'multiple-choice' | 'true-false' | 'multiple-select';
+}
+
 export interface Block {
     id: string;
     type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer';
@@ -17,15 +25,9 @@ export interface Block {
     content?: string;
     url?: string;
     media_type?: 'video' | 'audio';
-    config?: any;
+    config?: Record<string, unknown>;
     quiz_data?: {
-        questions: {
-            id: string;
-            question: string;
-            options: string[];
-            correct: number[];
-            type?: 'multiple-choice' | 'true-false' | 'multiple-select';
-        }[];
+        questions: QuizQuestion[];
     };
     pairs?: { left: string; right: string }[];
     items?: string[];
@@ -39,7 +41,12 @@ export interface Lesson {
     title: string;
     content_type: string;
     content_url?: string;
-    transcription?: any;
+    summary?: string;
+    transcription?: {
+        en?: string;
+        es?: string;
+        cues?: { start: number; end: number; text: string }[];
+    } | null;
     metadata?: {
         blocks: Block[];
     };
@@ -66,7 +73,7 @@ export interface UserGrade {
     lesson_id: string;
     score: number;
     attempts_count: number;
-    metadata: any;
+    metadata: Record<string, unknown>;
     created_at: string;
 }
 
@@ -138,7 +145,7 @@ export const lmsApi = {
         }).then(res => res.ok ? res.json() : res.json().then(e => Promise.reject(e)));
     },
 
-    async enroll(courseId: string, userId: string): Promise<any> {
+    async enroll(courseId: string, userId: string): Promise<void> {
         return fetch(`${API_BASE_URL}/enroll`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -163,6 +170,12 @@ export const lmsApi = {
     async getUserGrades(userId: string, courseId: string): Promise<UserGrade[]> {
         const response = await fetch(`${API_BASE_URL}/users/${userId}/courses/${courseId}/grades`);
         if (!response.ok) throw new Error('Failed to fetch user grades');
+        return response.json();
+    },
+
+    async getGamification(userId: string): Promise<{ points: number, badges: { id: string, name: string, description: string }[] }> {
+        const response = await fetch(`${API_BASE_URL}/users/${userId}/gamification`);
+        if (!response.ok) throw new Error('Failed to fetch gamification data');
         return response.json();
     }
 };

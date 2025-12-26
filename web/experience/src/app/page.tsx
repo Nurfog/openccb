@@ -11,6 +11,7 @@ export default function CatalogPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [gamification, setGamification] = useState<{ points: number, badges: any[] } | null>(null);
 
   const { user } = useAuth();
   const router = useRouter();
@@ -24,6 +25,9 @@ export default function CatalogPage() {
         if (user) {
           const enrollmentData = await lmsApi.getEnrollments(user.id);
           setEnrollments(enrollmentData.map(e => e.course_id));
+
+          const gamificationData = await lmsApi.getGamification(user.id);
+          setGamification(gamificationData);
         }
       } catch (err) {
         console.error(err);
@@ -81,6 +85,40 @@ export default function CatalogPage() {
           </Link>
         )}
       </div>
+
+      {user && gamification && (
+        <div className="mb-16 grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-top-6 duration-700">
+          <div className="md:col-span-1 glass-card p-8 bg-gradient-to-br from-blue-600/20 to-indigo-700/20 border-blue-500/20 flex flex-col items-center justify-center text-center rounded-3xl">
+            <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mb-4 border border-blue-500/20">
+              <Star className="text-blue-400 fill-blue-400/20" size={32} />
+            </div>
+            <div className="text-4xl font-black text-white mb-1">{gamification.points}</div>
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Total Experience Points</div>
+          </div>
+
+          <div className="md:col-span-2 glass-card p-8 bg-white/[0.01] border-white/5 rounded-3xl overflow-hidden relative">
+            <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
+              <CheckCircle2 size={14} /> My Badges
+            </h3>
+            <div className="flex flex-wrap gap-4">
+              {gamification.badges.length === 0 ? (
+                <p className="text-sm text-gray-600 italic">No badges earned yet. Start learning to unlock achievements!</p>
+              ) : (
+                gamification.badges.map(badge => (
+                  <div key={badge.id} className="group/badge relative">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-400/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center shadow-lg transition-transform hover:scale-110 cursor-help" title={badge.description}>
+                      <span className="text-xl">🏆</span>
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-black flex items-center justify-center text-[8px] font-bold">✓</div>
+                  </div>
+                ))
+              )}
+            </div>
+            {/* Visual Flair */}
+            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-500/5 blur-[80px] rounded-full"></div>
+          </div>
+        </div>
+      )}
 
       {courses.length === 0 ? (
         <div className="py-20 text-center glass-card border-dashed border-white/10 rounded-3xl bg-white/[0.01]">

@@ -405,7 +405,89 @@ pub async fn submit_lesson_score(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
+    // 4. Grant Points
+    let points_to_grant = 20; // Base points for any lesson
+    let _ = sqlx::query(
+        "INSERT INTO points_log (user_id, organization_id, amount, reason, entity_type, entity_id) VALUES ($1, $2, $3, $4, $5, $6)"
+    )
+    .bind(payload.user_id)
+    .bind(org_ctx.id)
+    .bind(points_to_grant)
+    .bind("lesson_completion")
+    .bind("lesson")
+    .bind(payload.lesson_id)
+    .execute(&pool)
+    .await;
+
+    // 5. Check for new badges (Trigger-like logic in code)
+    // For now, very simple: if they reached a points threshold
+    let total_points: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(amount), 0) FROM points_log WHERE user_id = $1")
+        .bind(payload.user_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap_or(0);
+
+    let eligible_badges = sqlx::query(
+        "SELECT id FROM badges WHERE organization_id = $1 AND requirement_type = 'points' AND requirement_value <= $2 AND id NOT IN (SELECT badge_id FROM user_badges WHERE user_id = $3)"
+    )
+    .bind(org_ctx.id)
+    .bind(total_points as i32)
+    .bind(payload.user_id)
+    .fetch_all(&pool)
+    .await;
+
+    if let Ok(new_badges) = eligible_badges {
+        for b in new_badges {
+            let badge_id: Uuid = b.get("id");
+            let _ = sqlx::query("INSERT INTO user_badges (user_id, badge_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")
+                .bind(payload.user_id)
+                .bind(badge_id)
+                .execute(&pool)
+                .await;
+        }
+    }
+
     Ok(Json(grade))
+}
+
+#[derive(serde::Serialize)]
+pub struct GamificationStatus {
+    pub points: i64,
+    pub badges: Vec<BadgeResponse>,
+}
+
+#[derive(serde::Serialize, sqlx::FromRow)]
+pub struct BadgeResponse {
+    pub id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub icon_url: Option<String>,
+    pub earned_at: chrono::DateTime<chrono::Utc>,
+}
+
+pub async fn get_user_gamification(
+    Org(_org_ctx): Org,
+    State(pool): State<PgPool>,
+    Path(user_id): Path<Uuid>,
+) -> Result<Json<GamificationStatus>, StatusCode> {
+    let points: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(amount), 0) FROM points_log WHERE user_id = $1")
+        .bind(user_id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let badges = sqlx::query_as::<_, BadgeResponse>(
+        "SELECT b.id, b.name, b.description, b.icon_url, ub.earned_at 
+         FROM user_badges ub 
+         JOIN badges b ON ub.badge_id = b.id 
+         WHERE ub.user_id = $1"
+    )
+    .bind(user_id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(GamificationStatus { points, badges }))
 }
 
 pub async fn get_user_course_grades(

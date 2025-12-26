@@ -1,7 +1,6 @@
 use axum::{
-    async_trait,
-    extract::FromRequestParts,
-    http::{request::Parts, Request, StatusCode},
+    extract::{FromRequestParts, Request},
+    http::{request::Parts, StatusCode},
     middleware::Next,
     response::Response,
 };
@@ -17,16 +16,16 @@ pub struct OrgContext {
 }
 
 /// Middleware que valida el token JWT y extrae el `organization_id`.
-pub async fn org_extractor_middleware<B>(
-    mut req: Request<B>,
-    next: Next<B>,
+pub async fn org_extractor_middleware(
+    mut req: Request,
+    next: Next,
 ) -> Result<Response, StatusCode> {
     let auth_header = req
         .headers()
         .get("authorization")
-        .and_then(|header| header.to_str().ok());
+        .and_then(|header: &axum::http::HeaderValue| header.to_str().ok());
 
-    let token = if let Some(token_str) = auth_header.and_then(|s| s.strip_prefix("Bearer ")) {
+    let token = if let Some(token_str) = auth_header.and_then(|s: &str| s.strip_prefix("Bearer ")) {
         token_str
     } else {
         return Err(StatusCode::UNAUTHORIZED);
@@ -43,17 +42,31 @@ pub async fn org_extractor_middleware<B>(
     .map_err(|_| StatusCode::UNAUTHORIZED)?
     .claims;
 
-    // Insertamos el contexto en las extensiones de la petición.
+    // Insertamos el contexto y las claims en las extensiones de la petición.
     req.extensions_mut().insert(OrgContext { id: claims.org });
+    req.extensions_mut().insert(claims);
 
     Ok(next.run(req).await)
+}
+
+impl<S> FromRequestParts<S> for Claims
+where
+    S: Send + Sync,
+{
+    type Rejection = (StatusCode, &'static str);
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        parts.extensions.get::<Claims>().cloned().ok_or((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Claims no encontradas. ¿El middleware está configurado?",
+        ))
+    }
 }
 
 /// Extractor de Axum para acceder fácilmente al `OrgContext` en los handlers.
 #[derive(Debug, Clone)]
 pub struct Org(pub OrgContext);
 
-#[async_trait]
 impl<S> FromRequestParts<S> for Org
 where
     S: Send + Sync,

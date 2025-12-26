@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { lmsApi, Lesson, Course, Module } from "@/lib/api";
+import { lmsApi, Lesson, Course, Module, UserGrade } from "@/lib/api";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Menu, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -19,7 +19,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
     const [course, setCourse] = useState<(Course & { modules: Module[] }) | null>(null);
     const [loading, setLoading] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(true);
-    const [userGrade, setUserGrade] = useState<any | null>(null);
+    const [userGrade, setUserGrade] = useState<UserGrade | null>(null);
     const { user } = useAuth();
 
     useEffect(() => {
@@ -34,7 +34,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
 
                 if (user) {
                     const grades = await lmsApi.getUserGrades(user.id, params.id);
-                    const currentGrade = grades.find((g: any) => g.lesson_id === params.lessonId);
+                    const currentGrade = grades.find((g: UserGrade) => g.lesson_id === params.lessonId);
                     setUserGrade(currentGrade || null);
                 }
             } catch (err) {
@@ -106,6 +106,17 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                             </div>
                             <h1 className="text-4xl font-black tracking-tighter text-white">{lesson.title}</h1>
                         </div>
+
+                        {lesson.summary && (
+                            <div className="p-8 rounded-3xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20 animate-in fade-in slide-in-from-top-4 duration-1000">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-400 mb-4 flex items-center gap-2">
+                                    <span className="text-base">✨</span> Summary
+                                </h3>
+                                <p className="text-lg text-gray-300 leading-relaxed font-medium italic">
+                                    &quot;{lesson.summary}&quot;
+                                </p>
+                            </div>
+                        )}
 
                         {/* Render Blocks */}
                         {(lesson.metadata?.blocks || []).length > 0 ? (

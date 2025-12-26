@@ -1,7 +1,7 @@
 mod handlers;
 
 use axum::{
-    routing::{get, post, delete, put},
+    routing::{get, post, delete},
     Router,
     middleware,
 };
@@ -37,18 +37,22 @@ async fn main() {
     // Rutas protegidas que requieren autenticación y contexto de organización
     let protected_routes = Router::new()
         .route("/courses", get(handlers::get_courses).post(handlers::create_course))
-        .route("/courses/:id", get(handlers::get_course).put(handlers::update_course))
+        .route("/courses/{id}", get(handlers::get_course).put(handlers::update_course))
         .route("/courses/{id}/publish", post(handlers::publish_course))
+        .route("/courses/{id}/outline", get(handlers::get_course_outline))
         .route("/courses/{id}/analytics", get(handlers::get_course_analytics))
         .route("/modules", get(handlers::get_modules).post(handlers::create_module))
         .route("/lessons", get(handlers::get_lessons).post(handlers::create_lesson))
-        .route("/lessons/:id", get(handlers::get_lesson).put(handlers::update_lesson))
+        .route("/lessons/{id}", get(handlers::get_lesson).put(handlers::update_lesson))
         .route("/lessons/{id}/transcribe", post(handlers::process_transcription))
+        .route("/lessons/{id}/summarize", post(handlers::summarize_lesson))
+        .route("/lessons/{id}/generate-quiz", post(handlers::generate_quiz))
         .route("/grading", post(handlers::create_grading_category))
-        .route("/grading/:id", delete(handlers::delete_grading_category))
+        .route("/grading/{id}", delete(handlers::delete_grading_category))
         .route("/courses/{id}/grading", get(handlers::get_grading_categories))
         .route("/audit-logs", get(handlers::get_audit_logs))
         .route("/assets/upload", post(handlers::upload_asset))
+        .route("/organization", get(handlers::get_organization))
         .route_layer(middleware::from_fn(common::middleware::org_extractor_middleware));
 
     // Rutas públicas que no requieren autenticación

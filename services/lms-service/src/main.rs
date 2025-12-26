@@ -1,7 +1,7 @@
 mod handlers;
 
 use axum::{
-    routing::{get, post, put},
+    routing::{get, post},
     Router,
     middleware,
 };
@@ -36,12 +36,13 @@ async fn main() {
 
     let protected_routes = Router::new()
         .route("/enroll", post(handlers::enroll_user))
-        .route("/enrollments/:id", get(handlers::get_user_enrollments))
+        .route("/enrollments/{id}", get(handlers::get_user_enrollments))
         .route("/courses/{id}/outline", get(handlers::get_course_outline))
-        .route("/lessons/:id", get(handlers::get_lesson_content))
+        .route("/lessons/{id}", get(handlers::get_lesson_content))
         .route("/grades", post(handlers::submit_lesson_score))
         .route("/users/{user_id}/courses/{course_id}/grades", get(handlers::get_user_course_grades))
         .route("/courses/{id}/analytics", get(handlers::get_course_analytics))
+        .route("/users/{id}/gamification", get(handlers::get_user_gamification))
         .route_layer(middleware::from_fn(common::middleware::org_extractor_middleware));
 
     let public_routes = Router::new()
