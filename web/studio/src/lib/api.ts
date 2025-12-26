@@ -167,6 +167,7 @@ export const cmsApi = {
 
     // Modules & Lessons
     createModule: (course_id: string, title: string, position: number): Promise<Module> => apiFetch('/modules', { method: 'POST', body: JSON.stringify({ course_id, title, position }) }),
+    updateModule: (id: string, payload: Partial<Module>): Promise<Module> => apiFetch(`/modules/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
     createLesson: (module_id: string, title: string, content_type: string, position: number): Promise<Lesson> => apiFetch('/lessons', { method: 'POST', body: JSON.stringify({ module_id, title, content_type, position }) }),
     getLesson: (id: string): Promise<Lesson> => apiFetch(`/lessons/${id}`),
     updateLesson: (id: string, payload: Partial<Lesson>): Promise<Lesson> => apiFetch(`/lessons/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),

@@ -42,6 +42,7 @@ async fn main() {
         .route("/courses/{id}/outline", get(handlers::get_course_outline))
         .route("/courses/{id}/analytics", get(handlers::get_course_analytics))
         .route("/modules", get(handlers::get_modules).post(handlers::create_module))
+        .route("/modules/{id}", axum::routing::put(handlers::update_module))
         .route("/lessons", get(handlers::get_lessons).post(handlers::create_lesson))
         .route("/lessons/{id}", get(handlers::get_lesson).put(handlers::update_lesson))
         .route("/lessons/{id}/transcribe", post(handlers::process_transcription))
