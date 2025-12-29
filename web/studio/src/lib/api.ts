@@ -5,6 +5,9 @@ export interface Course {
     title: string;
     description?: string;
     instructor_id: string;
+    pacing_mode: 'self_paced' | 'instructor_led';
+    start_date?: string;
+    end_date?: string;
     passing_percentage: number;
     certificate_template?: string;
     created_at: string;
@@ -57,19 +60,32 @@ export interface Lesson {
     grading_category_id: string | null;
     max_attempts: number | null;
     allow_retry: boolean;
+    due_date?: string;
+    important_date_type?: 'exam' | 'assignment' | 'milestone' | 'live-session';
     summary?: string;
     transcription?: {
         en?: string;
         es?: string;
         cues?: { start: number; end: number; text: string }[];
     } | null;
+    created_at: string;
 }
 
 export interface Organization {
     id: string;
     name: string;
+    domain?: string;
+    logo_url?: string;
+    primary_color?: string;
+    secondary_color?: string;
+    certificate_template?: string;
     created_at: string;
     updated_at: string;
+}
+
+export interface BrandingPayload {
+    primary_color?: string;
+    secondary_color?: string;
 }
 
 export interface User {
@@ -77,6 +93,7 @@ export interface User {
     email: string;
     full_name: string;
     role: string;
+    organization_id?: string;
 }
 
 export interface AuthResponse {
@@ -152,6 +169,8 @@ const apiFetch = (url: string, options: RequestInit = {}) => {
 export const cmsApi = {
     // Organization
     getOrganization: (): Promise<Organization> => apiFetch('/organization'),
+    getOrganizations: (): Promise<Organization[]> => apiFetch('/organizations'),
+    createOrganization: (name: string, domain?: string): Promise<Organization> => apiFetch('/organizations', { method: 'POST', body: JSON.stringify({ name, domain }) }),
 
     // Auth
     register: (payload: AuthPayload): Promise<AuthResponse> => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
@@ -171,8 +190,13 @@ export const cmsApi = {
     createLesson: (module_id: string, title: string, content_type: string, position: number): Promise<Lesson> => apiFetch('/lessons', { method: 'POST', body: JSON.stringify({ module_id, title, content_type, position }) }),
     getLesson: (id: string): Promise<Lesson> => apiFetch(`/lessons/${id}`),
     updateLesson: (id: string, payload: Partial<Lesson>): Promise<Lesson> => apiFetch(`/lessons/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    transcribeLesson: (id: string): Promise<Lesson> => apiFetch(`/lessons/${id}/transcribe`, { method: 'POST' }),
     summarizeLesson: (id: string): Promise<Lesson> => apiFetch(`/lessons/${id}/summarize`, { method: 'POST' }),
     generateQuiz: (id: string): Promise<Block[]> => apiFetch(`/lessons/${id}/generate-quiz`, { method: 'POST' }),
+    deleteModule: (id: string): Promise<void> => apiFetch(`/modules/${id}`, { method: 'DELETE' }),
+    deleteLesson: (id: string): Promise<void> => apiFetch(`/lessons/${id}`, { method: 'DELETE' }),
+    reorderModules: (payload: { items: { id: string, position: number }[] }): Promise<void> => apiFetch('/modules/reorder', { method: 'POST', body: JSON.stringify(payload) }),
+    reorderLessons: (payload: { items: { id: string, position: number }[] }): Promise<void> => apiFetch('/lessons/reorder', { method: 'POST', body: JSON.stringify(payload) }),
 
     // Grading
     getGradingCategories: (courseId: string): Promise<GradingCategory[]> => apiFetch(`/courses/${courseId}/grading`),
@@ -182,6 +206,10 @@ export const cmsApi = {
     // Admin & Analytics
     getAuditLogs: (): Promise<AuditLog[]> => apiFetch('/audit-logs'),
     getCourseAnalytics: (id: string): Promise<CourseAnalytics> => apiFetch(`/courses/${id}/analytics`),
+
+    // Users
+    getAllUsers: (): Promise<User[]> => apiFetch('/users'),
+    updateUser: (id: string, role: string, organization_id: string): Promise<void> => apiFetch(`/users/${id}`, { method: 'PUT', body: JSON.stringify({ role, organization_id }) }),
 
     // Assets
     uploadAsset: (file: File): Promise<UploadResponse> => {
@@ -201,6 +229,25 @@ export const cmsApi = {
             body: formData,
         }).then(res => {
             if (!res.ok) return res.json().then(err => Promise.reject(new Error(err.message || 'Upload failed')));
+            return res.json();
+        });
+    },
+    // Organizations Branding
+    getOrganizationBranding: (id: string): Promise<Organization> => apiFetch(`/organizations/${id}/branding`),
+    updateOrganizationBranding: (id: string, payload: BrandingPayload): Promise<void> => apiFetch(`/organizations/${id}/branding`, { method: 'PUT', body: JSON.stringify(payload) }),
+    uploadOrganizationLogo: (id: string, file: File): Promise<UploadResponse> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const token = getToken();
+        const headers: Record<string, string> = {
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
+        return fetch(`${API_BASE_URL}/organizations/${id}/logo`, {
+            method: 'POST',
+            headers,
+            body: formData,
+        }).then(res => {
+            if (!res.ok) return res.json().then(err => Promise.reject(new Error(err.message || 'Logo upload failed')));
             return res.json();
         });
     },

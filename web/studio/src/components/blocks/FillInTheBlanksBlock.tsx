@@ -51,7 +51,7 @@ export default function FillInTheBlanksBlock({ id, title, content, editMode, onC
             <div className="space-y-2">
                 {editMode ? (
                     <div className="space-y-2 p-6 glass border-white/5 bg-white/5 mb-4">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Section Title (Optional)</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Activity Title (Optional)</label>
                         <input
                             type="text"
                             value={title || ""}
@@ -98,8 +98,8 @@ export default function FillInTheBlanksBlock({ id, title, content, editMode, onC
                                     }}
                                     disabled={submitted}
                                     className={`mx-1 px-2 py-0 border-b-2 bg-transparent transition-all focus:outline-none text-center rounded-t-sm ${submitted
-                                            ? (isCorrect(part.index!) ? "border-green-500 text-green-400 bg-green-500/10" : "border-red-500 text-red-100 bg-red-500/10")
-                                            : "border-blue-500/30 focus:border-blue-500 text-blue-400 focus:bg-blue-500/5"
+                                        ? (isCorrect(part.index!) ? "border-green-500 text-green-400 bg-green-500/10" : "border-red-500 text-red-100 bg-red-500/10")
+                                        : "border-blue-500/30 focus:border-blue-500 text-blue-400 focus:bg-blue-500/5"
                                         }`}
                                     style={{ width: `${Math.max((part.answer?.length || 5) * 12, 60)}px` }}
                                     placeholder="..."

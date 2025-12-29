@@ -4,6 +4,7 @@ use axum::{
     http::StatusCode,
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
+use chrono::{DateTime, Utc};
 use common::auth::create_jwt;
 use common::middleware::Org;
 use common::models::{
@@ -13,6 +14,7 @@ use common::models::{
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::PgPool;
+use std::env;
 use uuid::Uuid;
 
 pub async fn publish_course(
@@ -120,15 +122,24 @@ pub async fn create_course(
         .ok_or(StatusCode::BAD_REQUEST)?;
     let instructor_id = claims.sub;
 
+    let pacing_mode = payload
+        .get("pacing_mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("self_paced");
+
     let course = sqlx::query_as::<_, Course>(
-        "INSERT INTO courses (title, instructor_id, organization_id) VALUES ($1, $2, $3) RETURNING *"
+        "INSERT INTO courses (title, instructor_id, organization_id, pacing_mode) VALUES ($1, $2, $3, $4) RETURNING *"
     )
     .bind(title)
     .bind(instructor_id)
     .bind(org_ctx.id)
+    .bind(pacing_mode)
     .fetch_one(&pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!("Create course failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     log_action(
         &pool,
@@ -136,7 +147,7 @@ pub async fn create_course(
         "CREATE",
         "Course",
         course.id,
-        json!({ "title": title }),
+        json!({ "title": title, "pacing_mode": pacing_mode }),
     )
     .await;
 
@@ -162,7 +173,6 @@ pub async fn update_course(
     Path(id): Path<Uuid>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Course>, (StatusCode, String)> {
-    // 1. Fetch course and check ownership/role
     let existing =
         sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
             .bind(id)
@@ -175,7 +185,6 @@ pub async fn update_course(
         return Err((StatusCode::FORBIDDEN, "Not authorized".into()));
     }
 
-    // 2. Update fields
     let title = payload
         .get("title")
         .and_then(|v| v.as_str())
@@ -189,22 +198,39 @@ pub async fn update_course(
         .and_then(|v| v.as_i64())
         .unwrap_or(existing.passing_percentage as i64) as i32;
 
-    // Check if certificate_template is in payload (even if null to unset?)
-    // For simplicity: if provided as string, use it. If not provided, keep existing.
-    // To unset, user can send empty string maybe?
     let certificate_template = payload
         .get("certificate_template")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
         .or(existing.certificate_template);
 
+    let pacing_mode = payload
+        .get("pacing_mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or(&existing.pacing_mode);
+
+    let start_date = payload
+        .get("start_date")
+        .and_then(|v| v.as_str())
+        .and_then(|s| s.parse::<DateTime<Utc>>().ok())
+        .or(existing.start_date);
+
+    let end_date = payload
+        .get("end_date")
+        .and_then(|v| v.as_str())
+        .and_then(|s| s.parse::<DateTime<Utc>>().ok())
+        .or(existing.end_date);
+
     let course = sqlx::query_as::<_, Course>(
-        "UPDATE courses SET title = $1, description = $2, passing_percentage = $3, certificate_template = $4, updated_at = NOW() WHERE id = $5 AND organization_id = $6 RETURNING *"
+        "UPDATE courses SET title = $1, description = $2, passing_percentage = $3, certificate_template = $4, pacing_mode = $5, start_date = $6, end_date = $7, updated_at = NOW() WHERE id = $8 AND organization_id = $9 RETURNING *"
     )
     .bind(title)
     .bind(description)
     .bind(passing_percentage)
     .bind(certificate_template)
+    .bind(pacing_mode)
+    .bind(start_date)
+    .bind(end_date)
     .bind(id)
     .bind(org_ctx.id)
     .fetch_one(&pool)
@@ -299,9 +325,16 @@ pub async fn create_lesson(
         .and_then(|v| v.as_bool())
         .unwrap_or(true);
 
+    let due_date = payload
+        .get("due_date")
+        .and_then(|v| v.as_str())
+        .and_then(|s| s.parse::<DateTime<Utc>>().ok());
+
+    let important_date_type = payload.get("important_date_type").and_then(|v| v.as_str());
+
     let lesson = sqlx::query_as::<_, Lesson>(
-        "INSERT INTO lessons (module_id, title, content_type, content_url, position, transcription, metadata, is_graded, grading_category_id, max_attempts, allow_retry) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *"
+        "INSERT INTO lessons (module_id, title, content_type, content_url, position, transcription, metadata, is_graded, grading_category_id, max_attempts, allow_retry, due_date, important_date_type) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *"
     )
     .bind(module_id)
     .bind(title)
@@ -314,9 +347,14 @@ pub async fn create_lesson(
     .bind(grading_category_id)
     .bind(max_attempts)
     .bind(allow_retry)
+    .bind(due_date)
+    .bind(important_date_type)
     .fetch_one(&pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!("Create lesson failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     log_action(
         &pool,
@@ -337,31 +375,114 @@ pub async fn process_transcription(
     Path(id): Path<Uuid>,
 ) -> Result<Json<Lesson>, StatusCode> {
     // 1. Fetch lesson
-    let _lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1")
+    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1")
         .bind(id)
         .fetch_one(&pool)
         .await
-        .map_err(|_| StatusCode::NOT_FOUND)?;
+        .map_err(|e| {
+            tracing::error!("Lesson fetch failed: {}", e);
+            StatusCode::NOT_FOUND
+        })?;
 
-    // 2. Simulate AI Processing
-    let mock_transcription = json!({
-        "en": "This is a simulated transcription of the video content in English.",
-        "es": "Esta es una transcripción simulada del contenido del video en español.",
-        "cues": [
-            { "start": 0.0, "end": 2.0, "text": "Hello world!" },
-            { "start": 2.1, "end": 5.0, "text": "Welcome to OpenCCB." }
-        ]
+    if lesson.content_type != "video" && lesson.content_type != "audio" {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let url = lesson.content_url.ok_or(StatusCode::BAD_REQUEST)?;
+    let filename = url.trim_start_matches("/assets/");
+    let file_path = format!("uploads/{}", filename);
+
+    // 2. Read file
+    let file_data = tokio::fs::read(&file_path).await.map_err(|e| {
+        tracing::error!("File read failed ({}): {}", file_path, e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    // 3. Configuration
+    let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+    let client = reqwest::Client::new();
+
+    let (url, auth_header, model) = if provider == "local" {
+        let base_url =
+            env::var("LOCAL_WHISPER_URL").unwrap_or_else(|_| "http://localhost:8000".to_string());
+        (
+            format!("{}/v1/audio/transcriptions", base_url),
+            "".to_string(),
+            "medium".to_string(),
+        )
+    } else {
+        let api_key = env::var("OPENAI_API_KEY").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        (
+            "https://api.openai.com/v1/audio/transcriptions".to_string(),
+            format!("Bearer {}", api_key),
+            "whisper-1".to_string(),
+        )
+    };
+
+    let part = reqwest::multipart::Part::bytes(file_data)
+        .file_name(filename.to_string())
+        .mime_str("application/octet-stream")
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let form = reqwest::multipart::Form::new()
+        .part("file", part)
+        .text("model", model)
+        .text("response_format", "verbose_json");
+
+    let mut request = client.post(&url).multipart(form);
+    if !auth_header.is_empty() {
+        request = request.header("Authorization", auth_header);
+    }
+
+    let response = request.send().await.map_err(|e| {
+        tracing::error!("Transcription request failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    if !response.status().is_success() {
+        let err_body = response.text().await.unwrap_or_default();
+        tracing::error!("Transcription API error: {}", err_body);
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    let whisper_data: serde_json::Value = response.json().await.map_err(|e| {
+        tracing::error!("Whisper JSON parse failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    // Extract text and segments (cues)
+    let text = whisper_data["text"].as_str().unwrap_or_default();
+    let segments = whisper_data["segments"].as_array();
+
+    let mut cues = Vec::new();
+    if let Some(segments) = segments {
+        for s in segments {
+            cues.push(json!({
+                "start": s["start"],
+                "end": s["end"],
+                "text": s["text"]
+            }));
+        }
+    }
+
+    let transcription = json!({
+        "en": text,
+        "es": "", // Could add a translation step here
+        "cues": cues
     });
 
-    // 3. Update lesson
+    // 4. Update lesson
     let updated_lesson = sqlx::query_as::<_, Lesson>(
         "UPDATE lessons SET transcription = $1 WHERE id = $2 RETURNING *",
     )
-    .bind(mock_transcription)
+    .bind(transcription)
     .bind(id)
     .fetch_one(&pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!("Database update failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     log_action(
         &pool,
@@ -388,17 +509,84 @@ pub async fn summarize_lesson(
         .await
         .map_err(|_| StatusCode::NOT_FOUND)?;
 
-    // 2. Simulate AI Summarization based on content
-    // In a real scenario, this would call an LLM with the transcription or blocks content
-    let mock_summary = format!(
-        "This lesson, titled '{}', covers the fundamental concepts of the topic. It includes interactive elements designed to reinforce learning through practice and assessment.",
-        lesson.title
-    );
+    let transcription_text = lesson
+        .transcription
+        .as_ref()
+        .and_then(|t| t["en"].as_str())
+        .unwrap_or("");
+
+    if transcription_text.is_empty() {
+        tracing::warn!("Cannot summarize lesson {}: No transcription found", id);
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // 2. Configuration
+    let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+    let client = reqwest::Client::new();
+
+    let (url, auth_header, model) = if provider == "local" {
+        let base_url =
+            env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
+        let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3".to_string());
+        (
+            format!("{}/v1/chat/completions", base_url),
+            "".to_string(),
+            model,
+        )
+    } else {
+        let api_key = env::var("OPENAI_API_KEY").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        (
+            "https://api.openai.com/v1/chat/completions".to_string(),
+            format!("Bearer {}", api_key),
+            "gpt-4o".to_string(),
+        )
+    };
+
+    let mut request = client
+        .post(&url)
+        .json(&json!({
+            "model": model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a professional educational assistant. Summarize the following lesson transcription into a high-quality summary suited for a course platform. Keep it concise but informative (max 150 words). Focus on the key learning objectives."
+                },
+                {
+                    "role": "user",
+                    "content": transcription_text
+                }
+            ]
+        }));
+
+    if !auth_header.is_empty() {
+        request = request.header("Authorization", auth_header);
+    }
+
+    let response = request.send().await.map_err(|e| {
+        tracing::error!("Summarization request failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    if !response.status().is_success() {
+        let err_body = response.text().await.unwrap_or_default();
+        tracing::error!("Summarization API error: {}", err_body);
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    let gpt_data: serde_json::Value = response.json().await.map_err(|e| {
+        tracing::error!("Summarization JSON parse failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let summary = gpt_data["choices"][0]["message"]["content"]
+        .as_str()
+        .unwrap_or("")
+        .trim();
 
     // 3. Update lesson
     let updated_lesson =
         sqlx::query_as::<_, Lesson>("UPDATE lessons SET summary = $1 WHERE id = $2 RETURNING *")
-            .bind(mock_summary)
+            .bind(summary)
             .bind(id)
             .fetch_one(&pool)
             .await
@@ -429,27 +617,90 @@ pub async fn generate_quiz(
         .await
         .map_err(|_| StatusCode::NOT_FOUND)?;
 
-    // 2. Simulate AI Quiz Generation
-    // Normally would use lesson content (transcription, blocks, etc.)
-    let quiz_blocks = json!([
-        {
-            "id": Uuid::new_v4().to_string(),
-            "type": "quiz",
-            "title": "Automated Content Check",
-            "quiz_data": {
-                "questions": [
-                    {
-                        "id": "q1",
-                        "type": "multiple-choice",
-                        "question": format!("Based on '{}', what is the primary objective?", lesson.title),
-                        "options": ["Option A", "Option B", "Option C", "Option D"],
-                        "correctAnswer": 0,
-                        "explanation": "This question was generated automatically based on the lesson title."
-                    }
-                ]
-            }
-        }
-    ]);
+    let transcription_text = lesson
+        .transcription
+        .as_ref()
+        .and_then(|t| t["en"].as_str())
+        .unwrap_or("");
+
+    if transcription_text.is_empty() {
+        tracing::warn!(
+            "Cannot generate quiz for lesson {}: No transcription found",
+            id
+        );
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // 2. Configuration
+    let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+    let client = reqwest::Client::new();
+
+    let (url, auth_header, model) = if provider == "local" {
+        let base_url =
+            env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
+        let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3".to_string());
+        (
+            format!("{}/v1/chat/completions", base_url),
+            "".to_string(),
+            model,
+        )
+    } else {
+        let api_key = env::var("OPENAI_API_KEY").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        (
+            "https://api.openai.com/v1/chat/completions".to_string(),
+            format!("Bearer {}", api_key),
+            "gpt-4o".to_string(),
+        )
+    };
+
+    let mut request = client
+        .post(&url)
+        .json(&json!({
+            "model": model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are an educational content designer. Generate 3 multiple-choice questions based on the lesson transcription. Return ONLY a JSON object with a field 'blocks' which is an array. Each block in the array must follow this exact structure: { \"id\": \"string-uuid\", \"type\": \"quiz\", \"title\": \"Quiz: Concept Check\", \"quiz_data\": { \"questions\": [ { \"id\": \"q-string\", \"type\": \"multiple-choice\", \"question\": \"String\", \"options\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"correctAnswer\": 0, \"explanation\": \"Explain why the answer is correct.\" } ] } }"
+                },
+                {
+                    "role": "user",
+                    "content": transcription_text
+                }
+            ],
+            "response_format": { "type": "json_object" }
+        }));
+
+    if !auth_header.is_empty() {
+        request = request.header("Authorization", auth_header);
+    }
+
+    let response = request.send().await.map_err(|e| {
+        tracing::error!("Quiz generation request failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    if !response.status().is_success() {
+        let err_body = response.text().await.unwrap_or_default();
+        tracing::error!("Quiz API error: {}", err_body);
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    let quiz_data: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let quiz_json_str = quiz_data["choices"][0]["message"]["content"]
+        .as_str()
+        .unwrap_or("{}");
+
+    let mut quiz_data_parsed: serde_json::Value =
+        serde_json::from_str(quiz_json_str).unwrap_or(json!({}));
+
+    // Ensure we return just the blocks array as the frontend expects
+    let quiz_blocks = quiz_data_parsed
+        .get_mut("blocks")
+        .cloned()
+        .unwrap_or(json!([]));
 
     log_action(&pool, claims.sub, "QUIZ_GENERATED", "Lesson", id, json!({})).await;
 
@@ -492,6 +743,7 @@ pub async fn update_lesson(
         .map(|v| v as i32);
     let allow_retry = payload.get("allow_retry").and_then(|v| v.as_bool());
     let metadata = payload.get("metadata");
+    let important_date_type = payload.get("important_date_type").and_then(|v| v.as_str());
 
     let updated_lesson = sqlx::query_as::<_, Lesson>(
         "UPDATE lessons 
@@ -504,8 +756,10 @@ pub async fn update_lesson(
              metadata = COALESCE($8, metadata),
              max_attempts = COALESCE($9, max_attempts),
              allow_retry = COALESCE($10, allow_retry),
-             summary = COALESCE($11, summary)
-         WHERE id = $12 RETURNING *"
+             summary = COALESCE($11, summary),
+             due_date = CASE WHEN $12 = 'SET_NULL' THEN NULL WHEN $13::TIMESTAMPTZ IS NOT NULL THEN $13 ELSE due_date END,
+             important_date_type = COALESCE($14, important_date_type)
+         WHERE id = $15 RETURNING *"
     )
     .bind(title)
     .bind(content_type)
@@ -518,6 +772,9 @@ pub async fn update_lesson(
     .bind(max_attempts)
     .bind(allow_retry)
     .bind(payload.get("summary").and_then(|v| v.as_str()))
+    .bind(if payload.get("due_date").map(|v| v.is_null()).unwrap_or(false) { "SET_NULL" } else { "" })
+    .bind(payload.get("due_date").and_then(|v| v.as_str()).and_then(|s| s.parse::<DateTime<Utc>>().ok()))
+    .bind(important_date_type)
     .bind(id)
     .fetch_one(&pool)
     .await
@@ -666,6 +923,57 @@ pub async fn get_lessons(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(lessons))
+}
+
+#[derive(Deserialize)]
+pub struct ReorderPayload {
+    pub items: Vec<ReorderItem>,
+}
+
+#[derive(Deserialize)]
+pub struct ReorderItem {
+    pub id: Uuid,
+    pub position: i32,
+}
+
+pub async fn reorder_modules(
+    _claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+    Json(payload): Json<ReorderPayload>,
+) -> Result<StatusCode, StatusCode> {
+    for item in payload.items {
+        sqlx::query("UPDATE modules SET position = $1 WHERE id = $2")
+            .bind(item.position)
+            .bind(item.id)
+            .execute(&pool)
+            .await
+            .map_err(|e| {
+                tracing::error!("Reorder modules failed: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+    }
+
+    Ok(StatusCode::OK)
+}
+
+pub async fn reorder_lessons(
+    _claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+    Json(payload): Json<ReorderPayload>,
+) -> Result<StatusCode, StatusCode> {
+    for item in payload.items {
+        sqlx::query("UPDATE lessons SET position = $1 WHERE id = $2")
+            .bind(item.position)
+            .bind(item.id)
+            .execute(&pool)
+            .await
+            .map_err(|e| {
+                tracing::error!("Reorder lessons failed: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+    }
+
+    Ok(StatusCode::OK)
 }
 
 #[derive(Debug, Serialize)]
@@ -840,6 +1148,7 @@ pub async fn register(
             email: user.email,
             full_name: user.full_name,
             role: user.role,
+            organization_id: user.organization_id,
         },
         token,
     }))
@@ -877,6 +1186,7 @@ pub async fn login(
             email: user.email,
             full_name: user.full_name,
             role: user.role,
+            organization_id: user.organization_id,
         },
         token,
     }))
@@ -1072,4 +1382,95 @@ pub async fn update_module(
     log_action(&pool, claims.sub, "UPDATE", "Module", id, json!(payload)).await;
 
     Ok(Json(updated_module))
+}
+
+pub async fn delete_module(
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, StatusCode> {
+    sqlx::query("DELETE FROM modules WHERE id = $1")
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Delete module failed: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    log_action(&pool, claims.sub, "DELETE", "Module", id, json!({})).await;
+
+    Ok(StatusCode::OK)
+}
+
+pub async fn delete_lesson(
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, StatusCode> {
+    if claims.role != "admin" {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    sqlx::query("DELETE FROM lessons WHERE id = $1")
+        .bind(id)
+        .execute(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    log_action(&pool, claims.sub, "DELETE_LESSON", "Lesson", id, json!({})).await;
+
+    Ok(StatusCode::OK)
+}
+
+// User Management
+pub async fn get_all_users(
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+) -> Result<Json<Vec<UserResponse>>, StatusCode> {
+    if claims.role != "admin" {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    let users = sqlx::query_as::<_, UserResponse>(
+        "SELECT id, email, full_name, role, organization_id FROM users",
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch users: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(users))
+}
+
+pub async fn update_user(
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    if claims.role != "admin" {
+        return Err((StatusCode::FORBIDDEN, "Admin access required".into()));
+    }
+
+    let role = payload.get("role").and_then(|r| r.as_str());
+    let organization_id = payload
+        .get("organization_id")
+        .and_then(|o| o.as_str())
+        .and_then(|o| Uuid::parse_str(o).ok());
+
+    sqlx::query(
+        "UPDATE users SET role = COALESCE($1, role), organization_id = COALESCE($2, organization_id) WHERE id = $3"
+    )
+    .bind(role)
+    .bind(organization_id)
+    .bind(id)
+    .execute(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    log_action(&pool, claims.sub, "UPDATE_USER", "User", id, payload).await;
+
+    Ok(StatusCode::OK)
 }

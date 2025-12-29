@@ -1,4 +1,13 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_LMS_API_URL || "http://localhost:3002";
+export const CMS_API_URL = process.env.NEXT_PUBLIC_CMS_API_URL || "http://localhost:3001";
+
+export interface Organization {
+    id: string;
+    name: string;
+    logo_url?: string;
+    primary_color?: string;
+    secondary_color?: string;
+}
 
 export interface Course {
     id: string;
@@ -7,6 +16,9 @@ export interface Course {
     instructor_id: string;
     passing_percentage: number;
     certificate_template?: string;
+    pacing_mode: string;
+    start_date?: string;
+    end_date?: string;
     created_at: string;
 }
 
@@ -55,6 +67,8 @@ export interface Lesson {
     max_attempts: number | null;
     allow_retry: boolean;
     position: number;
+    due_date?: string;
+    important_date_type?: 'exam' | 'assignment' | 'milestone' | 'live-session';
     created_at: string;
 }
 
@@ -176,6 +190,12 @@ export const lmsApi = {
     async getGamification(userId: string): Promise<{ points: number, badges: { id: string, name: string, description: string }[] }> {
         const response = await fetch(`${API_BASE_URL}/users/${userId}/gamification`);
         if (!response.ok) throw new Error('Failed to fetch gamification data');
+        return response.json();
+    },
+
+    async getBranding(orgId: string): Promise<Organization> {
+        const response = await fetch(`${CMS_API_URL}/organizations/${orgId}/branding`);
+        if (!response.ok) throw new Error('Failed to fetch branding');
         return response.json();
     }
 };

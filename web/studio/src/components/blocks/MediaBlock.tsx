@@ -45,7 +45,7 @@ export default function MediaBlock({ title, url, type, config, editMode, onChang
             <div className="space-y-2">
                 {editMode ? (
                     <div className="space-y-2 p-6 glass border-white/5 bg-white/5 mb-4">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Section Title (Optional)</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Activity Title (Optional)</label>
                         <input
                             type="text"
                             value={title || ""}

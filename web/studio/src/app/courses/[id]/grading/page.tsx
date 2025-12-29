@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { cmsApi, GradingCategory } from "@/lib/api";
+import { cmsApi, GradingCategory, Course } from "@/lib/api";
 import {
     Plus,
     Trash2,
@@ -11,8 +11,12 @@ import {
     CheckCircle2,
     ArrowLeft,
     TrendingUp,
-    Settings
+    Settings,
+    Layout,
+    Calendar,
+    BarChart2
 } from "lucide-react";
+import Link from "next/link";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -106,6 +110,26 @@ export default function GradingPolicyPage() {
                         {isBalanced ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
                         <span className="font-bold text-lg">{totalWeight}%</span>
                         <span className="text-sm opacity-70">Total Weight</span>
+                    </div>
+                </div>
+
+                <div className="glass p-1 mb-12">
+                    <div className="flex border-b border-white/10">
+                        <Link href={`/courses/${id}`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium text-gray-500 hover:text-white transition-colors">
+                            <Layout className="w-4 h-4" /> Outline
+                        </Link>
+                        <Link href={`/courses/${id}/grading`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 border-blue-500 bg-white/5">
+                            <CheckCircle2 className="w-4 h-4" /> Grading
+                        </Link>
+                        <Link href={`/courses/${id}/calendar`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium text-gray-500 hover:text-white transition-colors">
+                            <Calendar className="w-4 h-4" /> Calendar
+                        </Link>
+                        <Link href={`/courses/${id}/analytics`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium text-gray-500 hover:text-white transition-colors">
+                            <BarChart2 className="w-4 h-4" /> Analytics
+                        </Link>
+                        <Link href={`/courses/${id}/settings`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium text-gray-500 hover:text-white transition-colors">
+                            <Settings className="w-4 h-4" /> Settings
+                        </Link>
                     </div>
                 </div>
 

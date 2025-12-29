@@ -75,6 +75,11 @@
   - [x] Update Rust models & JWT Claims
   - [x] Implement Axum middleware for organization context
   - [x] Update Frontend registration to support organizations
+- [x] **Organization Branding**: Custom identity per tenant (Completed)
+  - [x] Logo upload & optimization
+  - [x] Custom color schemes (Primary/Secondary)
+  - [x] Dynamic Experience Portal adaptation
+  - [x] Live Branding Preview in Studio
 - [ ] **Advanced Analytics**:
   - [ ] Cohort analysis
   - [ ] Retention metrics
@@ -88,10 +93,15 @@
   - [x] Badges and achievements (Implemented base system)
   - [ ] Leaderboards
   - [ ] XP and leveling system
-- [ ] **Communication**:
-  - [ ] Discussion forums
-  - [ ] Direct messaging
-  - [ ] Announcements
+- [x] **Course Management Enhancements**:
+  - [x] Manual naming for modules, lessons, and activities during creation.
+  - [x] Drag-and-drop reordering for modules, lessons, and activities.
+  - [x] **Pacing Control**:
+    - [x] Self-paced mode (Evergreen).
+    - [x] Instructor-led mode (Cohort-based with start/end dates).
+  - [x] **Course Calendar**:
+    - [x] Management of important dates (exams, assignments, milestones).
+    - [ ] Automated reminders for upcoming deadlines.
 - [ ] **Content Library**:
   - [ ] Reusable content blocks
   - [ ] Template courses
@@ -105,7 +115,7 @@
 - [ ] **Integration Ecosystem**:
   - [ ] LTI 1.3 support
   - [ ] SCORM compliance
-  - [ ] Third-party integrations (Zoom, Google Meet)
+  - [ ] Third-party integrations (Zoom, Google Meet, BigBlueButton)
 - [ ] **Mobile Apps**:
   - [ ] Native iOS app
   - [ ] Native Android app
@@ -115,11 +125,35 @@
   - [ ] Screen reader optimization
   - [ ] Keyboard navigation
 
+## Phase 8: Future Innovations (Next Gen)
+- [ ] **AI & Adaptive Learning**:
+  - [ ] **AI Tutor**: Real-time context-aware assistant for students.
+  - [ ] **Auto-grading**: LLM-based evaluation for short answers and essays.
+  - [ ] **Adaptive Paths**: Dynamic content unlocking based on performance.
+- [ ] **Monetization & Marketplace**:
+  - [ ] **Multi-tenant Payments**: Integrated Stripe/Mercado Pago per organization.
+  - [ ] **Subscriptions**: Monthly/Yearly membership support.
+  - [ ] **Promotions**: Coupons, scholarships, and referral systems.
+- [ ] **Social & Collaborative**:
+  - [ ] **Peer Review**: Structured student-to-student evaluation flows.
+  - [ ] **Co-working Spaces**: Real-time shared whiteboards and documents.
+  - [ ] **AI-Threaded Forums**: Automatic discussion summaries and sentiment analysis.
+- [ ] **Enterprise Ecosystem**:
+  - [ ] **SSO (Single Sign-On)**: Azure AD, Okta, and Google Workspace integration.
+  - [ ] **HRIS Integration**: Sync with Workday, SAP, and other HR tools.
+  - [ ] **Webhooks & API**: Extensibility for third-party automation.
+- [ ] **Deep Analytics**:
+  - [ ] **Dropout Prediction**: ML models to detect students at risk.
+  - [ ] **Engagement Heatmaps**: Detailed video and interaction tracking.
+- [ ] **Offline-First Experience**:
+  - [ ] **Mobile Offline Mode**: Encrypted downloads for learning on the go.
+
 ## Current Status
 
 **Platform Maturity**: Core functionality is production-ready. Advanced features like AI integration are under active development.
 
 **Recent Milestones**:
+- ✅ **Organization Branding**: Full customization of logos and brand colors across both portals.
 - ✅ **Multi-Tenancy**: Full support for multiple organizations, from the database to the frontend.
 - ✅ **Holistic Grading System**: Weighted categories, attempt tracking, and dynamic passing thresholds.
 - ✅ **Analytics Dashboards**: Performance insights for both instructors and students.
@@ -127,5 +161,5 @@
 
 **Next Priorities**:
 1. **AI Integration**: Implement real-time video transcription.
-2. **Gamification**: Introduce badges and achievements.
+2. **Gamification**: Expand the badges and achievement system.
 3. **Advanced Analytics**: Develop cohort analysis and retention metrics.

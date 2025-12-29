@@ -54,14 +54,21 @@ async fn main() {
             "/modules",
             get(handlers::get_modules).post(handlers::create_module),
         )
-        .route("/modules/{id}", axum::routing::put(handlers::update_module))
+        .route("/modules/reorder", post(handlers::reorder_modules))
+        .route(
+            "/modules/{id}",
+            axum::routing::put(handlers::update_module).delete(handlers::delete_module),
+        )
         .route(
             "/lessons",
             get(handlers::get_lessons).post(handlers::create_lesson),
         )
+        .route("/lessons/reorder", post(handlers::reorder_lessons))
         .route(
             "/lessons/{id}",
-            get(handlers::get_lesson).put(handlers::update_lesson),
+            get(handlers::get_lesson)
+                .put(handlers::update_lesson)
+                .delete(handlers::delete_lesson),
         )
         .route(
             "/lessons/{id}/transcribe",
@@ -75,15 +82,17 @@ async fn main() {
             "/courses/{id}/grading",
             get(handlers::get_grading_categories),
         )
+        .route("/users", get(handlers::get_all_users))
+        .route("/users/{id}", axum::routing::put(handlers::update_user))
         .route("/audit-logs", get(handlers::get_audit_logs))
         .route("/assets/upload", post(handlers::upload_asset))
         .route("/organization", get(handlers::get_organization))
         .route(
-            "/organizations/:id/logo",
+            "/organizations/{id}/logo",
             post(handlers_branding::upload_organization_logo),
         )
         .route(
-            "/organizations/:id/branding",
+            "/organizations/{id}/branding",
             axum::routing::put(handlers_branding::update_organization_branding),
         )
         .route_layer(middleware::from_fn(
@@ -95,7 +104,7 @@ async fn main() {
         .route("/auth/register", post(handlers::register))
         .route("/auth/login", post(handlers::login))
         .route(
-            "/organizations/:id/branding",
+            "/organizations/{id}/branding",
             get(handlers_branding::get_organization_branding),
         )
         .nest_service("/assets", tower_http::services::ServeDir::new("uploads"))

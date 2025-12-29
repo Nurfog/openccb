@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { lmsApi, Course } from "@/lib/api";
+import { lmsApi, Course, Lesson } from "@/lib/api";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { Rocket, CheckCircle2, ArrowRight, Star } from "lucide-react";
+import { Rocket, CheckCircle2, ArrowRight, Star, Calendar, Clock, AlertCircle } from "lucide-react";
 
 export default function CatalogPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [gamification, setGamification] = useState<{ points: number, badges: any[] } | null>(null);
+  const [upcomingDeadlines, setUpcomingDeadlines] = useState<{ lesson: Lesson, courseTitle: string }[]>([]);
 
   const { user } = useAuth();
   const router = useRouter();
@@ -28,6 +29,24 @@ export default function CatalogPage() {
 
           const gamificationData = await lmsApi.getGamification(user.id);
           setGamification(gamificationData);
+
+          // Fetch deadlines for enrolled courses
+          const deadlines: { lesson: Lesson, courseTitle: string }[] = [];
+          for (const enrollment of enrollmentData) {
+            try {
+              const outline = await lmsApi.getCourseOutline(enrollment.course_id);
+              outline.modules.forEach(mod => {
+                mod.lessons.forEach(l => {
+                  if (l.due_date && new Date(l.due_date) >= new Date()) {
+                    deadlines.push({ lesson: l, courseTitle: outline.title });
+                  }
+                });
+              });
+            } catch (err) {
+              console.error(`Failed to fetch outline for course ${enrollment.course_id}`, err);
+            }
+          }
+          setUpcomingDeadlines(deadlines.sort((a, b) => new Date(a.lesson.due_date!).getTime() - new Date(b.lesson.due_date!).getTime()).slice(0, 3));
         }
       } catch (err) {
         console.error(err);
@@ -115,7 +134,33 @@ export default function CatalogPage() {
               )}
             </div>
             {/* Visual Flair */}
-            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-500/5 blur-[80px] rounded-full"></div>
+          </div>
+        </div>
+      )}
+
+      {user && upcomingDeadlines.length > 0 && (
+        <div className="mb-16 animate-in fade-in slide-in-from-top-4 duration-700 delay-200">
+          <h3 className="text-xs font-black uppercase tracking-[0.3em] text-gray-500 mb-6 flex items-center gap-2">
+            <Calendar size={14} /> Upcoming Deadlines
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {upcomingDeadlines.map(({ lesson, courseTitle }) => (
+              <Link key={lesson.id} href={`/courses/${lesson.module_id}/lessons/${lesson.id}`} className="group">
+                <div className="glass-card p-6 border-blue-500/10 bg-blue-500/2 rounded-3xl hover:border-blue-500/30 transition-all">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-blue-400 group-hover:text-blue-300 transition-colors">
+                      {lesson.important_date_type || 'Activity'}
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs font-black text-white">{new Date(lesson.due_date!).toLocaleDateString()}</div>
+                      <div className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">Deadline</div>
+                    </div>
+                  </div>
+                  <h4 className="font-bold text-sm text-gray-200 mb-1 group-hover:text-white transition-colors line-clamp-1">{lesson.title}</h4>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{courseTitle}</p>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       )}

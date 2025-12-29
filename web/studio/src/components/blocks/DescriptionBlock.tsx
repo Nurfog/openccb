@@ -18,7 +18,7 @@ export default function DescriptionBlock({ title, content, editMode, onChange }:
             <div className="space-y-2">
                 {editMode ? (
                     <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Section Title (Optional)</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Activity Title (Optional)</label>
                         <input
                             type="text"
                             value={title || ""}

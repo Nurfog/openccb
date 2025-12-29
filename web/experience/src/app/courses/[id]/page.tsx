@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { lmsApi, Course, Module } from "@/lib/api";
 import Link from "next/link";
-import { BookOpen, ChevronRight, PlayCircle } from "lucide-react";
+import { BookOpen, ChevronRight, PlayCircle, Calendar, Clock, Info } from "lucide-react";
 
 export default function CourseOutlinePage({ params }: { params: { id: string } }) {
     const [courseData, setCourseData] = useState<(Course & { modules: Module[] }) | null>(null);
@@ -45,6 +45,25 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                     {courseData.description || "Master the core principles and advanced techniques in this structured curriculum. Each module is designed to provide actionable insights and hands-on experience."}
                 </p>
 
+                <div className="flex flex-wrap items-center gap-4 mb-10">
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold uppercase tracking-widest ${courseData.pacing_mode === 'instructor_led' ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                        }`}>
+                        {courseData.pacing_mode === 'instructor_led' ? <Clock size={14} /> : <Info size={14} />}
+                        {courseData.pacing_mode === 'instructor_led' ? 'Instructor-Led' : 'Self-Paced'}
+                    </div>
+
+                    {courseData.pacing_mode === 'instructor_led' && (courseData.start_date || courseData.end_date) && (
+                        <div className="flex items-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                            <Calendar size={14} />
+                            <span>
+                                {courseData.start_date ? new Date(courseData.start_date).toLocaleDateString() : 'TBD'}
+                                <span className="mx-2 text-gray-700">→</span>
+                                {courseData.end_date ? new Date(courseData.end_date).toLocaleDateString() : 'TBD'}
+                            </span>
+                        </div>
+                    )}
+                </div>
+
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-8">
                         <div className="flex flex-col">
@@ -60,11 +79,18 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                         </div>
                     </div>
 
-                    <Link href={`/courses/${params.id}/progress`}>
-                        <button className="px-8 py-3 glass hover:border-blue-500/50 transition-all font-bold text-xs uppercase tracking-widest flex items-center gap-3 active:scale-95">
-                            📊 View Progress
-                        </button>
-                    </Link>
+                    <div className="flex gap-2">
+                        <Link href={`/courses/${params.id}/calendar`}>
+                            <button className="px-6 py-3 glass hover:border-blue-500/50 transition-all font-bold text-xs uppercase tracking-widest flex items-center gap-3 active:scale-95">
+                                <Calendar size={16} /> Timeline
+                            </button>
+                        </Link>
+                        <Link href={`/courses/${params.id}/progress`}>
+                            <button className="px-8 py-3 glass hover:border-blue-500/50 transition-all font-bold text-xs uppercase tracking-widest flex items-center gap-3 active:scale-95">
+                                📊 Progress
+                            </button>
+                        </Link>
+                    </div>
                 </div>
             </div>
 
@@ -98,8 +124,18 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <ChevronRight size={18} className="text-blue-500" />
+                                            <div className="flex items-center gap-6">
+                                                {lesson.due_date && (
+                                                    <div className="text-right hidden sm:block">
+                                                        <div className="text-[9px] font-black uppercase tracking-widest text-gray-600">Deadline</div>
+                                                        <div className={`text-[10px] font-bold ${new Date(lesson.due_date) < new Date() ? 'text-red-400' : 'text-blue-400'}`}>
+                                                            {new Date(lesson.due_date).toLocaleDateString()}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <ChevronRight size={18} className="text-blue-500" />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

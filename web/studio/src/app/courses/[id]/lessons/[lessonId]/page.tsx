@@ -10,6 +10,20 @@ import FillInTheBlanksBlock from "@/components/blocks/FillInTheBlanksBlock";
 import MatchingBlock from "@/components/blocks/MatchingBlock";
 import OrderingBlock from "@/components/blocks/OrderingBlock";
 import ShortAnswerBlock from "@/components/blocks/ShortAnswerBlock";
+import {
+    Save,
+    X,
+    Pencil,
+    ChevronUp,
+    ChevronDown,
+    Trash2,
+    PlayCircle,
+    FileText,
+    Calendar,
+    Settings,
+    Layout,
+    CheckCircle2
+} from "lucide-react";
 
 export default function LessonEditor({ params }: { params: { id: string; lessonId: string } }) {
     const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -20,6 +34,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
     // Activity State (Blocks)
     const [blocks, setBlocks] = useState<Block[]>([]);
     const [summary, setSummary] = useState<string>("");
+    const [isTranscribing, setIsTranscribing] = useState(false);
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
     const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
     const [gradingCategories, setGradingCategories] = useState<GradingCategory[]>([]);
@@ -27,6 +42,11 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | "">("");
     const [maxAttempts, setMaxAttempts] = useState<number | null>(null);
     const [allowRetry, setAllowRetry] = useState(true);
+    const [dueDate, setDueDate] = useState<string>("");
+    const [importantDateType, setImportantDateType] = useState<string>("");
+
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editValue, setEditValue] = useState("");
 
     useEffect(() => {
         const loadData = async () => {
@@ -39,6 +59,8 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                 setSelectedCategoryId(lessonData.grading_category_id || "");
                 setMaxAttempts(lessonData.max_attempts);
                 setAllowRetry(lessonData.allow_retry);
+                setDueDate(lessonData.due_date ? new Date(lessonData.due_date).toISOString().split('T')[0] : "");
+                setImportantDateType(lessonData.important_date_type || "");
 
                 if (lessonData.metadata?.blocks) {
                     setBlocks(lessonData.metadata.blocks);
@@ -64,6 +86,17 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
         loadData();
     }, [params.id, params.lessonId]);
 
+    const handleSaveLessonTitle = async () => {
+        if (!lesson || !editValue) return;
+        try {
+            const updated = await cmsApi.updateLesson(lesson.id, { title: editValue });
+            setLesson(updated);
+            setEditingId(null);
+        } catch {
+            alert("Failed to update title");
+        }
+    };
+
     const handleSave = async () => {
         if (!lesson) return;
         setIsSaving(true);
@@ -74,7 +107,9 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                 is_graded: isGraded,
                 grading_category_id: selectedCategoryId || null,
                 max_attempts: maxAttempts,
-                allow_retry: allowRetry
+                allow_retry: allowRetry,
+                due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
+                important_date_type: (importantDateType || undefined) as any
             });
             setLesson(updated);
             setEditMode(false);
@@ -117,6 +152,19 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
         setBlocks(newBlocks);
     };
 
+    const handleTranscribe = async () => {
+        if (!lesson) return;
+        setIsTranscribing(true);
+        try {
+            const updated = await cmsApi.transcribeLesson(lesson.id);
+            setLesson(updated);
+        } catch {
+            alert("Failed to transcribe video.");
+        } finally {
+            setIsTranscribing(false);
+        }
+    };
+
     const handleSummarize = async () => {
         if (!lesson) return;
         setIsGeneratingSummary(true);
@@ -155,7 +203,31 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                         <span className="text-gray-700">/</span>
                         <span>Activity</span>
                     </div>
-                    <h2 className="text-4xl font-black tracking-tight">{lesson.title}</h2>
+                    <div className="flex items-center gap-4">
+                        {editingId === 'lesson-title' ? (
+                            <div className="flex items-center gap-2">
+                                <input
+                                    autoFocus
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSaveLessonTitle()}
+                                    className="text-4xl font-black bg-transparent border-b-2 border-blue-500 focus:outline-none"
+                                />
+                                <button onClick={handleSaveLessonTitle} className="text-green-400"><Save className="w-6 h-6" /></button>
+                                <button onClick={() => setEditingId(null)} className="text-gray-400"><X className="w-6 h-6" /></button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-4 group">
+                                <h2 className="text-4xl font-black tracking-tight">{lesson.title}</h2>
+                                <button
+                                    onClick={() => { setEditingId('lesson-title'); setEditValue(lesson.title); }}
+                                    className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-white transition-opacity"
+                                >
+                                    <Pencil className="w-5 h-5" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -259,7 +331,98 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                 </div>
             )}
 
-            {/* AI Summary Section */}
+            {editMode && (
+                <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div>
+                        <h3 className="text-xl font-bold flex items-center gap-2">
+                            <span className="text-blue-500">📅</span> Scheduling & Deadlines
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-1">Set deadlines and mark important dates for this activity</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            <label className="block">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Due Date</span>
+                                <input
+                                    type="date"
+                                    value={dueDate}
+                                    onChange={(e) => setDueDate(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all font-bold"
+                                />
+                            </label>
+                        </div>
+
+                        <div className="space-y-4">
+                            <label className="block">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Date Type</span>
+                                <select
+                                    value={importantDateType}
+                                    onChange={(e) => setImportantDateType(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all appearance-none font-bold"
+                                >
+                                    <option value="" className="bg-gray-900">Standard Activity</option>
+                                    <option value="exam" className="bg-gray-900">Exam</option>
+                                    <option value="assignment" className="bg-gray-900">Assignment</option>
+                                    <option value="milestone" className="bg-gray-900">Milestone</option>
+                                    <option value="live-session" className="bg-gray-900">Live Session</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* AI Magic Section */}
+            {editMode && (
+                <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl">🪄</span>
+                        <div>
+                            <h3 className="text-xl font-bold italic tracking-tight">AI Content Assistant</h3>
+                            <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">Automate your content creation</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {(lesson.content_type === 'video' || lesson.content_type === 'audio') && (
+                            <button
+                                onClick={handleTranscribe}
+                                disabled={isTranscribing}
+                                className={`p-6 rounded-2xl border transition-all text-left flex flex-col gap-2 ${lesson.transcription ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:border-blue-500/60'}`}
+                            >
+                                <span className="text-xl">{isTranscribing ? '⏳' : '🎤'}</span>
+                                <div className="text-[10px] font-black uppercase tracking-widest opacity-80">Video/Audio</div>
+                                <div className="font-bold">{isTranscribing ? 'Transcribing...' : lesson.transcription ? 'Update Transcript' : 'Transcribe Video'}</div>
+                            </button>
+                        )}
+
+                        <button
+                            onClick={handleSummarize}
+                            disabled={isGeneratingSummary || !lesson.transcription}
+                            className={`p-6 rounded-2xl border transition-all text-left flex flex-col gap-2 ${summary ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:border-indigo-500/60 disabled:opacity-30 disabled:cursor-not-allowed'}`}
+                        >
+                            <span className="text-xl">{isGeneratingSummary ? '⏳' : '✍️'}</span>
+                            <div className="text-[10px] font-black uppercase tracking-widest opacity-80">Summarization</div>
+                            <div className="font-bold">{isGeneratingSummary ? 'Generating...' : summary ? 'Update Summary' : 'Generate Summary'}</div>
+                            {!lesson.transcription && <div className="text-[8px] opacity-60">Requires Transcript</div>}
+                        </button>
+
+                        <button
+                            onClick={handleGenerateQuiz}
+                            disabled={isGeneratingQuiz || !lesson.transcription}
+                            className="p-6 bg-purple-500/10 border border-purple-500/30 hover:border-purple-500/60 rounded-2xl transition-all text-left flex flex-col gap-2 text-purple-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            <span className="text-xl">{isGeneratingQuiz ? '⏳' : '💡'}</span>
+                            <div className="text-[10px] font-black uppercase tracking-widest opacity-80">Assessments</div>
+                            <div className="font-bold">{isGeneratingQuiz ? 'Building...' : 'Generate Quiz'}</div>
+                            {!lesson.transcription && <div className="text-[8px] opacity-60">Requires Transcript</div>}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* AI Summary Visualization */}
             {(summary || editMode) && (
                 <div className="bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border border-indigo-500/20 rounded-3xl p-8 space-y-6 animate-in fade-in duration-700">
                     <div className="flex items-center justify-between">
@@ -270,15 +433,6 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">Key insights generated by intelligence</p>
                             </div>
                         </div>
-                        {editMode && (
-                            <button
-                                onClick={handleSummarize}
-                                disabled={isGeneratingSummary}
-                                className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-widest rounded-xl border border-blue-500/20 transition-all flex items-center gap-2"
-                            >
-                                {isGeneratingSummary ? "Generating..." : "Regenerate Summary"}
-                            </button>
-                        )}
                     </div>
 
                     {editMode ? (
@@ -300,32 +454,33 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                 {blocks.map((block, index) => (
                     <div key={block.id} className="relative group/block animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${index * 100}ms` }}>
                         {editMode && (
-                            <div className="absolute -left-12 top-0 h-full flex flex-col items-center gap-2 opacity-0 group-hover/block:opacity-100 transition-all">
+                            <div className="absolute -left-16 top-0 h-full flex flex-col items-center gap-2 opacity-100 transition-all">
+                                <span className="text-[10px] font-black text-gray-700 uppercase vertical-text mb-2">Move</span>
                                 <button
                                     onClick={() => moveBlock(index, 'up')}
                                     disabled={index === 0}
-                                    className="w-8 h-8 rounded-lg bg-white/5 text-gray-400 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all border border-white/10 disabled:opacity-20 disabled:cursor-not-allowed"
+                                    className="w-10 h-10 rounded-xl bg-white/5 text-gray-400 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all border border-white/10 disabled:opacity-20 disabled:cursor-not-allowed group-hover/block:scale-110"
                                     title="Move Up"
                                 >
-                                    <span className="text-xs">↑</span>
+                                    <ChevronUp className="w-5 h-5" />
                                 </button>
                                 <button
                                     onClick={() => moveBlock(index, 'down')}
                                     disabled={index === blocks.length - 1}
-                                    className="w-8 h-8 rounded-lg bg-white/5 text-gray-400 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all border border-white/10 disabled:opacity-20 disabled:cursor-not-allowed"
+                                    className="w-10 h-10 rounded-xl bg-white/5 text-gray-400 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all border border-white/10 disabled:opacity-20 disabled:cursor-not-allowed group-hover/block:scale-110"
                                     title="Move Down"
                                 >
-                                    <span className="text-xs">↓</span>
+                                    <ChevronDown className="w-5 h-5" />
                                 </button>
-                                <div className="h-2"></div>
+                                <div className="h-4"></div>
                                 <button
                                     onClick={() => removeBlock(block.id)}
-                                    className="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
+                                    className="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-500/20 group-hover/block:scale-110"
                                     title="Remove Block"
                                 >
-                                    <span className="text-sm">×</span>
+                                    <Trash2 className="w-5 h-5" />
                                 </button>
-                                <div className="w-0.5 flex-1 bg-white/5"></div>
+                                <div className="w-0.5 flex-1 bg-white/5 mt-2"></div>
                             </div>
                         )}
 

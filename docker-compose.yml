@@ -52,6 +52,24 @@ services:
     environment:
       NEXT_PUBLIC_LMS_API_URL: http://localhost:3002
 
+  whisper:
+    image: fedirz/faster-whisper-server:latest-cuda
+    ports:
+      - "8000:8000"
+    volumes:
+      - whisper_cache:/root/.cache/huggingface
+    environment:
+      - WHISPER_MODEL=medium
+      - DEVICE=cuda
+    # GPU support for RTX 2070 Super
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+
   e2e:
     build:
       context: ./e2e
@@ -69,3 +87,4 @@ services:
 volumes:
   postgres_data:
   uploads_data:
+  whisper_cache:

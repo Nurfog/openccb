@@ -4,7 +4,7 @@ OpenCCB es una infraestructura de código abierto para plataformas de gestión d
 
 ## 🚀 Estado del Proyecto
 
-El sistema se encuentra en una fase madura (**Phase 6 en progreso**), con una API robusta para la gestión de cursos, autenticación segura, multi-tenencia y análisis de datos.
+El sistema se encuentra en una fase avanzada (**Phase 6 en progreso**), ofreciendo una infraestructura multi-inquilino de alto rendimiento, gestión de marcas por organización (branding), autenticación segura y análisis detallado de datos.
 
 Consulta el archivo [ROADMAP.md](./roadmap.md) para ver el desglose detallado de funcionalidades.
 
@@ -135,6 +135,32 @@ El servicio CMS expone una API RESTful en el puerto `3001`. A continuación se d
 #### Logs de Auditoría
 - **URL**: `GET /audit-logs`
 - **Query Params**: `?page=1&limit=50`
+
+### 🏢 Organizaciones & Branding
+
+#### Listar Organizaciones (Admin)
+- **URL**: `GET /organizations`
+- **Descripción**: Obtiene la lista completa de inquilinos del sistema.
+
+#### Configurar Branding
+- **URL**: `PUT /organizations/{id}/branding`
+- **Descripción**: Actualiza los colores primario y secundario de la organización.
+- **Body (JSON)**:
+  ```json
+  {
+    "primary_color": "#hex",
+    "secondary_color": "#hex"
+  }
+  ```
+
+#### Subir Logo de Organización
+- **URL**: `POST /organizations/{id}/logo`
+- **Tipo**: `multipart/form-data`
+- **Campo**: `file` (Binary)
+
+#### Obtener Branding Público
+- **URL**: `GET /organizations/{id}/branding`
+- **Descripción**: Recupera la identidad visual (logo y colores) de una organización.
 
 ## 📦 Configuración y Ejecución
 

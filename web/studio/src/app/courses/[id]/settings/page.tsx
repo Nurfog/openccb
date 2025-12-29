@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { cmsApi, Course } from "@/lib/api";
-import { ArrowLeft, Save, Settings as SettingsIcon, BookOpen } from "lucide-react";
+import { ArrowLeft, Save, Settings as SettingsIcon, BookOpen, Calendar, Clock, Layout, CheckCircle2 } from "lucide-react";
 
 const DEFAULT_CERTIFICATE_TEMPLATE = `
 <div style="width: 800px; height: 600px; padding: 40px; text-align: center; border: 10px solid #787878; font-family: 'Times New Roman', serif; background-color: #fff; color: #333;">
@@ -28,6 +29,9 @@ export default function CourseSettingsPage() {
     const [certificateTemplate, setCertificateTemplate] = useState("");
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [pacingMode, setPacingMode] = useState<'self_paced' | 'instructor_led'>("self_paced");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
 
     useEffect(() => {
         const fetchCourse = async () => {
@@ -36,6 +40,9 @@ export default function CourseSettingsPage() {
                 setCourse(data);
                 setPassingPercentage(data.passing_percentage || 70);
                 setCertificateTemplate(data.certificate_template || DEFAULT_CERTIFICATE_TEMPLATE);
+                setPacingMode(data.pacing_mode || "self_paced");
+                setStartDate(data.start_date ? new Date(data.start_date).toISOString().split('T')[0] : "");
+                setEndDate(data.end_date ? new Date(data.end_date).toISOString().split('T')[0] : "");
             } catch (err) {
                 console.error("Failed to load course", err);
             } finally {
@@ -50,7 +57,10 @@ export default function CourseSettingsPage() {
         try {
             const updated = await cmsApi.updateCourse(id, {
                 passing_percentage: passingPercentage,
-                certificate_template: certificateTemplate
+                certificate_template: certificateTemplate,
+                pacing_mode: pacingMode,
+                start_date: startDate ? new Date(startDate).toISOString() : undefined,
+                end_date: endDate ? new Date(endDate).toISOString() : undefined
             });
             setCourse(updated);
             alert("Course settings updated successfully!");
@@ -97,6 +107,23 @@ export default function CourseSettingsPage() {
             </header>
 
             <main className="max-w-5xl mx-auto px-8 mt-12 space-y-8">
+                <div className="glass p-1 mb-12">
+                    <div className="flex border-b border-white/10">
+                        <Link href={`/courses/${id}`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium text-gray-500 hover:text-white transition-colors">
+                            <Layout className="w-4 h-4" /> Outline
+                        </Link>
+                        <Link href={`/courses/${id}/grading`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium text-gray-500 hover:text-white transition-colors">
+                            <CheckCircle2 className="w-4 h-4" /> Grading
+                        </Link>
+                        <Link href={`/courses/${id}/calendar`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium text-gray-500 hover:text-white transition-colors">
+                            <Calendar className="w-4 h-4" /> Calendar
+                        </Link>
+                        <Link href={`/courses/${id}/settings`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 border-blue-500 bg-white/5">
+                            <SettingsIcon className="w-4 h-4" /> Settings
+                        </Link>
+                    </div>
+                </div>
+
                 {/* Passing Percentage Section */}
                 <section className="bg-white/5 border border-white/10 rounded-3xl p-8">
                     <div className="flex items-center gap-3 mb-6">
@@ -160,6 +187,70 @@ export default function CourseSettingsPage() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </section>
+
+                {/* Course Pacing Section */}
+                <section className="bg-white/5 border border-white/10 rounded-3xl p-8">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center text-green-400">
+                            <Clock size={24} />
+                        </div>
+                        <h2 className="text-2xl font-black">Course Pacing & Schedule</h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            <label className="block text-sm font-bold text-gray-300">Pacing Mode</label>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setPacingMode('self_paced')}
+                                    className={`flex-1 p-4 rounded-2xl border-2 transition-all text-left ${pacingMode === 'self_paced' ? 'border-blue-500 bg-blue-500/10' : 'border-white/5 bg-white/5 hover:border-white/10'}`}
+                                >
+                                    <div className="font-bold">Self-Paced</div>
+                                    <div className="text-xs text-gray-500">Learners go at their own speed.</div>
+                                </button>
+                                <button
+                                    onClick={() => setPacingMode('instructor_led')}
+                                    className={`flex-1 p-4 rounded-2xl border-2 transition-all text-left ${pacingMode === 'instructor_led' ? 'border-purple-500 bg-purple-500/10' : 'border-white/5 bg-white/5 hover:border-white/10'}`}
+                                >
+                                    <div className="font-bold">Instructor-Led</div>
+                                    <div className="text-xs text-gray-500">Cohort-based with specific dates.</div>
+                                </button>
+                            </div>
+                        </div>
+
+                        {pacingMode === 'instructor_led' && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                <label className="block text-sm font-bold text-gray-300">Course Schedule</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs text-gray-500">Start Date</label>
+                                        <div className="relative">
+                                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                            <input
+                                                type="date"
+                                                value={startDate}
+                                                onChange={(e) => setStartDate(e.target.value)}
+                                                className="w-full bg-black/30 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs text-gray-500">End Date</label>
+                                        <div className="relative">
+                                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                            <input
+                                                type="date"
+                                                value={endDate}
+                                                onChange={(e) => setEndDate(e.target.value)}
+                                                className="w-full bg-black/30 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </section>
 

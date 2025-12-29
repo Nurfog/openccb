@@ -27,7 +27,7 @@ export default function ShortAnswerBlock({ id, title, prompt, correctAnswers, ed
             <div className="space-y-2">
                 {editMode ? (
                     <div className="space-y-2 p-6 glass border-white/5 bg-white/5 mb-4">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Section Title (Optional)</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Activity Title (Optional)</label>
                         <input
                             type="text"
                             value={title || ""}
@@ -77,8 +77,8 @@ export default function ShortAnswerBlock({ id, title, prompt, correctAnswers, ed
                             onChange={(e) => setUserAnswer(e.target.value)}
                             disabled={submitted}
                             className={`w-full bg-white/5 border-2 rounded-2xl px-6 py-4 text-lg transition-all focus:outline-none ${submitted
-                                    ? (isCorrect ? "border-green-500 bg-green-500/10 text-green-400" : "border-red-500 bg-red-500/10 text-red-100")
-                                    : "border-white/10 focus:border-blue-500 text-white"
+                                ? (isCorrect ? "border-green-500 bg-green-500/10 text-green-400" : "border-red-500 bg-red-500/10 text-red-100")
+                                : "border-white/10 focus:border-blue-500 text-white"
                                 }`}
                             placeholder="Type your answer..."
                         />

@@ -40,7 +40,7 @@ export default function OrderingBlock({ id, title, items, editMode, onChange }: 
             <div className="space-y-2">
                 {editMode ? (
                     <div className="space-y-2 p-6 glass border-white/5 bg-white/5 mb-4">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Section Title (Optional)</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Activity Title (Optional)</label>
                         <input
                             type="text"
                             value={title || ""}
@@ -128,7 +128,7 @@ export default function OrderingBlock({ id, title, items, editMode, onChange }: 
                                             disabled={isPicked || submitted}
                                             onClick={() => handlePick(item.originalIdx)}
                                             className={`px-6 py-3 rounded-full border text-sm font-bold transition-all ${isPicked ? "opacity-20 grayscale border-white/5 bg-white/5" :
-                                                    "border-white/10 bg-white/5 text-gray-200 hover:border-blue-500/50 hover:bg-blue-500/5"
+                                                "border-white/10 bg-white/5 text-gray-200 hover:border-blue-500/50 hover:bg-blue-500/5"
                                                 }`}
                                         >
                                             {item.value}
@@ -151,8 +151,8 @@ export default function OrderingBlock({ id, title, items, editMode, onChange }: 
                                             key={i}
                                             onClick={() => !submitted && handlePick(idx)}
                                             className={`flex items-center gap-4 p-4 rounded-xl border text-sm font-bold transition-all cursor-pointer ${isItemCorrect ? "border-green-500 bg-green-500/20 text-green-400" :
-                                                    isItemWrong ? "border-red-500 bg-red-500/20 text-red-100" :
-                                                        "border-blue-500/30 bg-blue-500/5 text-blue-400 hover:bg-blue-500/10"
+                                                isItemWrong ? "border-red-500 bg-red-500/20 text-red-100" :
+                                                    "border-blue-500/30 bg-blue-500/5 text-blue-400 hover:bg-blue-500/10"
                                                 }`}
                                         >
                                             <span className="opacity-50 text-xs">{i + 1}.</span>

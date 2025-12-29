@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
@@ -9,6 +10,7 @@ pub struct Course {
     pub title: String,
     pub description: Option<String>,
     pub instructor_id: Uuid,
+    pub pacing_mode: String, // "self_paced" or "instructor_led"
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
     pub passing_percentage: i32,
@@ -41,6 +43,8 @@ pub struct Lesson {
     pub max_attempts: Option<i32>,
     pub allow_retry: bool,
     pub position: i32,
+    pub due_date: Option<DateTime<Utc>>,
+    pub important_date_type: Option<String>, // "exam", "assignment", "milestone", etc.
     pub created_at: DateTime<Utc>,
 }
 
@@ -96,7 +100,7 @@ pub struct Enrollment {
     pub user_id: Uuid,
     pub organization_id: Uuid,
     pub course_id: Uuid,
-    pub enroled_at: DateTime<Utc>,
+    pub enrolled_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
@@ -121,12 +125,13 @@ pub struct User {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct UserResponse {
     pub id: Uuid,
     pub email: String,
     pub full_name: String,
     pub role: String,
+    pub organization_id: Uuid,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
@@ -192,6 +197,7 @@ mod tests {
             title: "Test Lesson".to_string(),
             content_type: "activity".to_string(),
             content_url: None,
+            summary: None,
             transcription: None,
             metadata: Some(json!({
                 "blocks": [
@@ -212,6 +218,8 @@ mod tests {
             max_attempts: None,
             allow_retry: true,
             position: 1,
+            due_date: None,
+            important_date_type: None,
             created_at: Utc::now(),
         };
 
@@ -229,9 +237,11 @@ mod tests {
         let pub_course = PublishedCourse {
             course: Course {
                 id: course_id,
+                organization_id: Uuid::new_v4(),
                 title: "Test Course".to_string(),
                 description: None,
                 instructor_id: Uuid::new_v4(),
+                pacing_mode: "self_paced".to_string(),
                 start_date: None,
                 end_date: None,
                 passing_percentage: 70,

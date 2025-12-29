@@ -44,7 +44,7 @@ export default function MatchingBlock({ id, title, pairs, editMode, onChange }: 
             <div className="space-y-2">
                 {editMode ? (
                     <div className="space-y-2 p-6 glass border-white/5 bg-white/5 mb-4">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Section Title (Optional)</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Activity Title (Optional)</label>
                         <input
                             type="text"
                             value={title || ""}
@@ -112,8 +112,8 @@ export default function MatchingBlock({ id, title, pairs, editMode, onChange }: 
                                 key={i}
                                 onClick={() => !submitted && setSelectedLeft(i)}
                                 className={`w-full p-4 rounded-xl border text-left text-sm font-bold transition-all ${selectedLeft === i ? "border-blue-500 bg-blue-500/10 text-white shadow-lg" :
-                                        matches[i] !== undefined ? "border-blue-500/20 bg-blue-500/5 text-blue-400" :
-                                            "border-white/5 bg-white/5 text-gray-200 hover:border-white/20"
+                                    matches[i] !== undefined ? "border-blue-500/20 bg-blue-500/5 text-blue-400" :
+                                        "border-white/5 bg-white/5 text-gray-200 hover:border-white/20"
                                     }`}
                             >
                                 {pair.left}
