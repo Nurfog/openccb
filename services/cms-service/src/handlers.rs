@@ -1,16 +1,19 @@
 use axum::{
-    extract::{State, Path, Query},
-    http::StatusCode,
     Json,
+    extract::{Path, Query, State},
+    http::StatusCode,
 };
-use common::models::{Course, Module, Lesson, PublishedCourse, PublishedModule, User, UserResponse, AuthResponse, CourseAnalytics, Organization};
+use bcrypt::{DEFAULT_COST, hash, verify};
 use common::auth::create_jwt;
 use common::middleware::Org;
+use common::models::{
+    AuthResponse, Course, CourseAnalytics, Lesson, Module, Organization, PublishedCourse,
+    PublishedModule, User, UserResponse,
+};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
-use serde_json::json;
-use serde::{Deserialize, Serialize};
-use bcrypt::{hash, verify, DEFAULT_COST};
 
 pub async fn publish_course(
     Org(org_ctx): Org,
@@ -18,25 +21,27 @@ pub async fn publish_course(
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, StatusCode> {
     // 1. Fetch Course
-    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
-        .bind(id)
-        .bind(org_ctx.id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| StatusCode::NOT_FOUND)?;
+    let course =
+        sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
+            .bind(id)
+            .bind(org_ctx.id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| StatusCode::NOT_FOUND)?;
 
     // 2. Fetch Modules
-    let modules = sqlx::query_as::<_, Module>("SELECT * FROM modules WHERE course_id = $1 ORDER BY position")
-        .bind(id)
-        .fetch_all(&pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let modules =
+        sqlx::query_as::<_, Module>("SELECT * FROM modules WHERE course_id = $1 ORDER BY position")
+            .bind(id)
+            .fetch_all(&pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let mut pub_modules = Vec::new();
 
     // 3. Fetch Grading Categories
     let grading_categories = sqlx::query_as::<_, common::models::GradingCategory>(
-        "SELECT * FROM grading_categories WHERE course_id = $1"
+        "SELECT * FROM grading_categories WHERE course_id = $1",
     )
     .bind(id)
     .fetch_all(&pool)
@@ -45,16 +50,15 @@ pub async fn publish_course(
 
     // 4. Fetch Lessons for each Module
     for module in modules {
-        let lessons = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE module_id = $1 ORDER BY position")
-            .bind(module.id)
-            .fetch_all(&pool)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let lessons = sqlx::query_as::<_, Lesson>(
+            "SELECT * FROM lessons WHERE module_id = $1 ORDER BY position",
+        )
+        .bind(module.id)
+        .fetch_all(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        pub_modules.push(PublishedModule {
-            module,
-            lessons,
-        });
+        pub_modules.push(PublishedModule { module, lessons });
     }
 
     let payload = PublishedCourse {
@@ -66,7 +70,8 @@ pub async fn publish_course(
     // 4. Send to LMS
     // Using service name for Docker compatibility
     let client = reqwest::Client::new();
-    let res = client.post("http://lms-service:3002/ingest")
+    let res = client
+        .post("http://lms-service:3002/ingest")
         .json(&payload)
         .send()
         .await
@@ -109,7 +114,10 @@ pub async fn create_course(
     State(pool): State<PgPool>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Course>, StatusCode> {
-    let title = payload.get("title").and_then(|t| t.as_str()).ok_or(StatusCode::BAD_REQUEST)?;
+    let title = payload
+        .get("title")
+        .and_then(|t| t.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
     let instructor_id = claims.sub;
 
     let course = sqlx::query_as::<_, Course>(
@@ -122,7 +130,15 @@ pub async fn create_course(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    log_action(&pool, instructor_id, "CREATE", "Course", course.id, json!({ "title": title })).await;
+    log_action(
+        &pool,
+        instructor_id,
+        "CREATE",
+        "Course",
+        course.id,
+        json!({ "title": title }),
+    )
+    .await;
 
     Ok(Json(course))
 }
@@ -147,26 +163,37 @@ pub async fn update_course(
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Course>, (StatusCode, String)> {
     // 1. Fetch course and check ownership/role
-    let existing = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
-        .bind(id)
-        .bind(org_ctx.id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| (StatusCode::NOT_FOUND, "Course not found".into()))?;
+    let existing =
+        sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
+            .bind(id)
+            .bind(org_ctx.id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| (StatusCode::NOT_FOUND, "Course not found".into()))?;
 
     if claims.role != "admin" && existing.instructor_id != claims.sub {
         return Err((StatusCode::FORBIDDEN, "Not authorized".into()));
     }
 
     // 2. Update fields
-    let title = payload.get("title").and_then(|v| v.as_str()).unwrap_or(&existing.title);
-    let description = payload.get("description").and_then(|v| v.as_str()).unwrap_or(existing.description.as_deref().unwrap_or(""));
-    let passing_percentage = payload.get("passing_percentage").and_then(|v| v.as_i64()).unwrap_or(existing.passing_percentage as i64) as i32;
-    
+    let title = payload
+        .get("title")
+        .and_then(|v| v.as_str())
+        .unwrap_or(&existing.title);
+    let description = payload
+        .get("description")
+        .and_then(|v| v.as_str())
+        .unwrap_or(existing.description.as_deref().unwrap_or(""));
+    let passing_percentage = payload
+        .get("passing_percentage")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(existing.passing_percentage as i64) as i32;
+
     // Check if certificate_template is in payload (even if null to unset?)
     // For simplicity: if provided as string, use it. If not provided, keep existing.
-    // To unset, user can send empty string maybe? 
-    let certificate_template = payload.get("certificate_template")
+    // To unset, user can send empty string maybe?
+    let certificate_template = payload
+        .get("certificate_template")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
         .or(existing.certificate_template);
@@ -192,13 +219,22 @@ pub async fn create_module(
     State(pool): State<PgPool>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Module>, StatusCode> {
-    let title = payload.get("title").and_then(|t| t.as_str()).ok_or(StatusCode::BAD_REQUEST)?;
-    let course_id_str = payload.get("course_id").and_then(|v| v.as_str()).ok_or(StatusCode::BAD_REQUEST)?;
+    let title = payload
+        .get("title")
+        .and_then(|t| t.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    let course_id_str = payload
+        .get("course_id")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
     let course_id = Uuid::parse_str(course_id_str).map_err(|_| StatusCode::BAD_REQUEST)?;
-    let position = payload.get("position").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+    let position = payload
+        .get("position")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(0) as i32;
 
     let module = sqlx::query_as::<_, Module>(
-        "INSERT INTO modules (course_id, title, position) VALUES ($1, $2, $3) RETURNING *"
+        "INSERT INTO modules (course_id, title, position) VALUES ($1, $2, $3) RETURNING *",
     )
     .bind(course_id)
     .bind(title)
@@ -207,7 +243,15 @@ pub async fn create_module(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    log_action(&pool, claims.sub, "CREATE", "Module", module.id, json!({ "title": title, "course_id": course_id })).await;
+    log_action(
+        &pool,
+        claims.sub,
+        "CREATE",
+        "Module",
+        module.id,
+        json!({ "title": title, "course_id": course_id }),
+    )
+    .await;
 
     Ok(Json(module))
 }
@@ -217,19 +261,43 @@ pub async fn create_lesson(
     State(pool): State<PgPool>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Lesson>, StatusCode> {
-    let title = payload.get("title").and_then(|t| t.as_str()).ok_or(StatusCode::BAD_REQUEST)?;
-    let module_id_str = payload.get("module_id").and_then(|v| v.as_str()).ok_or(StatusCode::BAD_REQUEST)?;
+    let title = payload
+        .get("title")
+        .and_then(|t| t.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    let module_id_str = payload
+        .get("module_id")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
     let module_id = Uuid::parse_str(module_id_str).map_err(|_| StatusCode::BAD_REQUEST)?;
-    let content_type = payload.get("content_type").and_then(|t| t.as_str()).ok_or(StatusCode::BAD_REQUEST)?;
+    let content_type = payload
+        .get("content_type")
+        .and_then(|t| t.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
     let content_url = payload.get("content_url").and_then(|v| v.as_str());
-    let position = payload.get("position").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+    let position = payload
+        .get("position")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(0) as i32;
     let transcription = payload.get("transcription").cloned();
     let metadata = payload.get("metadata").cloned();
 
-    let is_graded = payload.get("is_graded").and_then(|v| v.as_bool()).unwrap_or(false);
-    let grading_category_id = payload.get("grading_category_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok());
-    let max_attempts = payload.get("max_attempts").and_then(|v| v.as_i64()).map(|v| v as i32);
-    let allow_retry = payload.get("allow_retry").and_then(|v| v.as_bool()).unwrap_or(true);
+    let is_graded = payload
+        .get("is_graded")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let grading_category_id = payload
+        .get("grading_category_id")
+        .and_then(|v| v.as_str())
+        .and_then(|s| Uuid::parse_str(s).ok());
+    let max_attempts = payload
+        .get("max_attempts")
+        .and_then(|v| v.as_i64())
+        .map(|v| v as i32);
+    let allow_retry = payload
+        .get("allow_retry")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
 
     let lesson = sqlx::query_as::<_, Lesson>(
         "INSERT INTO lessons (module_id, title, content_type, content_url, position, transcription, metadata, is_graded, grading_category_id, max_attempts, allow_retry) 
@@ -250,7 +318,15 @@ pub async fn create_lesson(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    log_action(&pool, claims.sub, "CREATE", "Lesson", lesson.id, json!({ "title": title, "module_id": module_id })).await;
+    log_action(
+        &pool,
+        claims.sub,
+        "CREATE",
+        "Lesson",
+        lesson.id,
+        json!({ "title": title, "module_id": module_id }),
+    )
+    .await;
 
     Ok(Json(lesson))
 }
@@ -279,7 +355,7 @@ pub async fn process_transcription(
 
     // 3. Update lesson
     let updated_lesson = sqlx::query_as::<_, Lesson>(
-        "UPDATE lessons SET transcription = $1 WHERE id = $2 RETURNING *"
+        "UPDATE lessons SET transcription = $1 WHERE id = $2 RETURNING *",
     )
     .bind(mock_transcription)
     .bind(id)
@@ -287,7 +363,15 @@ pub async fn process_transcription(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    log_action(&pool, claims.sub, "TRANSCRIPTION_PROCESSED", "Lesson", id, json!({})).await;
+    log_action(
+        &pool,
+        claims.sub,
+        "TRANSCRIPTION_PROCESSED",
+        "Lesson",
+        id,
+        json!({}),
+    )
+    .await;
 
     Ok(Json(updated_lesson))
 }
@@ -312,16 +396,23 @@ pub async fn summarize_lesson(
     );
 
     // 3. Update lesson
-    let updated_lesson = sqlx::query_as::<_, Lesson>(
-        "UPDATE lessons SET summary = $1 WHERE id = $2 RETURNING *"
-    )
-    .bind(mock_summary)
-    .bind(id)
-    .fetch_one(&pool)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let updated_lesson =
+        sqlx::query_as::<_, Lesson>("UPDATE lessons SET summary = $1 WHERE id = $2 RETURNING *")
+            .bind(mock_summary)
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    log_action(&pool, claims.sub, "SUMMARY_GENERATED", "Lesson", id, json!({})).await;
+    log_action(
+        &pool,
+        claims.sub,
+        "SUMMARY_GENERATED",
+        "Lesson",
+        id,
+        json!({}),
+    )
+    .await;
 
     Ok(Json(updated_lesson))
 }
@@ -390,12 +481,18 @@ pub async fn update_lesson(
     let title = payload.get("title").and_then(|t| t.as_str());
     let content_type = payload.get("content_type").and_then(|t| t.as_str());
     let content_url = payload.get("content_url").and_then(|t| t.as_str());
-    let position = payload.get("position").and_then(|v| v.as_i64()).map(|v| v as i32);
+    let position = payload
+        .get("position")
+        .and_then(|v| v.as_i64())
+        .map(|v| v as i32);
     let is_graded = payload.get("is_graded").and_then(|v| v.as_bool());
-    let max_attempts = payload.get("max_attempts").and_then(|v| v.as_i64()).map(|v| v as i32);
+    let max_attempts = payload
+        .get("max_attempts")
+        .and_then(|v| v.as_i64())
+        .map(|v| v as i32);
     let allow_retry = payload.get("allow_retry").and_then(|v| v.as_bool());
     let metadata = payload.get("metadata");
-    
+
     let updated_lesson = sqlx::query_as::<_, Lesson>(
         "UPDATE lessons 
          SET title = COALESCE($1, title), 
@@ -459,7 +556,7 @@ pub async fn create_grading_category(
     let category = sqlx::query_as::<_, common::models::GradingCategory>(
         "INSERT INTO grading_categories (course_id, name, weight, drop_count) 
          VALUES ($1, $2, $3, $4) 
-         RETURNING *"
+         RETURNING *",
     )
     .bind(payload.course_id)
     .bind(payload.name)
@@ -485,7 +582,7 @@ pub async fn delete_grading_category(
     Ok(StatusCode::OK)
 }
 
-async fn log_action(
+pub async fn log_action(
     pool: &PgPool,
     user_id: Uuid,
     action: &str,
@@ -510,12 +607,13 @@ pub async fn get_course(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Course>, StatusCode> {
-    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
-        .bind(id)
-        .bind(org_ctx.id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| StatusCode::NOT_FOUND)?;
+    let course =
+        sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
+            .bind(id)
+            .bind(org_ctx.id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| StatusCode::NOT_FOUND)?;
 
     Ok(Json(course))
 }
@@ -586,12 +684,28 @@ pub async fn upload_asset(
     let mut data = Vec::new();
     let mut mimetype = String::new();
 
-    while let Some(field) = multipart.next_field().await.map_err(|e: axum::extract::multipart::MultipartError| (StatusCode::BAD_REQUEST, e.to_string()))? {
+    while let Some(field) =
+        multipart
+            .next_field()
+            .await
+            .map_err(|e: axum::extract::multipart::MultipartError| {
+                (StatusCode::BAD_REQUEST, e.to_string())
+            })?
+    {
         let name = field.name().unwrap_or_default().to_string();
         if name == "file" {
             filename = field.file_name().unwrap_or("unnamed").to_string();
-            mimetype = field.content_type().unwrap_or("application/octet-stream").to_string();
-            data = field.bytes().await.map_err(|e: axum::extract::multipart::MultipartError| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?.to_vec();
+            mimetype = field
+                .content_type()
+                .unwrap_or("application/octet-stream")
+                .to_string();
+            data = field
+                .bytes()
+                .await
+                .map_err(|e: axum::extract::multipart::MultipartError| {
+                    (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+                })?
+                .to_vec();
         }
     }
 
@@ -604,19 +718,26 @@ pub async fn upload_asset(
         .extension()
         .and_then(|s| s.to_str())
         .unwrap_or("");
-    
+
     let storage_filename = format!("{}.{}", asset_id, extension);
     let storage_path = format!("uploads/{}", storage_filename);
 
     // Ensure uploads directory exists
-    tokio::fs::create_dir_all("uploads").await.map_err(|e: std::io::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    tokio::fs::create_dir_all("uploads")
+        .await
+        .map_err(|e: std::io::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // Write file
-    tokio::fs::write(&storage_path, data).await.map_err(|e: std::io::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    tokio::fs::write(&storage_path, data)
+        .await
+        .map_err(|e: std::io::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // Record in DB
-    let size_bytes = tokio::fs::metadata(&storage_path).await.map(|m| m.len() as i64).unwrap_or(0);
-    
+    let size_bytes = tokio::fs::metadata(&storage_path)
+        .await
+        .map(|m| m.len() as i64)
+        .unwrap_or(0);
+
     sqlx::query(
         "INSERT INTO assets (id, filename, storage_path, mimetype, size_bytes, organization_id) VALUES ($1, $2, $3, $4, $5, $6)"
     )
@@ -655,7 +776,14 @@ pub async fn register(
     let password_hash = hash(payload.password, DEFAULT_COST)
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Hashing failed".into()))?;
 
-    let full_name = payload.full_name.unwrap_or_else(|| payload.email.split('@').next().unwrap_or("User").to_string());
+    let full_name = payload.full_name.unwrap_or_else(|| {
+        payload
+            .email
+            .split('@')
+            .next()
+            .unwrap_or("User")
+            .to_string()
+    });
     let role = payload.role.unwrap_or_else(|| "instructor".to_string());
 
     // Find or create organization based on email domain
@@ -664,7 +792,10 @@ pub async fn register(
         parts.get(1).unwrap_or(&"default.com").to_string()
     });
 
-    let mut tx = pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let organization = sqlx::query_as::<_, Organization>(
         "INSERT INTO organizations (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *"
@@ -692,10 +823,16 @@ pub async fn register(
         (StatusCode::CONFLICT, format!("User already exists or DB error: {}", e))
     })?;
 
-    tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let token = create_jwt(user.id, user.organization_id, &user.role)
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "JWT generation failed".into()))?;
+    let token = create_jwt(user.id, user.organization_id, &user.role).map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "JWT generation failed".into(),
+        )
+    })?;
 
     Ok(Json(AuthResponse {
         user: UserResponse {
@@ -718,12 +855,21 @@ pub async fn login(
         .await
         .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid credentials".into()))?;
 
-    if !verify(payload.password, &user.password_hash).map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Verification failed".into()))? {
+    if !verify(payload.password, &user.password_hash).map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Verification failed".into(),
+        )
+    })? {
         return Err((StatusCode::UNAUTHORIZED, "Invalid credentials".into()));
     }
 
-    let token = create_jwt(user.id, user.organization_id, &user.role)
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "JWT generation failed".into()))?;
+    let token = create_jwt(user.id, user.organization_id, &user.role).map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "JWT generation failed".into(),
+        )
+    })?;
 
     Ok(Json(AuthResponse {
         user: UserResponse {
@@ -742,30 +888,40 @@ pub async fn get_course_analytics(
     Path(id): Path<Uuid>,
 ) -> Result<Json<CourseAnalytics>, (StatusCode, String)> {
     // 1. Fetch Course to check ownership
-    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
-        .bind(id)
-        .bind(org_ctx.id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| (StatusCode::NOT_FOUND, "Course not found".into()))?;
+    let course =
+        sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
+            .bind(id)
+            .bind(org_ctx.id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| (StatusCode::NOT_FOUND, "Course not found".into()))?;
 
     // 2. Enforce RBAC
     if claims.role != "admin" && course.instructor_id != claims.sub {
-        return Err((StatusCode::FORBIDDEN, "You do not have permission to view stats for a course you don't own".into()));
+        return Err((
+            StatusCode::FORBIDDEN,
+            "You do not have permission to view stats for a course you don't own".into(),
+        ));
     }
 
     // 4. Fetch from LMS
     let client = reqwest::Client::new();
-    let res = client.get(format!("http://lms-service:3002/courses/{}/analytics", id))
+    let res = client
+        .get(format!("http://lms-service:3002/courses/{}/analytics", id))
         .send()
         .await
         .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
 
     if !res.status().is_success() {
-        return Err((StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch analytics from LMS".into()));
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to fetch analytics from LMS".into(),
+        ));
     }
 
-    let analytics = res.json::<CourseAnalytics>().await
+    let analytics = res
+        .json::<CourseAnalytics>()
+        .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(analytics))
@@ -785,7 +941,10 @@ pub async fn get_audit_logs(
 ) -> Result<Json<Vec<common::models::AuditLogResponse>>, (StatusCode, String)> {
     // 1. RBAC check
     if claims.role != "admin" {
-        return Err((StatusCode::FORBIDDEN, "Only admins can view audit logs".into()));
+        return Err((
+            StatusCode::FORBIDDEN,
+            "Only admins can view audit logs".into(),
+        ));
     }
 
     // 2. Query (filtered by organization)
@@ -845,34 +1004,35 @@ pub async fn get_course_outline(
     Path(id): Path<Uuid>,
 ) -> Result<Json<CourseWithOutline>, StatusCode> {
     // 1. Fetch Course
-    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
-        .bind(id)
-        .bind(org_ctx.id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| StatusCode::NOT_FOUND)?;
+    let course =
+        sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
+            .bind(id)
+            .bind(org_ctx.id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| StatusCode::NOT_FOUND)?;
 
     // 2. Fetch Modules
-    let modules = sqlx::query_as::<_, Module>("SELECT * FROM modules WHERE course_id = $1 ORDER BY position")
-        .bind(id)
-        .fetch_all(&pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let modules =
+        sqlx::query_as::<_, Module>("SELECT * FROM modules WHERE course_id = $1 ORDER BY position")
+            .bind(id)
+            .fetch_all(&pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let mut modules_with_lessons = Vec::new();
 
     // 3. Fetch Lessons (This could be optimized with a single query, but N+1 is acceptable for course editor scale)
     for module in modules {
-        let lessons = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE module_id = $1 ORDER BY position")
-            .bind(module.id)
-            .fetch_all(&pool)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let lessons = sqlx::query_as::<_, Lesson>(
+            "SELECT * FROM lessons WHERE module_id = $1 ORDER BY position",
+        )
+        .bind(module.id)
+        .fetch_all(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        modules_with_lessons.push(ModuleWithLessons {
-            module,
-            lessons,
-        });
+        modules_with_lessons.push(ModuleWithLessons { module, lessons });
     }
 
     Ok(Json(CourseWithOutline {
@@ -888,13 +1048,16 @@ pub async fn update_module(
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Module>, StatusCode> {
     let title = payload.get("title").and_then(|t| t.as_str());
-    let position = payload.get("position").and_then(|v| v.as_i64()).map(|v| v as i32);
+    let position = payload
+        .get("position")
+        .and_then(|v| v.as_i64())
+        .map(|v| v as i32);
 
     let updated_module = sqlx::query_as::<_, Module>(
         "UPDATE modules 
          SET title = COALESCE($1, title), 
              position = COALESCE($2, position)
-         WHERE id = $3 RETURNING *"
+         WHERE id = $3 RETURNING *",
     )
     .bind(title)
     .bind(position)

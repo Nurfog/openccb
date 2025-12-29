@@ -1,6 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Course {
@@ -31,7 +31,7 @@ pub struct Lesson {
     pub id: Uuid,
     pub module_id: Uuid,
     pub title: String,
-    pub content_type: String, 
+    pub content_type: String,
     pub content_url: Option<String>,
     pub summary: Option<String>,
     pub transcription: Option<serde_json::Value>,
@@ -72,7 +72,7 @@ pub struct AuditLog {
     pub user_id: Uuid,
     pub organization_id: Option<Uuid>,
     pub action: String,
-    pub entity_type: String, 
+    pub entity_type: String,
     pub entity_id: Uuid,
     pub changes: serde_json::Value,
     pub created_at: DateTime<Utc>,
@@ -84,7 +84,7 @@ pub struct AuditLogResponse {
     pub user_id: Uuid,
     pub user_full_name: Option<String>,
     pub action: String,
-    pub entity_type: String, 
+    pub entity_type: String,
     pub entity_id: Uuid,
     pub changes: serde_json::Value,
     pub created_at: DateTime<Utc>,
@@ -133,6 +133,10 @@ pub struct UserResponse {
 pub struct Organization {
     pub id: Uuid,
     pub name: String,
+    pub logo_url: Option<String>,
+    pub primary_color: Option<String>,
+    pub secondary_color: Option<String>,
+    pub certificate_template: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
