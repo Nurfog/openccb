@@ -24,5 +24,6 @@ pub fn create_jwt(user_id: Uuid, organization_id: Uuid, role: &str) -> Result<St
         role: role.to_string(),
     };
 
-    encode(&Header::default(), &claims, &EncodingKey::from_secret("secret".as_ref()))
+    let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "secret".to_string());
+    encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_ref()))
 }

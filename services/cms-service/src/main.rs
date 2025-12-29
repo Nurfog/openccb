@@ -86,6 +86,7 @@ async fn main() {
         .route("/users/{id}", axum::routing::put(handlers::update_user))
         .route("/audit-logs", get(handlers::get_audit_logs))
         .route("/assets/upload", post(handlers::upload_asset))
+        .route("/organizations", get(handlers::get_organizations).post(handlers::create_organization))
         .route("/organization", get(handlers::get_organization))
         .route(
             "/organizations/{id}/logo",

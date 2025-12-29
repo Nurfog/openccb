@@ -7,14 +7,13 @@ import {
     Calendar as CalendarIcon,
     ChevronLeft,
     ChevronRight,
-    Plus,
     Layout,
     CheckCircle2,
     BarChart2,
     Settings,
-    Clock,
     AlertCircle
 } from "lucide-react";
+import CourseEditorLayout from "@/components/CourseEditorLayout";
 
 export default function CourseCalendarPage({ params }: { params: { id: string } }) {
     const [course, setCourse] = useState<Course | null>(null);
@@ -73,9 +72,9 @@ export default function CourseCalendarPage({ params }: { params: { id: string } 
                             <div
                                 key={lesson.id}
                                 className={`text-[10px] p-1 rounded truncate flex items-center gap-1 ${lesson.important_date_type === 'exam' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
-                                        lesson.important_date_type === 'assignment' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                                            lesson.important_date_type === 'live-session' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                                                'bg-green-500/20 text-green-400 border border-green-500/30'
+                                    lesson.important_date_type === 'assignment' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                                        lesson.important_date_type === 'live-session' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                                            'bg-green-500/20 text-green-400 border border-green-500/30'
                                     }`}
                             >
                                 <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
@@ -121,25 +120,7 @@ export default function CourseCalendarPage({ params }: { params: { id: string } 
                 </div>
             </div>
 
-            <div className="glass p-1">
-                <div className="flex border-b border-white/10">
-                    <Link href={`/courses/${params.id}`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium text-gray-500 hover:text-white transition-colors">
-                        <Layout className="w-4 h-4" /> Outline
-                    </Link>
-                    <Link href={`/courses/${params.id}/grading`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium text-gray-500 hover:text-white transition-colors">
-                        <CheckCircle2 className="w-4 h-4" /> Grading
-                    </Link>
-                    <Link href={`/courses/${params.id}/calendar`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 border-blue-500 bg-white/5">
-                        <CalendarIcon className="w-4 h-4" /> Calendar
-                    </Link>
-                    <Link href={`/courses/${params.id}/analytics`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium text-gray-500 hover:text-white transition-colors">
-                        <BarChart2 className="w-4 h-4" /> Analytics
-                    </Link>
-                    <Link href={`/courses/${params.id}/settings`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium text-gray-500 hover:text-white transition-colors">
-                        <Settings className="w-4 h-4" /> Settings
-                    </Link>
-                </div>
-
+            <CourseEditorLayout activeTab="calendar">
                 <div className="p-8">
                     <div className="flex items-center justify-between mb-8">
                         <div className="flex items-center gap-6">
@@ -191,8 +172,8 @@ export default function CourseCalendarPage({ params }: { params: { id: string } 
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <div className={`text-[10px] font-black uppercase tracking-widest mb-1 ${lesson.important_date_type === 'exam' ? 'text-red-400' :
-                                                        lesson.important_date_type === 'assignment' ? 'text-blue-400' :
-                                                            'text-green-400'
+                                                    lesson.important_date_type === 'assignment' ? 'text-blue-400' :
+                                                        'text-green-400'
                                                     }`}>
                                                     {lesson.important_date_type || 'Activity'}
                                                 </div>
@@ -209,7 +190,7 @@ export default function CourseCalendarPage({ params }: { params: { id: string } 
                         </div>
                     </div>
                 </div>
-            </div>
+            </CourseEditorLayout>
         </div>
     );
 }

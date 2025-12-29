@@ -101,6 +101,7 @@ pub async fn register(
             email: user.email,
             full_name: user.full_name,
             role: user.role,
+            organization_id: user.organization_id,
         },
         token,
     }))
@@ -129,6 +130,7 @@ pub async fn login(
             email: user.email,
             full_name: user.full_name,
             role: user.role,
+            organization_id: user.organization_id,
         },
         token,
     }))

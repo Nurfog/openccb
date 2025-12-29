@@ -156,9 +156,15 @@ const apiFetch = (url: string, options: RequestInit = {}) => {
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     };
 
-    return fetch(`${API_BASE_URL}${url}`, { ...options, headers }).then(res => {
+    return fetch(`${API_BASE_URL}${url}`, { ...options, headers }).then(async res => {
         if (!res.ok) {
-            return res.json().then(err => Promise.reject(err.message || 'An error occurred'));
+            const text = await res.text();
+            try {
+                const json = JSON.parse(text);
+                return Promise.reject(new Error(json.message || 'An error occurred'));
+            } catch {
+                return Promise.reject(new Error(text || res.statusText));
+            }
         }
         // Handle no-content responses
         if (res.status === 204) return;

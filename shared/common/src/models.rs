@@ -138,6 +138,7 @@ pub struct UserResponse {
 pub struct Organization {
     pub id: Uuid,
     pub name: String,
+    pub domain: Option<String>,
     pub logo_url: Option<String>,
     pub primary_color: Option<String>,
     pub secondary_color: Option<String>,

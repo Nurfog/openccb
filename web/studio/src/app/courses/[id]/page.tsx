@@ -20,6 +20,7 @@ import {
     GripVertical,
     Trash2
 } from "lucide-react";
+import CourseEditorLayout from "@/components/CourseEditorLayout";
 
 interface FullModule extends Module {
     lessons: Lesson[];
@@ -57,7 +58,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
     }, [params.id]);
 
     const handleAddModule = async () => {
-        const title = "New Module";
+        const title = "";
         try {
             const newMod = await cmsApi.createModule(params.id, title, modules.length + 1);
             const fullMod = { ...newMod, lessons: [] };
@@ -222,25 +223,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                 </div>
             </div>
 
-            <div className="glass p-1">
-                <div className="flex border-b border-white/10">
-                    <Link href={`/courses/${params.id}`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 border-blue-500 bg-white/5">
-                        <Layout className="w-4 h-4" /> Outline
-                    </Link>
-                    <Link href={`/courses/${params.id}/grading`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium text-gray-500 hover:text-white transition-colors">
-                        <CheckCircle2 className="w-4 h-4" /> Grading
-                    </Link>
-                    <Link href={`/courses/${params.id}/calendar`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium text-gray-500 hover:text-white transition-colors">
-                        <Calendar className="w-4 h-4" /> Calendar
-                    </Link>
-                    <Link href={`/courses/${params.id}/analytics`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium text-gray-500 hover:text-white transition-colors">
-                        <BarChart2 className="w-4 h-4" /> Analytics
-                    </Link>
-                    <Link href={`/courses/${params.id}/settings`} className="flex items-center gap-2 px-6 py-4 text-sm font-medium text-gray-500 hover:text-white transition-colors">
-                        <Settings className="w-4 h-4" /> Settings
-                    </Link>
-                </div>
-
+            <CourseEditorLayout activeTab="outline">
                 <div className="p-8 space-y-6">
                     {modules.map((module, mIndex) => (
                         <div key={module.id} className="glass rounded-xl overflow-hidden border-white/5">
@@ -286,7 +269,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                                                 onClick={() => { setEditingId(module.id); setEditValue(module.title); }}
                                                 className="font-semibold text-lg text-blue-400 cursor-pointer hover:text-blue-300 transition-colors"
                                             >
-                                                Module {module.position}: {module.title}
+                                                {module.title || `Module ${module.position}`}
                                             </span>
                                             <button
                                                 onClick={() => { setEditingId(module.id); setEditValue(module.title); }}
@@ -404,7 +387,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                         <Plus className="w-6 h-6" /> Add New Module
                     </button>
                 </div>
-            </div>
+            </CourseEditorLayout>
         </div>
     );
 }

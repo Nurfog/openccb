@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { cmsApi, Organization } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import Image from 'next/image';
 import { Plus, Building2, Globe, Calendar, ExternalLink, ShieldCheck, Palette, Upload, Save, X } from 'lucide-react';
 
 export default function OrganizationsPage() {
@@ -141,9 +142,9 @@ export default function OrganizationsPage() {
                             </div>
 
                             <div className="flex items-start gap-4 mb-4">
-                                <div className="p-3 rounded-lg bg-blue-500/10 text-blue-400 overflow-hidden w-12 h-12 flex items-center justify-center">
+                                <div className="p-3 rounded-lg bg-blue-500/10 text-blue-400 overflow-hidden w-12 h-12 flex items-center justify-center relative">
                                     {org.logo_url ? (
-                                        <img src={org.logo_url} alt={org.name} className="w-full h-full object-contain" />
+                                        <Image src={org.logo_url} alt={org.name} fill className="object-contain" />
                                     ) : (
                                         <Building2 className="w-6 h-6" />
                                     )}
@@ -256,9 +257,9 @@ export default function OrganizationsPage() {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-400 mb-3 text-brand">Organization Logo</label>
                                     <div className="flex items-center gap-4">
-                                        <div className="w-20 h-20 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden">
+                                        <div className="w-20 h-20 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden relative">
                                             {selectedOrg.logo_url ? (
-                                                <img src={selectedOrg.logo_url} alt="Preview" className="w-full h-full object-contain" />
+                                                <Image src={selectedOrg.logo_url} alt="Preview" fill className="object-contain" />
                                             ) : (
                                                 <Building2 className="w-8 h-8 text-gray-600" />
                                             )}
@@ -320,9 +321,9 @@ export default function OrganizationsPage() {
                                     {/* Mock Experience Header */}
                                     <div className="h-10 px-4 flex items-center justify-between border-b border-white/5" style={{ backgroundColor: primaryColor }}>
                                         <div className="flex items-center gap-2">
-                                            <div className="w-5 h-5 bg-white/20 rounded flex items-center justify-center overflow-hidden">
+                                            <div className="w-5 h-5 bg-white/20 rounded flex items-center justify-center overflow-hidden relative">
                                                 {selectedOrg.logo_url ? (
-                                                    <img src={selectedOrg.logo_url} alt="Logo" className="w-full h-full object-contain" />
+                                                    <Image src={selectedOrg.logo_url} alt="Logo" fill className="object-contain" />
                                                 ) : <div className="w-3 h-3 bg-white" />}
                                             </div>
                                             <div className="w-16 h-2 bg-white/30 rounded" />
@@ -366,7 +367,7 @@ export default function OrganizationsPage() {
                             <button
                                 onClick={handleBrandingSave}
                                 disabled={isSavingBranding}
-                                className="flex-2 px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all shadow-lg shadow-blue-500/20 font-bold flex items-center justify-center gap-2"
+                                className="flex-[2] px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all shadow-lg shadow-blue-500/20 font-bold flex items-center justify-center gap-2"
                             >
                                 {isSavingBranding ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
                                 Save Branding

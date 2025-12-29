@@ -100,6 +100,7 @@ export default function StudioLoginPage() {
                                             onChange={(e) => setFullName(e.target.value)}
                                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             placeholder="John Doe"
+                                            autoComplete="name"
                                             required
                                         />
                                     </div>
@@ -116,6 +117,7 @@ export default function StudioLoginPage() {
                                             onChange={(e) => setOrganizationName(e.target.value)}
                                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             placeholder="Your School or Company"
+                                            autoComplete="organization"
                                         />
                                     </div>
                                     <p className="text-xs text-gray-500 mt-2 pl-1">
@@ -137,6 +139,7 @@ export default function StudioLoginPage() {
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="instructor@example.com"
+                                    autoComplete="email"
                                     required
                                 />
                             </div>
@@ -154,6 +157,7 @@ export default function StudioLoginPage() {
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="••••••••"
+                                    autoComplete="current-password"
                                     required
                                 />
                             </div>

@@ -1474,3 +1474,50 @@ pub async fn update_user(
 
     Ok(StatusCode::OK)
 }
+
+// Organizations Management (Plural/Admin)
+pub async fn get_organizations(
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+) -> Result<Json<Vec<Organization>>, StatusCode> {
+    if claims.role != "admin" {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    let orgs = sqlx::query_as::<_, Organization>("SELECT * FROM organizations ORDER BY created_at DESC")
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to fetch organizations: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(orgs))
+}
+
+pub async fn create_organization(
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<Json<Organization>, StatusCode> {
+    if claims.role != "admin" {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    let name = payload.get("name").and_then(|v| v.as_str()).ok_or(StatusCode::BAD_REQUEST)?;
+    let domain = payload.get("domain").and_then(|v| v.as_str());
+
+    let org = sqlx::query_as::<_, Organization>(
+        "INSERT INTO organizations (name, domain) VALUES ($1, $2) RETURNING *"
+    )
+    .bind(name)
+    .bind(domain)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to create organization: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(org))
+}
