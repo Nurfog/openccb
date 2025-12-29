@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { cmsApi, Organization } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { Plus, Building2, Globe, Calendar, ExternalLink, ShieldCheck, Palette, Upload, Save, X, Check } from 'lucide-react';
+import { Plus, Building2, Globe, Calendar, ExternalLink, ShieldCheck, Palette, Upload, Save, X } from 'lucide-react';
 
 export default function OrganizationsPage() {
     const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -322,7 +322,7 @@ export default function OrganizationsPage() {
                                         <div className="flex items-center gap-2">
                                             <div className="w-5 h-5 bg-white/20 rounded flex items-center justify-center overflow-hidden">
                                                 {selectedOrg.logo_url ? (
-                                                    <img src={selectedOrg.logo_url} className="w-full h-full object-contain" />
+                                                    <img src={selectedOrg.logo_url} alt="Logo" className="w-full h-full object-contain" />
                                                 ) : <div className="w-3 h-3 bg-white" />}
                                             </div>
                                             <div className="w-16 h-2 bg-white/30 rounded" />
@@ -350,7 +350,7 @@ export default function OrganizationsPage() {
                                 </div>
                                 <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                                     <p className="text-[10px] text-blue-400 leading-relaxed">
-                                        This is a real-time preview of how the brand identity will apply to the student's learning experience.
+                                        This is a real-time preview of how the brand identity will apply to the student&apos;s learning experience.
                                     </p>
                                 </div>
                             </div>

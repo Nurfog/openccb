@@ -162,6 +162,23 @@ El servicio CMS expone una API RESTful en el puerto `3001`. A continuación se d
 - **URL**: `GET /organizations/{id}/branding`
 - **Descripción**: Recupera la identidad visual (logo y colores) de una organización.
 
+### 👥 Gestión de Usuarios (Admin)
+
+#### Listar Usuarios
+- **URL**: `GET /users`
+- **Descripción**: Obtiene todos los usuarios registrados en el sistema.
+
+#### Actualizar Usuario
+- **URL**: `PUT /users/{id}`
+- **Descripción**: Permite cambiar el rol o la organización de un usuario.
+- **Body (JSON)**:
+  ```json
+  {
+    "role": "string",
+    "organization_id": "uuid"
+  }
+  ```
+
 ## 📦 Configuración y Ejecución
 
 1. **Variables de Entorno**:

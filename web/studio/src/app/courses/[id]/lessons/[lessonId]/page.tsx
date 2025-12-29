@@ -16,13 +16,7 @@ import {
     Pencil,
     ChevronUp,
     ChevronDown,
-    Trash2,
-    PlayCircle,
-    FileText,
-    Calendar,
-    Settings,
-    Layout,
-    CheckCircle2
+    Trash2
 } from "lucide-react";
 
 export default function LessonEditor({ params }: { params: { id: string; lessonId: string } }) {
@@ -109,7 +103,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                 max_attempts: maxAttempts,
                 allow_retry: allowRetry,
                 due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
-                important_date_type: (importantDateType || undefined) as any
+                important_date_type: (importantDateType || undefined) as 'exam' | 'assignment' | 'milestone' | 'live-session' | undefined
             });
             setLesson(updated);
             setEditMode(false);
@@ -199,7 +193,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-8">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 text-[10px] text-blue-500 font-bold uppercase tracking-[0.2em]">
-                        <Link href={`/courses/${params.id}`} className="hover:text-white transition-colors">Outline</Link>
+                        <Link href={`/ courses / ${params.id} `} className="hover:text-white transition-colors">Outline</Link>
                         <span className="text-gray-700">/</span>
                         <span>Activity</span>
                     </div>
@@ -274,8 +268,8 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in zoom-in-95 duration-300">
                                 {gradingCategories.length === 0 ? (
                                     <div className="col-span-full py-4 text-center border border-dashed border-white/10 rounded-2xl text-xs text-gray-500 italic">
-                                        No grading categories defined. <Link href={`/courses/${params.id}/grading`} className="text-blue-400 underline ml-1">Go to Grading Policy</Link>
-                                    </div>
+                                        No grading categories defined. <Link href={`/ courses / ${params.id} /grading`} className="text-blue-400 underline ml-1">Go to Grading Policy</Link >
+                                    </div >
                                 ) : (
                                     gradingCategories.map((cat) => (
                                         <button
@@ -292,7 +286,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                         </button>
                                     ))
                                 )}
-                            </div>
+                            </div >
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-white/5 animate-in fade-in duration-500">
                                 <div className="space-y-4">
@@ -328,127 +322,133 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                             </div>
                         </>
                     )}
-                </div>
+                </div >
             )}
 
-            {editMode && (
-                <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
-                    <div>
-                        <h3 className="text-xl font-bold flex items-center gap-2">
-                            <span className="text-blue-500">📅</span> Scheduling & Deadlines
-                        </h3>
-                        <p className="text-sm text-gray-500 mt-1">Set deadlines and mark important dates for this activity</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                            <label className="block">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Due Date</span>
-                                <input
-                                    type="date"
-                                    value={dueDate}
-                                    onChange={(e) => setDueDate(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all font-bold"
-                                />
-                            </label>
-                        </div>
-
-                        <div className="space-y-4">
-                            <label className="block">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Date Type</span>
-                                <select
-                                    value={importantDateType}
-                                    onChange={(e) => setImportantDateType(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all appearance-none font-bold"
-                                >
-                                    <option value="" className="bg-gray-900">Standard Activity</option>
-                                    <option value="exam" className="bg-gray-900">Exam</option>
-                                    <option value="assignment" className="bg-gray-900">Assignment</option>
-                                    <option value="milestone" className="bg-gray-900">Milestone</option>
-                                    <option value="live-session" className="bg-gray-900">Live Session</option>
-                                </select>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* AI Magic Section */}
-            {editMode && (
-                <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
-                    <div className="flex items-center gap-3">
-                        <span className="text-2xl">🪄</span>
+            {
+                editMode && (
+                    <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
                         <div>
-                            <h3 className="text-xl font-bold italic tracking-tight">AI Content Assistant</h3>
-                            <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">Automate your content creation</p>
+                            <h3 className="text-xl font-bold flex items-center gap-2">
+                                <span className="text-blue-500">📅</span> Scheduling & Deadlines
+                            </h3>
+                            <p className="text-sm text-gray-500 mt-1">Set deadlines and mark important dates for this activity</p>
                         </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {(lesson.content_type === 'video' || lesson.content_type === 'audio') && (
-                            <button
-                                onClick={handleTranscribe}
-                                disabled={isTranscribing}
-                                className={`p-6 rounded-2xl border transition-all text-left flex flex-col gap-2 ${lesson.transcription ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:border-blue-500/60'}`}
-                            >
-                                <span className="text-xl">{isTranscribing ? '⏳' : '🎤'}</span>
-                                <div className="text-[10px] font-black uppercase tracking-widest opacity-80">Video/Audio</div>
-                                <div className="font-bold">{isTranscribing ? 'Transcribing...' : lesson.transcription ? 'Update Transcript' : 'Transcribe Video'}</div>
-                            </button>
-                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <label className="block">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Due Date</span>
+                                    <input
+                                        type="date"
+                                        value={dueDate}
+                                        onChange={(e) => setDueDate(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all font-bold"
+                                    />
+                                </label>
+                            </div>
 
-                        <button
-                            onClick={handleSummarize}
-                            disabled={isGeneratingSummary || !lesson.transcription}
-                            className={`p-6 rounded-2xl border transition-all text-left flex flex-col gap-2 ${summary ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:border-indigo-500/60 disabled:opacity-30 disabled:cursor-not-allowed'}`}
-                        >
-                            <span className="text-xl">{isGeneratingSummary ? '⏳' : '✍️'}</span>
-                            <div className="text-[10px] font-black uppercase tracking-widest opacity-80">Summarization</div>
-                            <div className="font-bold">{isGeneratingSummary ? 'Generating...' : summary ? 'Update Summary' : 'Generate Summary'}</div>
-                            {!lesson.transcription && <div className="text-[8px] opacity-60">Requires Transcript</div>}
-                        </button>
-
-                        <button
-                            onClick={handleGenerateQuiz}
-                            disabled={isGeneratingQuiz || !lesson.transcription}
-                            className="p-6 bg-purple-500/10 border border-purple-500/30 hover:border-purple-500/60 rounded-2xl transition-all text-left flex flex-col gap-2 text-purple-400 disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                            <span className="text-xl">{isGeneratingQuiz ? '⏳' : '💡'}</span>
-                            <div className="text-[10px] font-black uppercase tracking-widest opacity-80">Assessments</div>
-                            <div className="font-bold">{isGeneratingQuiz ? 'Building...' : 'Generate Quiz'}</div>
-                            {!lesson.transcription && <div className="text-[8px] opacity-60">Requires Transcript</div>}
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* AI Summary Visualization */}
-            {(summary || editMode) && (
-                <div className="bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border border-indigo-500/20 rounded-3xl p-8 space-y-6 animate-in fade-in duration-700">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl">✨</span>
-                            <div>
-                                <h3 className="text-xl font-bold font-black italic tracking-tight">AI Lesson Summary</h3>
-                                <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">Key insights generated by intelligence</p>
+                            <div className="space-y-4">
+                                <label className="block">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Date Type</span>
+                                    <select
+                                        value={importantDateType}
+                                        onChange={(e) => setImportantDateType(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all appearance-none font-bold"
+                                    >
+                                        <option value="" className="bg-gray-900">Standard Activity</option>
+                                        <option value="exam" className="bg-gray-900">Exam</option>
+                                        <option value="assignment" className="bg-gray-900">Assignment</option>
+                                        <option value="milestone" className="bg-gray-900">Milestone</option>
+                                        <option value="live-session" className="bg-gray-900">Live Session</option>
+                                    </select>
+                                </label>
                             </div>
                         </div>
                     </div>
+                )
+            }
 
-                    {editMode ? (
-                        <textarea
-                            value={summary}
-                            onChange={(e) => setSummary(e.target.value)}
-                            placeholder="A concise summary of the lesson content..."
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-sm text-gray-300 focus:outline-none focus:border-blue-500/50 min-h-[120px] transition-all"
-                        />
-                    ) : (
-                        <div className="text-sm text-gray-400 leading-relaxed italic border-l-2 border-indigo-500/30 pl-6 py-2">
-                            &quot;{summary}&quot;
+            {/* AI Magic Section */}
+            {
+                editMode && (
+                    <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl">🪄</span>
+                            <div>
+                                <h3 className="text-xl font-bold italic tracking-tight">AI Content Assistant</h3>
+                                <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">Automate your content creation</p>
+                            </div>
                         </div>
-                    )}
-                </div>
-            )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {(lesson.content_type === 'video' || lesson.content_type === 'audio') && (
+                                <button
+                                    onClick={handleTranscribe}
+                                    disabled={isTranscribing}
+                                    className={`p-6 rounded-2xl border transition-all text-left flex flex-col gap-2 ${lesson.transcription ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:border-blue-500/60'}`}
+                                >
+                                    <span className="text-xl">{isTranscribing ? '⏳' : '🎤'}</span>
+                                    <div className="text-[10px] font-black uppercase tracking-widest opacity-80">Video/Audio</div>
+                                    <div className="font-bold">{isTranscribing ? 'Transcribing...' : lesson.transcription ? 'Update Transcript' : 'Transcribe Video'}</div>
+                                </button>
+                            )}
+
+                            <button
+                                onClick={handleSummarize}
+                                disabled={isGeneratingSummary || !lesson.transcription}
+                                className={`p-6 rounded-2xl border transition-all text-left flex flex-col gap-2 ${summary ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:border-indigo-500/60 disabled:opacity-30 disabled:cursor-not-allowed'}`}
+                            >
+                                <span className="text-xl">{isGeneratingSummary ? '⏳' : '✍️'}</span>
+                                <div className="text-[10px] font-black uppercase tracking-widest opacity-80">Summarization</div>
+                                <div className="font-bold">{isGeneratingSummary ? 'Generating...' : summary ? 'Update Summary' : 'Generate Summary'}</div>
+                                {!lesson.transcription && <div className="text-[8px] opacity-60">Requires Transcript</div>}
+                            </button>
+
+                            <button
+                                onClick={handleGenerateQuiz}
+                                disabled={isGeneratingQuiz || !lesson.transcription}
+                                className="p-6 bg-purple-500/10 border border-purple-500/30 hover:border-purple-500/60 rounded-2xl transition-all text-left flex flex-col gap-2 text-purple-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <span className="text-xl">{isGeneratingQuiz ? '⏳' : '💡'}</span>
+                                <div className="text-[10px] font-black uppercase tracking-widest opacity-80">Assessments</div>
+                                <div className="font-bold">{isGeneratingQuiz ? 'Building...' : 'Generate Quiz'}</div>
+                                {!lesson.transcription && <div className="text-[8px] opacity-60">Requires Transcript</div>}
+                            </button>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* AI Summary Visualization */}
+            {
+                (summary || editMode) && (
+                    <div className="bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border border-indigo-500/20 rounded-3xl p-8 space-y-6 animate-in fade-in duration-700">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">✨</span>
+                                <div>
+                                    <h3 className="text-xl font-bold font-black italic tracking-tight">AI Lesson Summary</h3>
+                                    <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">Key insights generated by intelligence</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {editMode ? (
+                            <textarea
+                                value={summary}
+                                onChange={(e) => setSummary(e.target.value)}
+                                placeholder="A concise summary of the lesson content..."
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-sm text-gray-300 focus:outline-none focus:border-blue-500/50 min-h-[120px] transition-all"
+                            />
+                        ) : (
+                            <div className="text-sm text-gray-400 leading-relaxed italic border-l-2 border-indigo-500/30 pl-6 py-2">
+                                &quot;{summary}&quot;
+                            </div>
+                        )}
+                    </div>
+                )
+            }
 
             <div className="space-y-16">
                 {blocks.map((block, index) => (
@@ -626,6 +626,6 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 }

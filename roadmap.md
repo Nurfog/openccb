@@ -95,7 +95,8 @@
   - [ ] XP and leveling system
 - [x] **Course Management Enhancements**:
   - [x] Manual naming for modules, lessons, and activities during creation.
-  - [x] Drag-and-drop reordering for modules, lessons, and activities.
+  - [x] Reordering for modules, lessons, and activities (Level up/down).
+  - [x] Deletion of modules and lessons with confirmation.
   - [x] **Pacing Control**:
     - [x] Self-paced mode (Evergreen).
     - [x] Instructor-led mode (Cohort-based with start/end dates).
