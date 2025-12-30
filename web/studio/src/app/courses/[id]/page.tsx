@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { cmsApi, Course, Module, Lesson } from "@/lib/api";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
     Plus,
@@ -11,14 +12,11 @@ import {
     PlayCircle,
     FileText,
     Calendar,
-    CheckCircle2,
-    Settings,
-    BarChart2,
-    Layout,
     Save,
     X,
     GripVertical,
-    Trash2
+    Trash2,
+    ArrowLeft
 } from "lucide-react";
 import CourseEditorLayout from "@/components/CourseEditorLayout";
 
@@ -27,6 +25,7 @@ interface FullModule extends Module {
 }
 
 export default function CourseEditor({ params }: { params: { id: string } }) {
+    const router = useRouter();
     const [course, setCourse] = useState<Course | null>(null);
     const [modules, setModules] = useState<FullModule[]>([]);
     const [loading, setLoading] = useState(true);
@@ -192,202 +191,210 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
     if (error) return <div className="py-20 text-center text-red-400">{error}</div>;
 
     return (
-        <div className="space-y-8">
-            <div className="flex items-center gap-4 text-sm text-gray-400">
-                <Link href="/" className="hover:text-white transition-colors">Courses</Link>
-                <span>/</span>
-                <span className="text-white">{course?.title}</span>
-            </div>
-
-            <div className="flex justify-between items-center">
-                <div>
-                    <h2 className="text-3xl font-bold">{course?.title}</h2>
-                    <div className="flex items-center gap-3 mt-1">
-                        <span className="text-gray-400 text-sm">Editor - Outline</span>
-                        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${course?.pacing_mode === 'instructor_led' ? 'bg-purple-500/20 text-purple-400' : 'bg-green-500/20 text-green-400'}`}>
-                            {course?.pacing_mode?.replace('_', ' ') || 'Self Paced'}
-                        </span>
+        <div className="min-h-screen bg-[#0f1115] text-white p-8">
+            <div className="max-w-6xl mx-auto">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-12">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => router.push('/')}
+                            className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                        >
+                            <ArrowLeft className="w-6 h-6" />
+                        </button>
+                        <div>
+                            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                                Course Editor
+                            </h1>
+                            <div className="flex items-center gap-3 mt-1">
+                                <p className="text-gray-400">Design your course structure and lesson content for {course?.title}</p>
+                                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${course?.pacing_mode === 'instructor_led' ? 'bg-purple-500/20 text-purple-400' : 'bg-green-500/20 text-green-400'}`}>
+                                    {course?.pacing_mode?.replace('_', ' ') || 'Self Paced'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex gap-3">
+                        <button className="flex items-center gap-2 px-6 py-3 glass hover:bg-white/20 transition-all rounded-xl text-sm font-bold shadow-lg active:scale-95">
+                            Preview
+                        </button>
+                        <button
+                            onClick={handlePublish}
+                            disabled={isPublishing}
+                            className={`flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 transition-all active:scale-95 ${isPublishing ? "opacity-75 cursor-wait" : ""}`}
+                        >
+                            <PlayCircle className="w-5 h-5 transition-transform group-active:scale-90" />
+                            {isPublishing ? "Publishing..." : "Publish to LMS"}
+                        </button>
                     </div>
                 </div>
-                <div className="flex gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2 glass hover:bg-white/10 transition-colors text-sm font-medium">
-                        Preview
-                    </button>
-                    <button
-                        onClick={handlePublish}
-                        disabled={isPublishing}
-                        className={`btn-primary flex items-center gap-2 ${isPublishing ? "opacity-75 cursor-wait" : ""}`}
-                    >
-                        {isPublishing ? "Publishing..." : "Publish to LMS"}
-                    </button>
-                </div>
-            </div>
 
-            <CourseEditorLayout activeTab="outline">
-                <div className="p-8 space-y-6">
-                    {modules.map((module, mIndex) => (
-                        <div key={module.id} className="glass rounded-xl overflow-hidden border-white/5">
-                            <div className="bg-white/5 px-6 py-4 flex justify-between items-center border-b border-white/5">
-                                <div className="flex items-center gap-4 flex-1">
-                                    <div className="flex flex-col">
+                <CourseEditorLayout activeTab="outline">
+                    <div className="p-8 space-y-6">
+                        {modules.map((module, mIndex) => (
+                            <div key={module.id} className="glass rounded-xl overflow-hidden border-white/5">
+                                <div className="bg-white/5 px-6 py-4 flex justify-between items-center border-b border-white/5">
+                                    <div className="flex items-center gap-4 flex-1">
+                                        <div className="flex flex-col">
+                                            <button
+                                                onClick={() => handleReorderModule(mIndex, 'up')}
+                                                disabled={mIndex === 0}
+                                                className="text-gray-500 hover:text-blue-400 disabled:opacity-0 transition-colors"
+                                            >
+                                                <ChevronUp className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleReorderModule(mIndex, 'down')}
+                                                disabled={mIndex === modules.length - 1}
+                                                className="text-gray-500 hover:text-blue-400 disabled:opacity-0 transition-colors"
+                                            >
+                                                <ChevronDown className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                        <GripVertical className="text-gray-600 w-5 h-5 cursor-grab active:cursor-grabbing" />
+
+                                        {editingId === module.id ? (
+                                            <div className="flex items-center gap-2 flex-1">
+                                                <input
+                                                    autoFocus
+                                                    value={editValue}
+                                                    onChange={(e) => setEditValue(e.target.value)}
+                                                    onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle(module.id, 'module')}
+                                                    className="bg-black/40 border border-blue-500/50 rounded px-3 py-1 flex-1 text-white focus:outline-none"
+                                                />
+                                                <button onClick={() => handleSaveTitle(module.id, 'module')} className="text-green-400 hover:text-green-300">
+                                                    <Save className="w-5 h-5" />
+                                                </button>
+                                                <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-red-400">
+                                                    <X className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-3 group flex-1">
+                                                <span
+                                                    onClick={() => { setEditingId(module.id); setEditValue(module.title); }}
+                                                    className="font-semibold text-lg text-blue-400 cursor-pointer hover:text-blue-300 transition-colors"
+                                                >
+                                                    {module.title || `Module ${module.position}`}
+                                                </span>
+                                                <button
+                                                    onClick={() => { setEditingId(module.id); setEditValue(module.title); }}
+                                                    className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-white transition-opacity"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-3">
                                         <button
-                                            onClick={() => handleReorderModule(mIndex, 'up')}
-                                            disabled={mIndex === 0}
-                                            className="text-gray-500 hover:text-blue-400 disabled:opacity-0 transition-colors"
+                                            onClick={() => handleDeleteModule(module.id)}
+                                            className="text-gray-500 hover:text-red-400 transition-colors"
                                         >
-                                            <ChevronUp className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleReorderModule(mIndex, 'down')}
-                                            disabled={mIndex === modules.length - 1}
-                                            className="text-gray-500 hover:text-blue-400 disabled:opacity-0 transition-colors"
-                                        >
-                                            <ChevronDown className="w-4 h-4" />
+                                            <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
-                                    <GripVertical className="text-gray-600 w-5 h-5 cursor-grab active:cursor-grabbing" />
-
-                                    {editingId === module.id ? (
-                                        <div className="flex items-center gap-2 flex-1">
-                                            <input
-                                                autoFocus
-                                                value={editValue}
-                                                onChange={(e) => setEditValue(e.target.value)}
-                                                onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle(module.id, 'module')}
-                                                className="bg-black/40 border border-blue-500/50 rounded px-3 py-1 flex-1 text-white focus:outline-none"
-                                            />
-                                            <button onClick={() => handleSaveTitle(module.id, 'module')} className="text-green-400 hover:text-green-300">
-                                                <Save className="w-5 h-5" />
-                                            </button>
-                                            <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-red-400">
-                                                <X className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-3 group flex-1">
-                                            <span
-                                                onClick={() => { setEditingId(module.id); setEditValue(module.title); }}
-                                                className="font-semibold text-lg text-blue-400 cursor-pointer hover:text-blue-300 transition-colors"
-                                            >
-                                                {module.title || `Module ${module.position}`}
-                                            </span>
-                                            <button
-                                                onClick={() => { setEditingId(module.id); setEditValue(module.title); }}
-                                                className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-white transition-opacity"
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    )}
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="p-6 space-y-3">
+                                    {module.lessons.map((lesson, lIndex) => (
+                                        <div key={lesson.id} className="flex items-center gap-3 group/row">
+                                            <div className="flex flex-col opacity-0 group-hover/row:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => handleReorderLesson(module.id, lIndex, 'up')}
+                                                    disabled={lIndex === 0}
+                                                    className="text-gray-500 hover:text-blue-400 disabled:opacity-0"
+                                                >
+                                                    <ChevronUp className="w-3 h-3" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleReorderLesson(module.id, lIndex, 'down')}
+                                                    disabled={lIndex === module.lessons.length - 1}
+                                                    className="text-gray-500 hover:text-blue-400 disabled:opacity-0"
+                                                >
+                                                    <ChevronDown className="w-3 h-3" />
+                                                </button>
+                                            </div>
+
+                                            <div className="flex-1">
+                                                {editingId === lesson.id ? (
+                                                    <div className="flex items-center gap-2 glass border-blue-500/30 p-2 rounded-lg">
+                                                        <input
+                                                            autoFocus
+                                                            value={editValue}
+                                                            onChange={(e) => setEditValue(e.target.value)}
+                                                            onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle(lesson.id, 'lesson')}
+                                                            className="bg-transparent border-none flex-1 text-white focus:outline-none"
+                                                        />
+                                                        <button onClick={() => handleSaveTitle(lesson.id, 'lesson')} className="text-green-400">
+                                                            <Save className="w-4 h-4" />
+                                                        </button>
+                                                        <button onClick={() => setEditingId(null)} className="text-gray-400">
+                                                            <X className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center justify-between glass border-white/5 p-4 rounded-xl hover:bg-white/10 hover:border-blue-500/30 transition-all cursor-pointer group/lesson">
+                                                        <Link href={`/courses/${params.id}/lessons/${lesson.id}`} className="flex-1 flex items-center gap-4">
+                                                            <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400 group-hover/lesson:scale-110 transition-transform">
+                                                                {lesson.content_type === 'video' ? <PlayCircle className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span
+                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEditing(lesson.id, lesson.title); }}
+                                                                    className="font-medium hover:text-blue-400 transition-colors"
+                                                                >
+                                                                    {lesson.title}
+                                                                </span>
+                                                                <div className="flex items-center gap-3 text-[10px] text-gray-500 uppercase mt-0.5 font-semibold">
+                                                                    <span>{lesson.content_type}</span>
+                                                                    {lesson.due_date && (
+                                                                        <div className="flex items-center gap-1 text-orange-400">
+                                                                            <Calendar className="w-3 h-3" />
+                                                                            {new Date(lesson.due_date).toLocaleDateString()}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </Link>
+                                                        <div className="flex items-center gap-4">
+                                                            <button
+                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEditing(lesson.id, lesson.title); }}
+                                                                className="opacity-0 group-hover/lesson:opacity-100 text-gray-500 hover:text-white transition-opacity"
+                                                            >
+                                                                <Pencil className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteLesson(module.id, lesson.id); }}
+                                                                className="opacity-0 group-hover/lesson:opacity-100 text-gray-500 hover:text-red-400 transition-opacity"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+
                                     <button
-                                        onClick={() => handleDeleteModule(module.id)}
-                                        className="text-gray-500 hover:text-red-400 transition-colors"
+                                        onClick={() => handleAddLesson(module.id)}
+                                        className="w-full py-3 border border-dashed border-white/10 rounded-xl text-sm text-gray-500 hover:text-white hover:border-white/20 hover:bg-white/5 transition-all mt-3 flex items-center justify-center gap-2"
                                     >
-                                        <Trash2 className="w-4 h-4" />
+                                        <Plus className="w-4 h-4" /> New Lesson
                                     </button>
                                 </div>
                             </div>
-                            <div className="p-6 space-y-3">
-                                {module.lessons.map((lesson, lIndex) => (
-                                    <div key={lesson.id} className="flex items-center gap-3 group/row">
-                                        <div className="flex flex-col opacity-0 group-hover/row:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={() => handleReorderLesson(module.id, lIndex, 'up')}
-                                                disabled={lIndex === 0}
-                                                className="text-gray-500 hover:text-blue-400 disabled:opacity-0"
-                                            >
-                                                <ChevronUp className="w-3 h-3" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleReorderLesson(module.id, lIndex, 'down')}
-                                                disabled={lIndex === module.lessons.length - 1}
-                                                className="text-gray-500 hover:text-blue-400 disabled:opacity-0"
-                                            >
-                                                <ChevronDown className="w-3 h-3" />
-                                            </button>
-                                        </div>
+                        ))}
 
-                                        <div className="flex-1">
-                                            {editingId === lesson.id ? (
-                                                <div className="flex items-center gap-2 glass border-blue-500/30 p-2 rounded-lg">
-                                                    <input
-                                                        autoFocus
-                                                        value={editValue}
-                                                        onChange={(e) => setEditValue(e.target.value)}
-                                                        onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle(lesson.id, 'lesson')}
-                                                        className="bg-transparent border-none flex-1 text-white focus:outline-none"
-                                                    />
-                                                    <button onClick={() => handleSaveTitle(lesson.id, 'lesson')} className="text-green-400">
-                                                        <Save className="w-4 h-4" />
-                                                    </button>
-                                                    <button onClick={() => setEditingId(null)} className="text-gray-400">
-                                                        <X className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center justify-between glass border-white/5 p-4 rounded-xl hover:bg-white/10 hover:border-blue-500/30 transition-all cursor-pointer group/lesson">
-                                                    <Link href={`/courses/${params.id}/lessons/${lesson.id}`} className="flex-1 flex items-center gap-4">
-                                                        <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400 group-hover/lesson:scale-110 transition-transform">
-                                                            {lesson.content_type === 'video' ? <PlayCircle className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span
-                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEditing(lesson.id, lesson.title); }}
-                                                                className="font-medium hover:text-blue-400 transition-colors"
-                                                            >
-                                                                {lesson.title}
-                                                            </span>
-                                                            <div className="flex items-center gap-3 text-[10px] text-gray-500 uppercase mt-0.5 font-semibold">
-                                                                <span>{lesson.content_type}</span>
-                                                                {lesson.due_date && (
-                                                                    <div className="flex items-center gap-1 text-orange-400">
-                                                                        <Calendar className="w-3 h-3" />
-                                                                        {new Date(lesson.due_date).toLocaleDateString()}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </Link>
-                                                    <div className="flex items-center gap-4">
-                                                        <button
-                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEditing(lesson.id, lesson.title); }}
-                                                            className="opacity-0 group-hover/lesson:opacity-100 text-gray-500 hover:text-white transition-opacity"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteLesson(module.id, lesson.id); }}
-                                                            className="opacity-0 group-hover/lesson:opacity-100 text-gray-500 hover:text-red-400 transition-opacity"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-
-                                <button
-                                    onClick={() => handleAddLesson(module.id)}
-                                    className="w-full py-3 border border-dashed border-white/10 rounded-xl text-sm text-gray-500 hover:text-white hover:border-white/20 hover:bg-white/5 transition-all mt-3 flex items-center justify-center gap-2"
-                                >
-                                    <Plus className="w-4 h-4" /> New Lesson
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-
-                    <button
-                        onClick={handleAddModule}
-                        className="w-full py-6 border-2 border-dashed border-white/10 rounded-2xl font-medium text-gray-500 hover:text-white hover:border-white/20 hover:bg-white/5 transition-all flex items-center justify-center gap-3 text-lg"
-                    >
-                        <Plus className="w-6 h-6" /> Add New Module
-                    </button>
-                </div>
-            </CourseEditorLayout>
+                        <button
+                            onClick={handleAddModule}
+                            className="w-full py-6 border-2 border-dashed border-white/10 rounded-2xl font-medium text-gray-500 hover:text-white hover:border-white/20 hover:bg-white/5 transition-all flex items-center justify-center gap-3 text-lg"
+                        >
+                            <Plus className="w-6 h-6" /> Add New Module
+                        </button>
+                    </div>
+                </CourseEditorLayout>
+            </div>
         </div>
     );
 }

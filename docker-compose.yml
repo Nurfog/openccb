@@ -57,24 +57,21 @@ services:
       NEXT_PUBLIC_LMS_API_URL: http://localhost:3002
 
   whisper:
-    image: fedirz/faster-whisper-server:latest-cpu
+    image: ${WHISPER_IMAGE:-fedirz/faster-whisper-server:latest-cpu}
     ports:
       - "8000:8000"
     volumes:
       - whisper_cache:/root/.cache/huggingface
     environment:
-      # - WHISPER_MODEL=medium
-      # - DEVICE=cpu
-      # GPU support commented out for stability if drivers missing
-      - DEVICE=cpu
+      - DEVICE=${WHISPER_DEVICE:-cpu}
     # GPU support for RTX 2070 Super
-    #    deploy:
-    #      resources:
-    #        reservations:
-    #          devices:
-    #            - driver: nvidia
-    #              count: 1
-    #              capabilities: [ gpu ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
 
   e2e:
     build:

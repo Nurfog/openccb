@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import { cmsApi, Course, CourseAnalytics } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -83,35 +82,26 @@ export default function AnalyticsPage() {
         .sort((a, b) => a.average_score - b.average_score);
 
     return (
-        <div className="min-h-screen bg-gray-950 text-white pb-20">
-            {/* Header */}
-            <header className="sticky top-0 z-50 bg-gray-950/80 backdrop-blur-xl border-b border-white/5 py-4 px-8">
-                <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="min-h-screen bg-[#0f1115] text-white p-8">
+            <div className="max-w-7xl mx-auto">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-12">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => router.back()} className="p-2 hover:bg-white/5 rounded-full transition-colors">
-                            <ArrowLeft className="w-5 h-5 text-gray-400" />
+                        <button
+                            onClick={() => router.back()}
+                            className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                        >
+                            <ArrowLeft className="w-6 h-6" />
                         </button>
-                        <h1 className="text-xl font-bold">{course.title} - Performance Insights</h1>
-                        <div className="bg-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded border border-blue-500/30">
-                            {user?.role} View
+                        <div>
+                            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                                Course Analytics
+                            </h1>
+                            <p className="text-gray-400 mt-1">Performance insights and student progress for {course?.title}</p>
                         </div>
                     </div>
-                </div>
-            </header>
-
-            <main className="max-w-7xl mx-auto px-8 mt-12 space-y-8">
-                <div className="flex items-center gap-4 text-sm text-gray-400">
-                    <Link href="/" className="hover:text-white transition-colors">Courses</Link>
-                    <span>/</span>
-                    <span className="text-white">{course?.title}</span>
-                </div>
-
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h2 className="text-3xl font-bold">{course?.title}</h2>
-                        <div className="flex items-center gap-3 mt-1">
-                            <span className="text-gray-400 text-sm">Performance Insights</span>
-                        </div>
+                    <div className="bg-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded border border-blue-500/30">
+                        {user?.role} View
                     </div>
                 </div>
 
@@ -226,7 +216,7 @@ export default function AnalyticsPage() {
                         </div>
                     </div>
                 </CourseEditorLayout>
-            </main>
+            </div>
         </div>
     );
 }

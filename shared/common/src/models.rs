@@ -123,6 +123,7 @@ pub struct User {
     pub full_name: String,
     pub role: String, // admin, instructor, student
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]

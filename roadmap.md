@@ -7,6 +7,7 @@
 - [x] Frontend Initialization (Next.js Studio & Experience)
 - [x] Dockerization of all services
 - [x] API Integration (Dashboard <-> CMS Service)
+- [x] Unified `install.sh` script with hardware detection & auto-config
 
 ## Phase 2: Core CMS Features ✅
 - [x] Course Outline Editor (Modules & Lessons)

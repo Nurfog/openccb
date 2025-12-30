@@ -11,12 +11,8 @@ import {
     CheckCircle2,
     ArrowLeft,
     TrendingUp,
-    Settings,
-    Layout,
-    Calendar,
-    BarChart2
+    Settings
 } from "lucide-react";
-import Link from "next/link";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import CourseEditorLayout from "@/components/CourseEditorLayout";
