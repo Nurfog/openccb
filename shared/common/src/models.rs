@@ -122,6 +122,8 @@ pub struct User {
     pub password_hash: String,
     pub full_name: String,
     pub role: String, // admin, instructor, student
+    pub xp: i32,
+    pub level: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -133,6 +135,8 @@ pub struct UserResponse {
     pub full_name: String,
     pub role: String,
     pub organization_id: Uuid,
+    pub xp: i32,
+    pub level: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]

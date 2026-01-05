@@ -1,15 +1,18 @@
 use axum::{
-    extract::{State, Path},
-    http::StatusCode,
     Json,
+    extract::{Path, State},
+    http::StatusCode,
 };
-use common::models::{Course, Enrollment, Module, Lesson, User, UserResponse, AuthResponse, CourseAnalytics, LessonAnalytics, Organization};
-use common::auth::{create_jwt, Claims};
+use bcrypt::{DEFAULT_COST, hash, verify};
+use common::auth::{Claims, create_jwt};
 use common::middleware::Org;
+use common::models::{
+    AuthResponse, Course, CourseAnalytics, Enrollment, Lesson, LessonAnalytics, Module,
+    Organization, User, UserResponse,
+};
+use serde::Deserialize;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
-use serde::Deserialize;
-use bcrypt::{hash, verify, DEFAULT_COST};
 
 pub async fn enroll_user(
     State(pool): State<PgPool>,
@@ -17,7 +20,10 @@ pub async fn enroll_user(
     claims: Claims,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Enrollment>, StatusCode> {
-    let course_id_str = payload.get("course_id").and_then(|v| v.as_str()).ok_or(StatusCode::BAD_REQUEST)?;
+    let course_id_str = payload
+        .get("course_id")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
     let course_id = Uuid::parse_str(course_id_str).map_err(|_| StatusCode::BAD_REQUEST)?;
     let user_id = claims.sub;
 
@@ -61,7 +67,14 @@ pub async fn register(
     let password_hash = hash(payload.password, DEFAULT_COST)
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Hashing failed".into()))?;
 
-    let full_name = payload.full_name.unwrap_or_else(|| payload.email.split('@').next().unwrap_or("Student").to_string());
+    let full_name = payload.full_name.unwrap_or_else(|| {
+        payload
+            .email
+            .split('@')
+            .next()
+            .unwrap_or("Student")
+            .to_string()
+    });
 
     // Find or create organization
     let org_name = payload.organization_name.unwrap_or_else(|| {
@@ -69,7 +82,10 @@ pub async fn register(
         parts.get(1).unwrap_or(&"default.com").to_string()
     });
 
-    let mut tx = pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let organization = sqlx::query_as::<_, Organization>(
         "INSERT INTO organizations (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *"
@@ -90,10 +106,16 @@ pub async fn register(
     .await
     .map_err(|e| (StatusCode::CONFLICT, format!("User already exists or DB error: {}", e)))?;
 
-    tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let token = create_jwt(user.id, user.organization_id, "student")
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "JWT generation failed".into()))?;
+    let token = create_jwt(user.id, user.organization_id, "student").map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "JWT generation failed".into(),
+        )
+    })?;
 
     Ok(Json(AuthResponse {
         user: UserResponse {
@@ -102,6 +124,8 @@ pub async fn register(
             full_name: user.full_name,
             role: user.role,
             organization_id: user.organization_id,
+            xp: user.xp,
+            level: user.level,
         },
         token,
     }))
@@ -117,12 +141,21 @@ pub async fn login(
         .await
         .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid credentials".into()))?;
 
-    if !verify(payload.password, &user.password_hash).map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Verification failed".into()))? {
+    if !verify(payload.password, &user.password_hash).map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Verification failed".into(),
+        )
+    })? {
         return Err((StatusCode::UNAUTHORIZED, "Invalid credentials".into()));
     }
 
-    let token = create_jwt(user.id, user.organization_id, "student")
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "JWT generation failed".into()))?;
+    let token = create_jwt(user.id, user.organization_id, "student").map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "JWT generation failed".into(),
+        )
+    })?;
 
     Ok(Json(AuthResponse {
         user: UserResponse {
@@ -131,6 +164,8 @@ pub async fn login(
             full_name: user.full_name,
             role: user.role,
             organization_id: user.organization_id,
+            xp: user.xp,
+            level: user.level,
         },
         token,
     }))
@@ -151,7 +186,10 @@ pub async fn ingest_course(
     State(pool): State<PgPool>,
     Json(payload): Json<common::models::PublishedCourse>,
 ) -> Result<StatusCode, StatusCode> {
-    let mut tx = pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // 1. Upsert Course
     let org_id = payload.course.organization_id;
@@ -221,7 +259,7 @@ pub async fn ingest_course(
     for pub_module in payload.modules {
         sqlx::query(
             "INSERT INTO modules (id, course_id, title, position, created_at, organization_id)
-             VALUES ($1, $2, $3, $4, $5, $6)"
+             VALUES ($1, $2, $3, $4, $5, $6)",
         )
         .bind(pub_module.module.id)
         .bind(payload.course.id)
@@ -261,7 +299,9 @@ pub async fn ingest_course(
         }
     }
 
-    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::OK)
 }
@@ -272,24 +312,27 @@ pub async fn get_course_outline(
     Path(id): Path<Uuid>,
 ) -> Result<Json<common::models::PublishedCourse>, StatusCode> {
     // 1. Fetch Course
-    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
-        .bind(id)
-        .bind(org_ctx.id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| StatusCode::NOT_FOUND)?;
+    let course =
+        sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
+            .bind(id)
+            .bind(org_ctx.id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| StatusCode::NOT_FOUND)?;
 
     // 2. Fetch Modules
-    let modules = sqlx::query_as::<_, Module>("SELECT * FROM modules WHERE course_id = $1 AND organization_id = $2 ORDER BY position")
-        .bind(id)
-        .bind(org_ctx.id)
-        .fetch_all(&pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let modules = sqlx::query_as::<_, Module>(
+        "SELECT * FROM modules WHERE course_id = $1 AND organization_id = $2 ORDER BY position",
+    )
+    .bind(id)
+    .bind(org_ctx.id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // 3. Fetch Grading Categories
     let grading_categories = sqlx::query_as::<_, common::models::GradingCategory>(
-        "SELECT * FROM grading_categories WHERE course_id = $1 ORDER BY created_at"
+        "SELECT * FROM grading_categories WHERE course_id = $1 ORDER BY created_at",
     )
     .bind(id)
     .bind(org_ctx.id)
@@ -300,17 +343,16 @@ pub async fn get_course_outline(
     // 4. Fetch Lessons
     let mut pub_modules = Vec::new();
     for module in modules {
-        let lessons = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE module_id = $1 AND organization_id = $2 ORDER BY position")
-            .bind(module.id)
-            .bind(org_ctx.id)
-            .fetch_all(&pool)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let lessons = sqlx::query_as::<_, Lesson>(
+            "SELECT * FROM lessons WHERE module_id = $1 AND organization_id = $2 ORDER BY position",
+        )
+        .bind(module.id)
+        .bind(org_ctx.id)
+        .fetch_all(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        pub_modules.push(common::models::PublishedModule {
-            module,
-            lessons,
-        });
+        pub_modules.push(common::models::PublishedModule { module, lessons });
     }
 
     Ok(Json(common::models::PublishedCourse {
@@ -325,12 +367,13 @@ pub async fn get_lesson_content(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Lesson>, StatusCode> {
-    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
-        .bind(id)
-        .bind(org_ctx.id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| StatusCode::NOT_FOUND)?;
+    let lesson =
+        sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
+            .bind(id)
+            .bind(org_ctx.id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| StatusCode::NOT_FOUND)?;
 
     Ok(Json(lesson))
 }
@@ -340,12 +383,14 @@ pub async fn get_user_enrollments(
     State(pool): State<PgPool>,
     Path(user_id): Path<Uuid>,
 ) -> Result<Json<Vec<Enrollment>>, StatusCode> {
-    let enrollments = sqlx::query_as::<_, Enrollment>("SELECT * FROM enrollments WHERE user_id = $1 AND organization_id = $2")
-        .bind(user_id)
-        .bind(org_ctx.id)
-        .fetch_all(&pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let enrollments = sqlx::query_as::<_, Enrollment>(
+        "SELECT * FROM enrollments WHERE user_id = $1 AND organization_id = $2",
+    )
+    .bind(user_id)
+    .bind(org_ctx.id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(enrollments))
 }
@@ -356,12 +401,14 @@ pub async fn submit_lesson_score(
     Json(payload): Json<GradeSubmissionPayload>,
 ) -> Result<Json<common::models::UserGrade>, (StatusCode, String)> {
     // 1. Get lesson attempt rules
-    let max_attempts: Option<Option<i32>> = sqlx::query_scalar("SELECT max_attempts FROM lessons WHERE id = $1 AND organization_id = $2")
-        .bind(payload.lesson_id)
-        .bind(org_ctx.id)
-        .fetch_optional(&pool)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let max_attempts: Option<Option<i32>> = sqlx::query_scalar(
+        "SELECT max_attempts FROM lessons WHERE id = $1 AND organization_id = $2",
+    )
+    .bind(payload.lesson_id)
+    .bind(org_ctx.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     if max_attempts.is_none() {
         return Err((StatusCode::NOT_FOUND, "Lesson not found".into()));
@@ -380,8 +427,16 @@ pub async fn submit_lesson_score(
     if let Some(count) = existing_attempts {
         if let Some(max) = max_attempts {
             if count >= max {
-                tracing::warn!("User {} attempted to resubmit lesson {} but reached max_attempts ({})", payload.user_id, payload.lesson_id, max);
-                return Err((StatusCode::FORBIDDEN, "Maximum attempts reached for this assessment".into()));
+                tracing::warn!(
+                    "User {} attempted to resubmit lesson {} but reached max_attempts ({})",
+                    payload.user_id,
+                    payload.lesson_id,
+                    max
+                );
+                return Err((
+                    StatusCode::FORBIDDEN,
+                    "Maximum attempts reached for this assessment".into(),
+                ));
             }
         }
     }
@@ -423,11 +478,12 @@ pub async fn submit_lesson_score(
 
     // 5. Check for new badges (Trigger-like logic in code)
     // For now, very simple: if they reached a points threshold
-    let total_points: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(amount), 0) FROM points_log WHERE user_id = $1")
-        .bind(payload.user_id)
-        .fetch_one(&pool)
-        .await
-        .unwrap_or(0);
+    let total_points: i64 =
+        sqlx::query_scalar("SELECT COALESCE(SUM(amount), 0) FROM points_log WHERE user_id = $1")
+            .bind(payload.user_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap_or(0);
 
     let eligible_badges = sqlx::query(
         "SELECT id FROM badges WHERE organization_id = $1 AND requirement_type = 'points' AND requirement_value <= $2 AND id NOT IN (SELECT badge_id FROM user_badges WHERE user_id = $3)"
@@ -472,17 +528,18 @@ pub async fn get_user_gamification(
     State(pool): State<PgPool>,
     Path(user_id): Path<Uuid>,
 ) -> Result<Json<GamificationStatus>, StatusCode> {
-    let points: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(amount), 0) FROM points_log WHERE user_id = $1")
-        .bind(user_id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let points: i64 =
+        sqlx::query_scalar("SELECT COALESCE(SUM(amount), 0) FROM points_log WHERE user_id = $1")
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let badges = sqlx::query_as::<_, BadgeResponse>(
         "SELECT b.id, b.name, b.description, b.icon_url, ub.earned_at 
          FROM user_badges ub 
          JOIN badges b ON ub.badge_id = b.id 
-         WHERE ub.user_id = $1"
+         WHERE ub.user_id = $1",
     )
     .bind(user_id)
     .fetch_all(&pool)
@@ -498,7 +555,7 @@ pub async fn get_user_course_grades(
     Path((user_id, course_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<Vec<common::models::UserGrade>>, StatusCode> {
     let grades = sqlx::query_as::<_, common::models::UserGrade>(
-        "SELECT * FROM user_grades WHERE user_id = $1 AND course_id = $2 AND organization_id = $3"
+        "SELECT * FROM user_grades WHERE user_id = $1 AND course_id = $2 AND organization_id = $3",
     )
     .bind(user_id)
     .bind(course_id)
@@ -515,20 +572,24 @@ pub async fn get_course_analytics(
     Path(course_id): Path<Uuid>,
 ) -> Result<Json<CourseAnalytics>, (StatusCode, String)> {
     // 1. Total Enrollments
-    let total_enrollments: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM enrollments WHERE course_id = $1 AND organization_id = $2")
-        .bind(course_id)
-        .bind(org_ctx.id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let total_enrollments: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM enrollments WHERE course_id = $1 AND organization_id = $2",
+    )
+    .bind(course_id)
+    .bind(org_ctx.id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // 2. Average Course Score (Overall)
-    let average_score: Option<f32> = sqlx::query_scalar("SELECT AVG(score)::float4 FROM user_grades WHERE course_id = $1 AND organization_id = $2")
-        .bind(course_id)
-        .bind(org_ctx.id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let average_score: Option<f32> = sqlx::query_scalar(
+        "SELECT AVG(score)::float4 FROM user_grades WHERE course_id = $1 AND organization_id = $2",
+    )
+    .bind(course_id)
+    .bind(org_ctx.id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // 3. Per-Lesson Analytics
     // Note: We cast AVG to float4 for PostgreSQL compatibility
@@ -552,14 +613,15 @@ pub async fn get_course_analytics(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let lessons = rows.into_iter().map(|row| {
-        LessonAnalytics {
+    let lessons = rows
+        .into_iter()
+        .map(|row| LessonAnalytics {
             lesson_id: row.get("id"),
             lesson_title: row.get("title"),
             average_score: row.get("average_score"),
             submission_count: row.get("submission_count"),
-        }
-    }).collect();
+        })
+        .collect();
 
     Ok(Json(CourseAnalytics {
         course_id,

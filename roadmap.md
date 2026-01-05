@@ -90,10 +90,10 @@
   - [ ] Implement real-time video transcription via external API
   - [x] Automated quiz generation (Implemented)
   - [ ] Personalized learning paths
-- [ ] **Gamification**:
+- [x] **Gamification**: (Base system implemented)
   - [x] Badges and achievements (Implemented base system)
   - [ ] Leaderboards
-  - [ ] XP and leveling system
+  - [x] XP and leveling system
 - [x] **Course Management Enhancements**:
   - [x] Manual naming for modules, lessons, and activities during creation.
   - [x] Reordering for modules, lessons, and activities (Level up/down).

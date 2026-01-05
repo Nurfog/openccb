@@ -1126,7 +1126,7 @@ pub async fn register(
     .bind(organization.id)
     .fetch_one(&mut *tx)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Failed to create user: {}", e);
         (StatusCode::CONFLICT, format!("User already exists or DB error: {}", e))
     })?;
@@ -1149,6 +1149,8 @@ pub async fn register(
             full_name: user.full_name,
             role: user.role,
             organization_id: user.organization_id,
+            xp: user.xp,
+            level: user.level,
         },
         token,
     }))
@@ -1187,6 +1189,8 @@ pub async fn login(
             full_name: user.full_name,
             role: user.role,
             organization_id: user.organization_id,
+            xp: user.xp,
+            level: user.level,
         },
         token,
     }))
@@ -1484,13 +1488,14 @@ pub async fn get_organizations(
         return Err(StatusCode::FORBIDDEN);
     }
 
-    let orgs = sqlx::query_as::<_, Organization>("SELECT * FROM organizations ORDER BY created_at DESC")
-        .fetch_all(&pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to fetch organizations: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    let orgs =
+        sqlx::query_as::<_, Organization>("SELECT * FROM organizations ORDER BY created_at DESC")
+            .fetch_all(&pool)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to fetch organizations: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
 
     Ok(Json(orgs))
 }
@@ -1504,11 +1509,14 @@ pub async fn create_organization(
         return Err(StatusCode::FORBIDDEN);
     }
 
-    let name = payload.get("name").and_then(|v| v.as_str()).ok_or(StatusCode::BAD_REQUEST)?;
+    let name = payload
+        .get("name")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
     let domain = payload.get("domain").and_then(|v| v.as_str());
 
     let org = sqlx::query_as::<_, Organization>(
-        "INSERT INTO organizations (name, domain) VALUES ($1, $2) RETURNING *"
+        "INSERT INTO organizations (name, domain) VALUES ($1, $2) RETURNING *",
     )
     .bind(name)
     .bind(domain)
