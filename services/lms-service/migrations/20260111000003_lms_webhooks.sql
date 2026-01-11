@@ -1,5 +1,5 @@
 -- Migration: Create Webhooks Table for LMS
-CREATE TABLE webhooks (
+CREATE TABLE IF NOT EXISTS webhooks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     url VARCHAR(500) NOT NULL,
@@ -11,4 +11,4 @@ CREATE TABLE webhooks (
 );
 
 -- Index for organization_id
-CREATE INDEX idx_webhooks_organization_id ON webhooks(organization_id);
+CREATE INDEX IF NOT EXISTS idx_webhooks_organization_id ON webhooks(organization_id);
