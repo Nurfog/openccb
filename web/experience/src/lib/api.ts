@@ -96,6 +96,8 @@ export interface User {
     email: string;
     full_name: string;
     role: string;
+    xp?: number;
+    level?: number;
 }
 
 export interface AuthResponse {
@@ -187,9 +189,18 @@ export const lmsApi = {
         return response.json();
     },
 
-    async getGamification(userId: string): Promise<{ points: number, badges: { id: string, name: string, description: string }[] }> {
+    async getGamification(userId: string): Promise<{ points: number, level: number, badges: { id: string, name: string, description: string, earned_at: string }[] }> {
         const response = await fetch(`${API_BASE_URL}/users/${userId}/gamification`);
         if (!response.ok) throw new Error('Failed to fetch gamification data');
+        return response.json();
+    },
+
+    async getLeaderboard(): Promise<User[]> {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE_URL}/analytics/leaderboard`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Failed to fetch leaderboard');
         return response.json();
     },
 

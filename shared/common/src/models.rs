@@ -185,6 +185,36 @@ pub struct LessonAnalytics {
     pub average_score: f32, // 0.0-1.0
     pub submission_count: i64,
 }
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct CohortData {
+    pub period: String,
+    pub count: i64,
+    pub completion_rate: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct RetentionData {
+    pub lesson_id: Uuid,
+    pub lesson_title: String,
+    pub student_count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdvancedAnalytics {
+    pub cohorts: Vec<CohortData>,
+    pub retention: Vec<RetentionData>,
+}
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct Webhook {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub url: String,
+    pub events: Vec<String>,
+    pub secret: Option<String>,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
 
 #[cfg(test)]
 mod tests {

@@ -11,7 +11,8 @@ import {
     AlertTriangle,
     ArrowLeft,
     CheckCircle2,
-    BookOpen
+    BookOpen,
+    Layers
 } from "lucide-react";
 import CourseEditorLayout from "@/components/CourseEditorLayout";
 
@@ -100,8 +101,16 @@ export default function AnalyticsPage() {
                             <p className="text-gray-400 mt-1">Performance insights and student progress for {course?.title}</p>
                         </div>
                     </div>
-                    <div className="bg-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded border border-blue-500/30">
-                        {user?.role} View
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => router.push(`/courses/${id}/analytics/advanced`)}
+                            className="btn-premium !bg-purple-600/10 !text-purple-400 border border-purple-500/20 hover:!bg-purple-600/20 !shadow-none gap-2 text-xs py-2"
+                        >
+                            <Layers size={14} /> Advanced Insights
+                        </button>
+                        <div className="bg-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded border border-blue-500/30">
+                            {user?.role} View
+                        </div>
                     </div>
                 </div>
 

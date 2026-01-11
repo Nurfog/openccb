@@ -20,3 +20,6 @@ tower-http.workspace = true
 reqwest.workspace = true
 bcrypt.workspace = true
 jsonwebtoken.workspace = true
+hmac.workspace = true
+sha2.workspace = true
+hex.workspace = true

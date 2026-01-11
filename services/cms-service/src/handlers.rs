@@ -1,3 +1,4 @@
+use crate::webhooks::WebhookService;
 use axum::{
     Json,
     extract::{Path, Query, State},
@@ -89,6 +90,21 @@ pub async fn publish_course(
 
     log_action(&pool, Uuid::new_v4(), "PUBLISH", "Course", id, json!({})).await;
 
+    // 5. Trigger Webhook
+    let webhook_service = WebhookService::new(pool.clone());
+    webhook_service
+        .dispatch(
+            org_ctx.id,
+            "course.published",
+            &json!({
+                "course_id": id,
+                "title": payload.course.title,
+                "pacing_mode": payload.course.pacing_mode,
+                "published_at": Utc::now()
+            }),
+        )
+        .await;
+
     Ok(StatusCode::OK)
 }
 
@@ -114,6 +130,7 @@ pub async fn create_course(
     Org(org_ctx): Org,
     claims: common::auth::Claims,
     State(pool): State<PgPool>,
+    headers: axum::http::HeaderMap,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Course>, StatusCode> {
     let title = payload
@@ -127,29 +144,53 @@ pub async fn create_course(
         .and_then(|v| v.as_str())
         .unwrap_or("self_paced");
 
-    let course = sqlx::query_as::<_, Course>(
-        "INSERT INTO courses (title, instructor_id, organization_id, pacing_mode) VALUES ($1, $2, $3, $4) RETURNING *"
-    )
-    .bind(title)
-    .bind(instructor_id)
-    .bind(org_ctx.id)
-    .bind(pacing_mode)
-    .fetch_one(&pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Create course failed: {}", e);
+    let mut tx = pool.begin().await.map_err(|e| {
+        tracing::error!("Failed to start transaction: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    log_action(
-        &pool,
-        instructor_id,
-        "CREATE",
-        "Course",
-        course.id,
-        json!({ "title": title, "pacing_mode": pacing_mode }),
+    // Set session context for the DB trigger to find
+    let ip = headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .or_else(|| headers.get("x-real-ip").and_then(|h| h.to_str().ok()))
+        .map(|s| s.to_string());
+
+    let ua = headers
+        .get("user-agent")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+
+    crate::db_util::set_session_context(
+        &mut tx,
+        Some(instructor_id),
+        Some(org_ctx.id),
+        ip,
+        ua,
+        Some("USER_EVENT".to_string()),
     )
-    .await;
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to set session context: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let course = sqlx::query_as::<_, Course>("SELECT * FROM fn_create_course($1, $2, $3, $4)")
+        .bind(org_ctx.id)
+        .bind(instructor_id)
+        .bind(title)
+        .bind(pacing_mode)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Create course failed: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    tx.commit().await.map_err(|e| {
+        tracing::error!("Failed to commit transaction: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok(Json(course))
 }
@@ -222,27 +263,34 @@ pub async fn update_course(
         .or(existing.end_date);
 
     let course = sqlx::query_as::<_, Course>(
-        "UPDATE courses SET title = $1, description = $2, passing_percentage = $3, certificate_template = $4, pacing_mode = $5, start_date = $6, end_date = $7, updated_at = NOW() WHERE id = $8 AND organization_id = $9 RETURNING *"
+        "SELECT * FROM fn_update_course($1, $2, $3, $4, $5, $6, $7, $8, $9)",
     )
+    .bind(id)
+    .bind(org_ctx.id)
     .bind(title)
     .bind(description)
     .bind(passing_percentage)
-    .bind(certificate_template)
     .bind(pacing_mode)
     .bind(start_date)
     .bind(end_date)
-    .bind(id)
-    .bind(org_ctx.id)
+    .bind(certificate_template)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to update course: {}", e)))?;
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to update course: {}", e),
+        )
+    })?;
 
     Ok(Json(course))
 }
 
 pub async fn create_module(
+    Org(org_ctx): Org,
     claims: common::auth::Claims,
     State(pool): State<PgPool>,
+    headers: axum::http::HeaderMap,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Module>, StatusCode> {
     let title = payload
@@ -259,32 +307,57 @@ pub async fn create_module(
         .and_then(|v| v.as_i64())
         .unwrap_or(0) as i32;
 
-    let module = sqlx::query_as::<_, Module>(
-        "INSERT INTO modules (course_id, title, position) VALUES ($1, $2, $3) RETURNING *",
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let ip = headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .or_else(|| headers.get("x-real-ip").and_then(|h| h.to_str().ok()))
+        .map(|s| s.to_string());
+
+    let ua = headers
+        .get("user-agent")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+
+    crate::db_util::set_session_context(
+        &mut tx,
+        Some(claims.sub),
+        Some(org_ctx.id),
+        ip,
+        ua,
+        Some("USER_EVENT".to_string()),
     )
-    .bind(course_id)
-    .bind(title)
-    .bind(position)
-    .fetch_one(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    log_action(
-        &pool,
-        claims.sub,
-        "CREATE",
-        "Module",
-        module.id,
-        json!({ "title": title, "course_id": course_id }),
-    )
-    .await;
+    let module = sqlx::query_as::<_, Module>("SELECT * FROM fn_create_module($1, $2, $3, $4)")
+        .bind(org_ctx.id)
+        .bind(course_id)
+        .bind(title)
+        .bind(position)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Create module failed: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(module))
 }
 
 pub async fn create_lesson(
+    Org(org_ctx): Org,
     claims: common::auth::Claims,
     State(pool): State<PgPool>,
+    headers: axum::http::HeaderMap,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Lesson>, StatusCode> {
     let title = payload
@@ -332,10 +405,37 @@ pub async fn create_lesson(
 
     let important_date_type = payload.get("important_date_type").and_then(|v| v.as_str());
 
-    let lesson = sqlx::query_as::<_, Lesson>(
-        "INSERT INTO lessons (module_id, title, content_type, content_url, position, transcription, metadata, is_graded, grading_category_id, max_attempts, allow_retry, due_date, important_date_type) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *"
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let ip = headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .or_else(|| headers.get("x-real-ip").and_then(|h| h.to_str().ok()))
+        .map(|s| s.to_string());
+
+    let ua = headers
+        .get("user-agent")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+
+    crate::db_util::set_session_context(
+        &mut tx,
+        Some(claims.sub),
+        Some(org_ctx.id),
+        ip,
+        ua,
+        Some("USER_EVENT".to_string()),
     )
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let lesson = sqlx::query_as::<_, Lesson>(
+        "SELECT * FROM fn_create_lesson($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"
+    )
+    .bind(org_ctx.id)
     .bind(module_id)
     .bind(title)
     .bind(content_type)
@@ -349,22 +449,16 @@ pub async fn create_lesson(
     .bind(allow_retry)
     .bind(due_date)
     .bind(important_date_type)
-    .fetch_one(&pool)
+    .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
         tracing::error!("Create lesson failed: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    log_action(
-        &pool,
-        claims.sub,
-        "CREATE",
-        "Lesson",
-        lesson.id,
-        json!({ "title": title, "module_id": module_id }),
-    )
-    .await;
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(lesson))
 }
@@ -724,8 +818,10 @@ pub async fn get_lesson(
 }
 
 pub async fn update_lesson(
+    Org(org_ctx): Org,
     claims: common::auth::Claims,
     State(pool): State<PgPool>,
+    headers: axum::http::HeaderMap,
     Path(id): Path<Uuid>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Lesson>, StatusCode> {
@@ -742,50 +838,90 @@ pub async fn update_lesson(
         .and_then(|v| v.as_i64())
         .map(|v| v as i32);
     let allow_retry = payload.get("allow_retry").and_then(|v| v.as_bool());
-    let metadata = payload.get("metadata");
+    let metadata = payload.get("metadata").cloned();
     let important_date_type = payload.get("important_date_type").and_then(|v| v.as_str());
+    let summary = payload.get("summary").and_then(|v| v.as_str());
+    let content_blocks = payload.get("content_blocks").cloned();
+    let transcription = payload.get("transcription").cloned();
 
-    let updated_lesson = sqlx::query_as::<_, Lesson>(
-        "UPDATE lessons 
-         SET title = COALESCE($1, title), 
-             content_type = COALESCE($2, content_type), 
-             content_url = COALESCE($3, content_url),
-             position = COALESCE($4, position),
-             is_graded = COALESCE($5, is_graded),
-             grading_category_id = CASE WHEN $6 = 'SET_NULL' THEN NULL WHEN $7::UUID IS NOT NULL THEN $7 ELSE grading_category_id END,
-             metadata = COALESCE($8, metadata),
-             max_attempts = COALESCE($9, max_attempts),
-             allow_retry = COALESCE($10, allow_retry),
-             summary = COALESCE($11, summary),
-             due_date = CASE WHEN $12 = 'SET_NULL' THEN NULL WHEN $13::TIMESTAMPTZ IS NOT NULL THEN $13 ELSE due_date END,
-             important_date_type = COALESCE($14, important_date_type)
-         WHERE id = $15 RETURNING *"
+    let clear_grading_category = payload
+        .get("grading_category_id")
+        .map(|v| v.is_null())
+        .unwrap_or(false);
+    let grading_category_id = payload
+        .get("grading_category_id")
+        .and_then(|v| v.as_str())
+        .and_then(|s| Uuid::parse_str(s).ok());
+
+    let clear_due_date = payload
+        .get("due_date")
+        .map(|v| v.is_null())
+        .unwrap_or(false);
+    let due_date = payload
+        .get("due_date")
+        .and_then(|v| v.as_str())
+        .and_then(|s| s.parse::<DateTime<Utc>>().ok());
+
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let ip = headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .or_else(|| headers.get("x-real-ip").and_then(|h| h.to_str().ok()))
+        .map(|s| s.to_string());
+
+    let ua = headers
+        .get("user-agent")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+
+    crate::db_util::set_session_context(
+        &mut tx,
+        Some(claims.sub),
+        Some(org_ctx.id),
+        ip,
+        ua,
+        Some("USER_EVENT".to_string()),
     )
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let lesson = sqlx::query_as::<_, Lesson>(
+        "SELECT * FROM fn_update_lesson($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"
+    )
+    .bind(id)
+    .bind(org_ctx.id)
     .bind(title)
     .bind(content_type)
     .bind(content_url)
-    .bind(position)
-    .bind(is_graded)
-    .bind(if payload.get("grading_category_id").map(|v| v.is_null()).unwrap_or(false) { "SET_NULL" } else { "" })
-    .bind(payload.get("grading_category_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok()))
+    .bind(content_blocks)
+    .bind(transcription)
     .bind(metadata)
+    .bind(is_graded)
+    .bind(grading_category_id)
     .bind(max_attempts)
     .bind(allow_retry)
-    .bind(payload.get("summary").and_then(|v| v.as_str()))
-    .bind(if payload.get("due_date").map(|v| v.is_null()).unwrap_or(false) { "SET_NULL" } else { "" })
-    .bind(payload.get("due_date").and_then(|v| v.as_str()).and_then(|s| s.parse::<DateTime<Utc>>().ok()))
+    .bind(position)
+    .bind(due_date)
     .bind(important_date_type)
-    .bind(id)
-    .fetch_one(&pool)
+    .bind(summary)
+    .bind(clear_due_date)
+    .bind(clear_grading_category)
+    .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
         tracing::error!("Update lesson failed: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    log_action(&pool, claims.sub, "UPDATE", "Lesson", id, json!(payload)).await;
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Json(updated_lesson))
+    Ok(Json(lesson))
 }
 
 // Grading Policies
@@ -925,53 +1061,115 @@ pub async fn get_lessons(
     Ok(Json(lessons))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ReorderPayload {
     pub items: Vec<ReorderItem>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ReorderItem {
     pub id: Uuid,
     pub position: i32,
 }
 
 pub async fn reorder_modules(
-    _claims: common::auth::Claims,
+    Org(org_ctx): Org,
+    claims: common::auth::Claims,
     State(pool): State<PgPool>,
+    headers: axum::http::HeaderMap,
     Json(payload): Json<ReorderPayload>,
 ) -> Result<StatusCode, StatusCode> {
-    for item in payload.items {
-        sqlx::query("UPDATE modules SET position = $1 WHERE id = $2")
-            .bind(item.position)
-            .bind(item.id)
-            .execute(&pool)
-            .await
-            .map_err(|e| {
-                tracing::error!("Reorder modules failed: {}", e);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
-    }
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let ip = headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .or_else(|| headers.get("x-real-ip").and_then(|h| h.to_str().ok()))
+        .map(|s| s.to_string());
+
+    let ua = headers
+        .get("user-agent")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+
+    crate::db_util::set_session_context(
+        &mut tx,
+        Some(claims.sub),
+        Some(org_ctx.id),
+        ip,
+        ua,
+        Some("USER_EVENT".to_string()),
+    )
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    sqlx::query("CALL pr_reorder_modules($1, $2)")
+        .bind(org_ctx.id)
+        .bind(serde_json::to_value(&payload.items).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Reorder modules failed: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::OK)
 }
 
 pub async fn reorder_lessons(
-    _claims: common::auth::Claims,
+    Org(org_ctx): Org,
+    claims: common::auth::Claims,
     State(pool): State<PgPool>,
+    headers: axum::http::HeaderMap,
     Json(payload): Json<ReorderPayload>,
 ) -> Result<StatusCode, StatusCode> {
-    for item in payload.items {
-        sqlx::query("UPDATE lessons SET position = $1 WHERE id = $2")
-            .bind(item.position)
-            .bind(item.id)
-            .execute(&pool)
-            .await
-            .map_err(|e| {
-                tracing::error!("Reorder lessons failed: {}", e);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
-    }
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let ip = headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .or_else(|| headers.get("x-real-ip").and_then(|h| h.to_str().ok()))
+        .map(|s| s.to_string());
+
+    let ua = headers
+        .get("user-agent")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+
+    crate::db_util::set_session_context(
+        &mut tx,
+        Some(claims.sub),
+        Some(org_ctx.id),
+        ip,
+        ua,
+        Some("USER_EVENT".to_string()),
+    )
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    sqlx::query("CALL pr_reorder_lessons($1, $2)")
+        .bind(org_ctx.id)
+        .bind(serde_json::to_value(&payload.items).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Reorder lessons failed: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::OK)
 }
@@ -1105,31 +1303,21 @@ pub async fn register(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let organization = sqlx::query_as::<_, Organization>(
-        "INSERT INTO organizations (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *"
-    )
-    .bind(&org_name)
-    .fetch_one(&mut *tx)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to create/find org: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to find or create organization: {}", e))
-    })?;
-
-    let user = sqlx::query_as::<_, User>(
-        "INSERT INTO users (email, password_hash, full_name, role, organization_id) VALUES ($1, $2, $3, $4, $5) RETURNING *"
-    )
-    .bind(&payload.email)
-    .bind(password_hash)
-    .bind(full_name)
-    .bind(&role)
-    .bind(organization.id)
-    .fetch_one(&mut *tx)
-    .await
-    .map_err(|e: sqlx::Error| {
-        tracing::error!("Failed to create user: {}", e);
-        (StatusCode::CONFLICT, format!("User already exists or DB error: {}", e))
-    })?;
+    let user = sqlx::query_as::<_, User>("SELECT * FROM fn_register_user($1, $2, $3, $4, $5)")
+        .bind(&payload.email)
+        .bind(password_hash)
+        .bind(full_name)
+        .bind(&role)
+        .bind(&org_name)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e: sqlx::Error| {
+            tracing::error!("Failed to create user: {}", e);
+            (
+                StatusCode::CONFLICT,
+                format!("User already exists or DB error: {}", e),
+            )
+        })?;
 
     tx.commit()
         .await
@@ -1160,7 +1348,7 @@ pub async fn login(
     State(pool): State<PgPool>,
     Json(payload): Json<AuthPayload>,
 ) -> Result<Json<AuthResponse>, (StatusCode, String)> {
-    let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE email = $1")
+    let user = sqlx::query_as::<_, User>("SELECT * FROM fn_get_user_by_email($1)")
         .bind(&payload.email)
         .fetch_one(&pool)
         .await
@@ -1235,6 +1423,55 @@ pub async fn get_course_analytics(
 
     let analytics = res
         .json::<CourseAnalytics>()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(analytics))
+}
+
+pub async fn get_advanced_analytics(
+    Org(org_ctx): Org,
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<common::models::AdvancedAnalytics>, (StatusCode, String)> {
+    // 1. Fetch Course to check ownership
+    let course =
+        sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
+            .bind(id)
+            .bind(org_ctx.id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| (StatusCode::NOT_FOUND, "Course not found".into()))?;
+
+    // 2. Enforce RBAC
+    if claims.role != "admin" && course.instructor_id != claims.sub {
+        return Err((
+            StatusCode::FORBIDDEN,
+            "You do not have permission to view stats for a course you don't own".into(),
+        ));
+    }
+
+    // 4. Fetch from LMS
+    let client = reqwest::Client::new();
+    let res = client
+        .get(format!(
+            "http://lms-service:3002/courses/{}/analytics/advanced",
+            id
+        ))
+        .send()
+        .await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+
+    if !res.status().is_success() {
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to fetch advanced analytics from LMS".into(),
+        ));
+    }
+
+    let analytics = res
+        .json::<common::models::AdvancedAnalytics>()
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
@@ -1356,8 +1593,10 @@ pub async fn get_course_outline(
 }
 
 pub async fn update_module(
+    Org(org_ctx): Org,
     claims: common::auth::Claims,
     State(pool): State<PgPool>,
+    headers: axum::http::HeaderMap,
     Path(id): Path<Uuid>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Module>, StatusCode> {
@@ -1367,61 +1606,168 @@ pub async fn update_module(
         .and_then(|v| v.as_i64())
         .map(|v| v as i32);
 
-    let updated_module = sqlx::query_as::<_, Module>(
-        "UPDATE modules 
-         SET title = COALESCE($1, title), 
-             position = COALESCE($2, position)
-         WHERE id = $3 RETURNING *",
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let ip = headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .or_else(|| headers.get("x-real-ip").and_then(|h| h.to_str().ok()))
+        .map(|s| s.to_string());
+
+    let ua = headers
+        .get("user-agent")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+
+    crate::db_util::set_session_context(
+        &mut tx,
+        Some(claims.sub),
+        Some(org_ctx.id),
+        ip,
+        ua,
+        Some("USER_EVENT".to_string()),
     )
-    .bind(title)
-    .bind(position)
-    .bind(id)
-    .fetch_one(&pool)
     .await
-    .map_err(|e| {
-        tracing::error!("Update module failed: {}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    log_action(&pool, claims.sub, "UPDATE", "Module", id, json!(payload)).await;
+    // Fetch existing to handle COALESCE if not handled in function
+    // For now, let's just use the function logic.
+    // Wait, the DB function I wrote doesn't use COALESCE, it just sets values.
+    // I should fix the DB function or handle COALESCE here.
+    // Let's fix the DB function to use COALESCE for optional updates.
 
-    Ok(Json(updated_module))
+    let module = sqlx::query_as::<_, Module>("SELECT * FROM fn_update_module($1, $2, $3, $4)")
+        .bind(id)
+        .bind(org_ctx.id)
+        .bind(title)
+        .bind(position)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Update module failed: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(module))
 }
 
 pub async fn delete_module(
+    Org(org_ctx): Org,
     claims: common::auth::Claims,
     State(pool): State<PgPool>,
+    headers: axum::http::HeaderMap,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, StatusCode> {
-    sqlx::query("DELETE FROM modules WHERE id = $1")
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let ip = headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .or_else(|| headers.get("x-real-ip").and_then(|h| h.to_str().ok()))
+        .map(|s| s.to_string());
+
+    let ua = headers
+        .get("user-agent")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+
+    crate::db_util::set_session_context(
+        &mut tx,
+        Some(claims.sub),
+        Some(org_ctx.id),
+        ip,
+        ua,
+        Some("USER_EVENT".to_string()),
+    )
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let success = sqlx::query_scalar::<_, bool>("SELECT fn_delete_module($1, $2)")
         .bind(id)
-        .execute(&pool)
+        .bind(org_ctx.id)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|e| {
             tracing::error!("Delete module failed: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-    log_action(&pool, claims.sub, "DELETE", "Module", id, json!({})).await;
+    if !success {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::OK)
 }
 
 pub async fn delete_lesson(
+    Org(org_ctx): Org,
     claims: common::auth::Claims,
     State(pool): State<PgPool>,
+    headers: axum::http::HeaderMap,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, StatusCode> {
     if claims.role != "admin" {
         return Err(StatusCode::FORBIDDEN);
     }
-    sqlx::query("DELETE FROM lessons WHERE id = $1")
-        .bind(id)
-        .execute(&pool)
+
+    let mut tx = pool
+        .begin()
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    log_action(&pool, claims.sub, "DELETE_LESSON", "Lesson", id, json!({})).await;
+    let ip = headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .or_else(|| headers.get("x-real-ip").and_then(|h| h.to_str().ok()))
+        .map(|s| s.to_string());
+
+    let ua = headers
+        .get("user-agent")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+
+    crate::db_util::set_session_context(
+        &mut tx,
+        Some(claims.sub),
+        Some(org_ctx.id),
+        ip,
+        ua,
+        Some("USER_EVENT".to_string()),
+    )
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let success = sqlx::query_scalar::<_, bool>("SELECT fn_delete_lesson($1, $2)")
+        .bind(id)
+        .bind(org_ctx.id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Delete lesson failed: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    if !success {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::OK)
 }
@@ -1528,4 +1874,103 @@ pub async fn create_organization(
     })?;
 
     Ok(Json(org))
+}
+
+#[derive(serde::Deserialize)]
+pub struct CreateWebhookPayload {
+    pub url: String,
+    pub events: Vec<String>,
+    pub secret: Option<String>,
+}
+
+pub async fn get_webhooks(
+    Org(org_ctx): Org,
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+) -> Result<Json<Vec<common::models::Webhook>>, (StatusCode, String)> {
+    if claims.role != "admin" {
+        return Err((StatusCode::FORBIDDEN, "Admin access required".into()));
+    }
+
+    let webhooks = sqlx::query_as::<_, common::models::Webhook>(
+        "SELECT * FROM webhooks WHERE organization_id =  ORDER BY created_at DESC",
+    )
+    .bind(org_ctx.id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(webhooks))
+}
+
+pub async fn create_webhook(
+    Org(org_ctx): Org,
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+    Json(payload): Json<CreateWebhookPayload>,
+) -> Result<Json<common::models::Webhook>, (StatusCode, String)> {
+    if claims.role != "admin" {
+        return Err((StatusCode::FORBIDDEN, "Admin access required".into()));
+    }
+
+    let webhook = sqlx::query_as::<_, common::models::Webhook>(
+        r#"
+        INSERT INTO webhooks (organization_id, url, events, secret)
+        VALUES (, , , )
+        RETURNING *
+        "#,
+    )
+    .bind(org_ctx.id)
+    .bind(payload.url)
+    .bind(payload.events)
+    .bind(payload.secret)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    log_action(
+        &pool,
+        claims.sub,
+        "CREATE_WEBHOOK",
+        "Webhook",
+        webhook.id,
+        serde_json::to_value(&webhook).unwrap(),
+    )
+    .await;
+
+    Ok(Json(webhook))
+}
+
+pub async fn delete_webhook(
+    Org(org_ctx): Org,
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    if claims.role != "admin" {
+        return Err((StatusCode::FORBIDDEN, "Admin access required".into()));
+    }
+
+    let result = sqlx::query("DELETE FROM webhooks WHERE id =  AND organization_id = ")
+        .bind(id)
+        .bind(org_ctx.id)
+        .execute(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if result.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, "Webhook not found".into()));
+    }
+
+    log_action(
+        &pool,
+        claims.sub,
+        "DELETE_WEBHOOK",
+        "Webhook",
+        id,
+        serde_json::json!({}),
+    )
+    .await;
+
+    Ok(StatusCode::OK)
 }

@@ -35,7 +35,7 @@ fi
 
 echo ""
 echo "3. Verificando JWT_SECRET en el contenedor..."
-JWT_SECRET=$(docker exec openccb-1-cms-service-1 env | grep JWT_SECRET | cut -d'=' -f2)
+JWT_SECRET=$(docker exec openccb-studio-1 env | grep JWT_SECRET | cut -d'=' -f2)
 echo "JWT_SECRET actual: $JWT_SECRET"
 
 echo ""

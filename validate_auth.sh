@@ -19,7 +19,7 @@ fi
 # 2. Verify New Registration
 echo "Testing Registration for newuser@test.com..."
 # Clear if exists
-docker exec openccb-1-db-1 psql -U user -d openccb_cms -c "DELETE FROM users WHERE email='newuser@test.com';" > /dev/null 2>&1
+docker exec openccb-db-1 psql -U user -d openccb_cms -c "DELETE FROM users WHERE email='newuser@test.com';" > /dev/null 2>&1
 
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3001/auth/register \
   -H "Content-Type: application/json" \
@@ -28,7 +28,7 @@ HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3001
 if [ "$HTTP_CODE" -eq 200 ]; then
     echo "SUCCESS: Registration worked for newuser@test.com"
     # Cleanup
-    docker exec openccb-1-db-1 psql -U user -d openccb_cms -c "DELETE FROM users WHERE email='newuser@test.com';" > /dev/null 2>&1
+    docker exec openccb-db-1 psql -U user -d openccb_cms -c "DELETE FROM users WHERE email='newuser@test.com';" > /dev/null 2>&1
 else
     echo "FAIL: Registration failed with status $HTTP_CODE"
     curl -s -X POST http://localhost:3001/auth/register \

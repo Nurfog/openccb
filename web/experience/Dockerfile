@@ -1,20 +1,37 @@
-# Build stage
-FROM node:18-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
+# Build stage for Rust LMS
+FROM rustlang/rust:nightly AS rust-builder
+WORKDIR /usr/src/app
 COPY . .
+RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+RUN cargo build --release -p lms-service
+
+# Build stage for Next.js Experience
+FROM node:18-alpine AS node-builder
+WORKDIR /app
+COPY web/experience/package*.json ./
+RUN npm install
+COPY web/experience/ .
 RUN npm run build
 
-# Production stage
+# Final stage
 FROM node:18-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV production
-ENV PORT 3003
 
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+# Install system dependencies for Rust binary
+RUN apk add --no-cache openssl libgcc libstdc++
 
-EXPOSE 3003
-CMD ["node", "server.js"]
+# Copy LMS binary
+COPY --from=rust-builder /usr/src/app/target/release/lms-service ./
+
+# Copy Experience frontend
+COPY --from=node-builder /app/public ./public
+COPY --from=node-builder /app/.next/standalone ./
+COPY --from=node-builder /app/.next/static ./.next/static
+
+# Copy entrypoint
+COPY web/experience/entrypoint.sh ./
+RUN chmod +x entrypoint.sh
+
+EXPOSE 3003 3002
+CMD ["./entrypoint.sh"]

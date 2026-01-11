@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { LayoutDashboard, Building2, Users2, LogOut } from 'lucide-react';
+import { LayoutDashboard, Building2, Users2, LogOut, Webhook } from 'lucide-react';
 
 export function Navbar() {
     const { user, logout } = useAuth();
@@ -41,6 +41,13 @@ export function Navbar() {
                                 >
                                     <Users2 className="w-4 h-4" />
                                     Users
+                                </Link>
+                                <Link
+                                    href="/settings/webhooks"
+                                    className="text-sm font-medium text-gray-400 hover:text-blue-400 transition-colors flex items-center gap-2"
+                                >
+                                    <Webhook className="w-4 h-4" />
+                                    Webhooks
                                 </Link>
                             </>
                         )}

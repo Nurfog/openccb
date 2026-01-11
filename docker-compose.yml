@@ -10,51 +10,37 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  cms-service:
+  studio:
     build:
       context: .
-      dockerfile: services/cms-service/Dockerfile
+      dockerfile: web/studio/Dockerfile
+    ports:
+      - "3000:3000"
+      - "3001:3001"
     environment:
       DATABASE_URL: postgresql://user:password@db:5432/openccb_cms
       JWT_SECRET: openccb_secret_key_2025_production
-    ports:
-      - "3001:3001"
+      NEXT_PUBLIC_CMS_API_URL: http://localhost:3001
     volumes:
       - uploads_data:/app/uploads
     env_file: .env
     depends_on:
       - db
 
-  lms-service:
+  experience:
     build:
       context: .
-      dockerfile: services/lms-service/Dockerfile
+      dockerfile: web/experience/Dockerfile
+    ports:
+      - "3003:3003"
+      - "3002:3002"
     environment:
       DATABASE_URL: postgresql://user:password@db:5432/openccb_lms
       JWT_SECRET: openccb_secret_key_2025_production
-    ports:
-      - "3002:3002"
+      NEXT_PUBLIC_LMS_API_URL: http://localhost:3002
     env_file: .env
     depends_on:
       - db
-
-  studio:
-    build:
-      context: ./web/studio
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    environment:
-      NEXT_PUBLIC_CMS_API_URL: http://localhost:3001
-
-  experience:
-    build:
-      context: ./web/experience
-      dockerfile: Dockerfile
-    ports:
-      - "3003:3003"
-    environment:
-      NEXT_PUBLIC_LMS_API_URL: http://localhost:3002
 
   whisper:
     image: ${WHISPER_IMAGE:-fedirz/faster-whisper-server:latest-cpu}

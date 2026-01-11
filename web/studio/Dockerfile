@@ -1,19 +1,37 @@
-# Build stage
-FROM node:18-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
+# Build stage for Rust CMS
+FROM rustlang/rust:nightly AS rust-builder
+WORKDIR /usr/src/app
 COPY . .
+RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+RUN cargo build --release -p cms-service
+
+# Build stage for Next.js Studio
+FROM node:18-alpine AS node-builder
+WORKDIR /app
+COPY web/studio/package*.json ./
+RUN npm install
+COPY web/studio/ .
 RUN npm run build
 
-# Production stage
+# Final stage
 FROM node:18-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV production
 
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+# Install system dependencies for Rust binary
+RUN apk add --no-cache openssl libgcc libstdc++
 
-EXPOSE 3000
-CMD ["node", "server.js"]
+# Copy CMS binary
+COPY --from=rust-builder /usr/src/app/target/release/cms-service ./
+
+# Copy Studio frontend
+COPY --from=node-builder /app/public ./public
+COPY --from=node-builder /app/.next/standalone ./
+COPY --from=node-builder /app/.next/static ./.next/static
+
+# Copy entrypoint
+COPY web/studio/entrypoint.sh ./
+RUN chmod +x entrypoint.sh
+
+EXPOSE 3000 3001
+CMD ["./entrypoint.sh"]

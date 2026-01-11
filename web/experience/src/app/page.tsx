@@ -5,13 +5,14 @@ import { lmsApi, Course, Lesson } from "@/lib/api";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { Rocket, CheckCircle2, ArrowRight, Star, Calendar, Clock, AlertCircle } from "lucide-react";
+import { Rocket, CheckCircle2, ArrowRight, Star, Calendar, Clock, AlertCircle, Zap, TrendingUp } from "lucide-react";
+import Leaderboard from "@/components/Leaderboard";
 
 export default function CatalogPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [gamification, setGamification] = useState<{ points: number, badges: any[] } | null>(null);
+  const [gamification, setGamification] = useState<{ points: number, level: number, badges: any[] } | null>(null);
   const [upcomingDeadlines, setUpcomingDeadlines] = useState<{ lesson: Lesson, courseTitle: string }[]>([]);
 
   const { user } = useAuth();
@@ -106,34 +107,71 @@ export default function CatalogPage() {
       </div>
 
       {user && gamification && (
-        <div className="mb-16 grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-top-6 duration-700">
-          <div className="md:col-span-1 glass-card p-8 bg-gradient-to-br from-blue-600/20 to-indigo-700/20 border-blue-500/20 flex flex-col items-center justify-center text-center rounded-3xl">
-            <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mb-4 border border-blue-500/20">
-              <Star className="text-blue-400 fill-blue-400/20" size={32} />
+        <div className="mb-16 grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-top-6 duration-700">
+          <div className="lg:col-span-2 space-y-8">
+            <div className="glass-card p-10 bg-gradient-to-br from-blue-600/20 via-indigo-700/10 to-transparent border-blue-500/20 rounded-3xl relative overflow-hidden group">
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-10">
+                <div className="flex-shrink-0 relative">
+                  <div className="w-24 h-24 rounded-3xl bg-blue-600 flex items-center justify-center shadow-2xl shadow-blue-500/40 rotate-3 group-hover:rotate-0 transition-transform duration-500">
+                    <Zap className="text-white fill-white/20" size={48} />
+                  </div>
+                  <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-white text-black flex items-center justify-center font-black text-xs border-4 border-[#050505]">
+                    {gamification.level}
+                  </div>
+                </div>
+
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-400 mb-1">Current Standing</div>
+                    <h2 className="text-3xl font-black text-white">Level {gamification.level} Pioneer</h2>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-end">
+                      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                        {gamification.points} / {Math.pow(gamification.level, 2) * 100} XP
+                      </div>
+                      <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest">
+                        {Math.floor(((gamification.points - Math.pow(gamification.level - 1, 2) * 100) / (Math.pow(gamification.level, 2) * 100 - Math.pow(gamification.level - 1, 2) * 100)) * 100)}% to Level {gamification.level + 1}
+                      </div>
+                    </div>
+                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                      <div
+                        className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-1000"
+                        style={{ width: `${Math.min(100, Math.max(0, ((gamification.points - Math.pow(gamification.level - 1, 2) * 100) / (Math.pow(gamification.level, 2) * 100 - Math.pow(gamification.level - 1, 2) * 100)) * 100))}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Background Flair */}
+              <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-blue-500/10 blur-[120px] rounded-full pointer-events-none group-hover:bg-blue-500/20 transition-colors duration-500"></div>
             </div>
-            <div className="text-4xl font-black text-white mb-1">{gamification.points}</div>
-            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Total Experience Points</div>
+
+            <div className="glass-card p-8 bg-white/[0.01] border-white/5 rounded-3xl">
+              <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
+                <CheckCircle2 size={14} /> My Badges
+              </h3>
+              <div className="flex flex-wrap gap-4">
+                {gamification.badges.length === 0 ? (
+                  <p className="text-sm text-gray-600 italic">No badges earned yet. Start learning to unlock achievements!</p>
+                ) : (
+                  gamification.badges.map(badge => (
+                    <div key={badge.id} className="group/badge relative">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-400/10 to-orange-500/10 border border-amber-500/20 flex items-center justify-center shadow-lg transition-all hover:scale-110 hover:bg-amber-500/20 cursor-help" title={badge.description}>
+                        <span className="text-2xl">🏆</span>
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-[#050505] flex items-center justify-center text-[8px] font-bold">✓</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
 
-          <div className="md:col-span-2 glass-card p-8 bg-white/[0.01] border-white/5 rounded-3xl overflow-hidden relative">
-            <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
-              <CheckCircle2 size={14} /> My Badges
-            </h3>
-            <div className="flex flex-wrap gap-4">
-              {gamification.badges.length === 0 ? (
-                <p className="text-sm text-gray-600 italic">No badges earned yet. Start learning to unlock achievements!</p>
-              ) : (
-                gamification.badges.map(badge => (
-                  <div key={badge.id} className="group/badge relative">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-400/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center shadow-lg transition-transform hover:scale-110 cursor-help" title={badge.description}>
-                      <span className="text-xl">🏆</span>
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-black flex items-center justify-center text-[8px] font-bold">✓</div>
-                  </div>
-                ))
-              )}
-            </div>
-            {/* Visual Flair */}
+          <div className="lg:col-span-1">
+            <Leaderboard />
           </div>
         </div>
       )}

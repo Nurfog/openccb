@@ -1,15 +1,15 @@
+mod db_util;
 mod handlers;
 
 use axum::{
+    Router, middleware,
     routing::{get, post},
-    Router,
-    middleware,
 };
-use tower_http::cors::{Any, CorsLayer};
-use sqlx::postgres::PgPoolOptions;
-use std::net::SocketAddr;
 use dotenvy::dotenv;
+use sqlx::postgres::PgPoolOptions;
 use std::env;
+use std::net::SocketAddr;
+use tower_http::cors::{Any, CorsLayer};
 
 #[tokio::main]
 async fn main() {
@@ -40,10 +40,26 @@ async fn main() {
         .route("/courses/{id}/outline", get(handlers::get_course_outline))
         .route("/lessons/{id}", get(handlers::get_lesson_content))
         .route("/grades", post(handlers::submit_lesson_score))
-        .route("/users/{user_id}/courses/{course_id}/grades", get(handlers::get_user_course_grades))
-        .route("/courses/{id}/analytics", get(handlers::get_course_analytics))
-        .route("/users/{id}/gamification", get(handlers::get_user_gamification))
-        .route_layer(middleware::from_fn(common::middleware::org_extractor_middleware));
+        .route(
+            "/users/{user_id}/courses/{course_id}/grades",
+            get(handlers::get_user_course_grades),
+        )
+        .route(
+            "/courses/{id}/analytics",
+            get(handlers::get_course_analytics),
+        )
+        .route(
+            "/courses/{id}/analytics/advanced",
+            get(handlers::get_advanced_analytics),
+        )
+        .route(
+            "/users/{id}/gamification",
+            get(handlers::get_user_gamification),
+        )
+        .route("/analytics/leaderboard", get(handlers::get_leaderboard))
+        .route_layer(middleware::from_fn(
+            common::middleware::org_extractor_middleware,
+        ));
 
     let public_routes = Router::new()
         .route("/catalog", get(handlers::get_course_catalog))

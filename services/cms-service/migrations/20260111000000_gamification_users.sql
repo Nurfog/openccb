@@ -1,0 +1,4 @@
+-- Add XP and Level to users for gamification
+ALTER TABLE users
+ADD COLUMN xp INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN level INTEGER NOT NULL DEFAULT 1;

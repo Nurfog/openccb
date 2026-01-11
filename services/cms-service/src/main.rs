@@ -1,5 +1,7 @@
+mod db_util;
 mod handlers;
 mod handlers_branding;
+mod webhooks;
 
 use axum::{
     Router, middleware,
@@ -51,6 +53,10 @@ async fn main() {
             get(handlers::get_course_analytics),
         )
         .route(
+            "/courses/{id}/analytics/advanced",
+            get(handlers::get_advanced_analytics),
+        )
+        .route(
             "/modules",
             get(handlers::get_modules).post(handlers::create_module),
         )
@@ -86,7 +92,15 @@ async fn main() {
         .route("/users/{id}", axum::routing::put(handlers::update_user))
         .route("/audit-logs", get(handlers::get_audit_logs))
         .route("/assets/upload", post(handlers::upload_asset))
-        .route("/organizations", get(handlers::get_organizations).post(handlers::create_organization))
+        .route(
+            "/organizations",
+            get(handlers::get_organizations).post(handlers::create_organization),
+        )
+        .route(
+            "/webhooks",
+            get(handlers::get_webhooks).post(handlers::create_webhook),
+        )
+        .route("/webhooks/{id}", delete(handlers::delete_webhook))
         .route("/organization", get(handlers::get_organization))
         .route(
             "/organizations/{id}/logo",

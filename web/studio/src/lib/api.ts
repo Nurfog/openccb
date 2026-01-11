@@ -146,6 +146,40 @@ export interface CourseAnalytics {
     }[];
 }
 
+export interface CohortData {
+    period: string;
+    count: number;
+    completion_rate: number;
+}
+
+export interface RetentionData {
+    lesson_id: string;
+    lesson_title: string;
+    student_count: number;
+}
+
+export interface AdvancedAnalytics {
+    cohorts: CohortData[];
+    retention: RetentionData[];
+}
+
+export interface Webhook {
+    id: string;
+    organization_id: string;
+    url: string;
+    events: string[];
+    secret?: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateWebhookPayload {
+    url: string;
+    events: string[];
+    secret?: string;
+}
+
 const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('studio_token') : null;
 
 const apiFetch = (url: string, options: RequestInit = {}) => {
@@ -212,10 +246,16 @@ export const cmsApi = {
     // Admin & Analytics
     getAuditLogs: (): Promise<AuditLog[]> => apiFetch('/audit-logs'),
     getCourseAnalytics: (id: string): Promise<CourseAnalytics> => apiFetch(`/courses/${id}/analytics`),
+    getAdvancedAnalytics: (id: string): Promise<AdvancedAnalytics> => apiFetch(`/courses/${id}/analytics/advanced`),
 
     // Users
     getAllUsers: (): Promise<User[]> => apiFetch('/users'),
     updateUser: (id: string, role: string, organization_id: string): Promise<void> => apiFetch(`/users/${id}`, { method: 'PUT', body: JSON.stringify({ role, organization_id }) }),
+
+    // Webhooks
+    getWebhooks: (): Promise<Webhook[]> => apiFetch('/webhooks'),
+    createWebhook: (payload: CreateWebhookPayload): Promise<Webhook> => apiFetch('/webhooks', { method: 'POST', body: JSON.stringify(payload) }),
+    deleteWebhook: (id: string): Promise<void> => apiFetch(`/webhooks/${id}`, { method: 'DELETE' }),
 
     // Assets
     uploadAsset: (file: File): Promise<UploadResponse> => {

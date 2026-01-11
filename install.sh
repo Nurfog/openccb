@@ -175,8 +175,7 @@ DATABASE_URL=$LMS_URL sqlx migrate run --source services/lms-service/migrations
 echo ""
 echo "👤 Creating Initial Administrator..."
 API_URL="http://localhost:3001"
-# Start the CMS service temporarily to create the user? 
-# Better yet, start all services with docker compose
+# Start the Studio service (which contains CMS) to allow admin creation
 echo "🚀 Starting services to allow admin creation..."
 docker compose up -d --build
 echo "⏳ Waiting for CMS API to be ready..."
@@ -209,6 +208,6 @@ echo ""
 echo "===================================================="
 echo "        ✨ OpenCCB Installation Complete!"
 echo "===================================================="
-echo "Studio:     http://localhost:3000"
-echo "Experience: http://localhost:3003"
+echo "Studio (Admin/CMS): http://localhost:3000"
+echo "Experience (LMS):   http://localhost:3003"
 echo "===================================================="
