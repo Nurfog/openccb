@@ -3,12 +3,9 @@ import { useEffect, useState } from "react";
 import { cmsApi, Course, Lesson } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import {
-    Plus,
-    Calendar,
     ArrowLeft,
     ChevronLeft,
     ChevronRight,
-    Clock,
     AlertCircle
 } from "lucide-react";
 import CourseEditorLayout from "@/components/CourseEditorLayout";
@@ -55,12 +52,12 @@ export default function CourseCalendarPage({ params }: { params: { id: string } 
 
         // Padding for first week
         for (let i = 0; i < firstDay; i++) {
-            days.push(<div key={`empty - ${i} `} className="h-32 border border-white/5 bg-white/2"></div>);
+            days.push(<div key={`empty-${i}`} className="h-32 border border-white/5 bg-white/2"></div>);
         }
 
         // Days of month
         for (let day = 1; day <= daysInMonth; day++) {
-            const dateStr = `${year} -${String(month + 1).padStart(2, '0')} -${String(day).padStart(2, '0')} `;
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const dayLessons = lessons.filter(l => l.due_date && l.due_date.startsWith(dateStr));
 
             days.push(
@@ -70,11 +67,11 @@ export default function CourseCalendarPage({ params }: { params: { id: string } 
                         {dayLessons.map(lesson => (
                             <div
                                 key={lesson.id}
-                                className={`text - [10px] p - 1 rounded truncate flex items - center gap - 1 ${lesson.important_date_type === 'exam' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
-                                        lesson.important_date_type === 'assignment' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                                            lesson.important_date_type === 'live-session' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                                                'bg-green-500/20 text-green-400 border border-green-500/30'
-                                    } `}
+                                className={`text-[10px] p-1 rounded truncate flex items-center gap-1 ${lesson.important_date_type === 'exam' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                                    lesson.important_date_type === 'assignment' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                                        lesson.important_date_type === 'live-session' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                                            'bg-green-500/20 text-green-400 border border-green-500/30'
+                                    }`}
                             >
                                 <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
                                 {lesson.title}
@@ -172,10 +169,10 @@ export default function CourseCalendarPage({ params }: { params: { id: string } 
                                         <div key={lesson.id} className="glass p-4 border-white/5 hover:border-blue-500/30 transition-all group">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <div className={`text - [10px] font - black uppercase tracking - widest mb - 1 ${lesson.important_date_type === 'exam' ? 'text-red-400' :
-                                                            lesson.important_date_type === 'assignment' ? 'text-blue-400' :
-                                                                'text-green-400'
-                                                        } `}>
+                                                    <div className={`text-[10px] font-black uppercase tracking-widest mb-1 ${lesson.important_date_type === 'exam' ? 'text-red-400' :
+                                                        lesson.important_date_type === 'assignment' ? 'text-blue-400' :
+                                                            'text-green-400'
+                                                        }`}>
                                                         {lesson.important_date_type || 'Activity'}
                                                     </div>
                                                     <h5 className="font-bold group-hover:text-blue-400 transition-colors">{lesson.title}</h5>

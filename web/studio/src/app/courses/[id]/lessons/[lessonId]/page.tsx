@@ -193,7 +193,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-8">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 text-[10px] text-blue-500 font-bold uppercase tracking-[0.2em]">
-                        <Link href={`/ courses / ${params.id} `} className="hover:text-white transition-colors">Outline</Link>
+                        <Link href={`/courses/${params.id}`} className="hover:text-white transition-colors">Outline</Link>
                         <span className="text-gray-700">/</span>
                         <span>Activity</span>
                     </div>
@@ -265,28 +265,24 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
 
                     {isGraded && (
                         <>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in zoom-in-95 duration-300">
-                                {gradingCategories.length === 0 ? (
-                                    <div className="col-span-full py-4 text-center border border-dashed border-white/10 rounded-2xl text-xs text-gray-500 italic">
-                                        No grading categories defined. <Link href={`/ courses / ${params.id} /grading`} className="text-blue-400 underline ml-1">Go to Grading Policy</Link >
-                                    </div >
-                                ) : (
-                                    gradingCategories.map((cat) => (
-                                        <button
-                                            key={cat.id}
-                                            onClick={() => setSelectedCategoryId(cat.id)}
-                                            className={`p-4 rounded-2xl border transition-all text-left group ${selectedCategoryId === cat.id
-                                                ? "bg-blue-500/10 border-blue-500 text-blue-400"
-                                                : "bg-white/5 border-white/10 text-gray-500 hover:border-white/20"
-                                                }`}
-                                        >
-                                            <div className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-1">Category</div>
-                                            <div className="font-bold truncate">{cat.name}</div>
-                                            <div className="text-xs mt-2 font-medium opacity-80">{cat.weight}% Weight</div>
-                                        </button>
-                                    ))
-                                )}
-                            </div >
+                            <div className="col-span-full space-y-2">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Assessment Category</span>
+                                <select
+                                    value={selectedCategoryId}
+                                    onChange={(e) => setSelectedCategoryId(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all appearance-none font-bold"
+                                >
+                                    <option value="" className="bg-gray-900 border-0">Select Category...</option>
+                                    {gradingCategories.map((cat) => (
+                                        <option key={cat.id} value={cat.id} className="bg-gray-900 border-0">
+                                            {cat.name} ({cat.weight}%)
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="text-[10px] text-gray-500 italic mt-1 pl-1">
+                                    Manage categories in <Link href={`/courses/${params.id}/grading`} className="text-blue-400 hover:underline">Grading Policy</Link>
+                                </div>
+                            </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-white/5 animate-in fade-in duration-500">
                                 <div className="space-y-4">

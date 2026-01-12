@@ -43,8 +43,8 @@ export default function WebhooksPage() {
         try {
             const data = await cmsApi.getWebhooks();
             setWebhooks(data);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Unknown error");
         } finally {
             setLoading(false);
         }
@@ -58,8 +58,8 @@ export default function WebhooksPage() {
             setNewWebhook({ url: '', events: ['course.published'], secret: '' });
             setIsAdding(false);
             fetchWebhooks();
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Unknown error");
         }
     };
 
@@ -68,8 +68,8 @@ export default function WebhooksPage() {
         try {
             await cmsApi.deleteWebhook(id);
             fetchWebhooks();
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Unknown error");
         }
     };
 
@@ -164,8 +164,8 @@ export default function WebhooksPage() {
                                             id={`event-${event.id}`}
                                             onClick={() => toggleEvent(event.id)}
                                             className={`p-4 rounded-2xl border transition-all cursor-pointer ${newWebhook.events.includes(event.id)
-                                                    ? 'bg-blue-500/20 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]'
-                                                    : 'bg-black/20 border-white/10 text-gray-400 hover:bg-white/5'
+                                                ? 'bg-blue-500/20 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]'
+                                                : 'bg-black/20 border-white/10 text-gray-400 hover:bg-white/5'
                                                 }`}
                                         >
                                             <div className="flex items-center justify-between mb-1">

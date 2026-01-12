@@ -262,6 +262,22 @@ pub async fn update_course(
         .and_then(|s| s.parse::<DateTime<Utc>>().ok())
         .or(existing.end_date);
 
+    // BEGIN TRANSACTION
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // Set auditing context
+    sqlx::query(
+        "SELECT set_config('app.current_user_id', $1, true), set_config('app.org_id', $2, true)",
+    )
+    .bind(claims.sub.to_string())
+    .bind(org_ctx.id.to_string())
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
     let course = sqlx::query_as::<_, Course>(
         "SELECT * FROM fn_update_course($1, $2, $3, $4, $5, $6, $7, $8, $9)",
     )
@@ -274,7 +290,7 @@ pub async fn update_course(
     .bind(start_date)
     .bind(end_date)
     .bind(certificate_template)
-    .fetch_one(&pool)
+    .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
         (
@@ -282,6 +298,10 @@ pub async fn update_course(
             format!("Failed to update course: {}", e),
         )
     })?;
+
+    tx.commit()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(course))
 }
@@ -944,13 +964,15 @@ pub async fn get_grading_categories(
 
 pub async fn create_grading_category(
     State(pool): State<PgPool>,
+    Org(org_ctx): Org,
     Json(payload): Json<GradingPayload>,
 ) -> Result<Json<common::models::GradingCategory>, (StatusCode, String)> {
     let category = sqlx::query_as::<_, common::models::GradingCategory>(
-        "INSERT INTO grading_categories (course_id, name, weight, drop_count) 
-         VALUES ($1, $2, $3, $4) 
+        "INSERT INTO grading_categories (organization_id, course_id, name, weight, drop_count) 
+         VALUES ($1, $2, $3, $4, $5) 
          RETURNING *",
     )
+    .bind(org_ctx.id)
     .bind(payload.course_id)
     .bind(payload.name)
     .bind(payload.weight)

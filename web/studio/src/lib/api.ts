@@ -1,5 +1,15 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_CMS_API_URL || "http://localhost:3001";
 
+export const getImageUrl = (path?: string) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    // Map /uploads to /assets if backend stores relative paths
+    // The main.rs serves "uploads" dir at "/assets" route
+    const cleanPath = path.startsWith('/uploads') ? path.replace('/uploads', '/assets') : path;
+    const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+    return `${API_BASE_URL}${finalPath}`;
+};
+
 export interface Course {
     id: string;
     title: string;

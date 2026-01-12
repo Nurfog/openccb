@@ -14,12 +14,15 @@ COPY web/studio/ .
 RUN npm run build
 
 # Final stage
-FROM node:18-alpine AS runner
+FROM node:18-slim AS runner
 WORKDIR /app
 ENV NODE_ENV production
 
 # Install system dependencies for Rust binary
-RUN apk add --no-cache openssl libgcc libstdc++
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+
+# Install sharp for Next.js image optimization
+RUN npm install sharp
 
 # Copy CMS binary
 COPY --from=rust-builder /usr/src/app/target/release/cms-service ./

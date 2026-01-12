@@ -3,10 +3,12 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { lmsApi } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { GraduationCap, Lock, Mail, User, Building2 } from "lucide-react";
 
 export default function ExperienceLoginPage() {
     const router = useRouter();
+    const { login } = useAuth();
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -31,8 +33,7 @@ export default function ExperienceLoginPage() {
                     return;
                 }
 
-                localStorage.setItem("experience_token", response.token);
-                localStorage.setItem("experience_user", JSON.stringify(response.user));
+                login(response.user, response.token);
                 router.push("/");
             } else {
                 const response = await lmsApi.register({
@@ -42,8 +43,7 @@ export default function ExperienceLoginPage() {
                     organization_name: organizationName,
                 });
 
-                localStorage.setItem("experience_token", response.token);
-                localStorage.setItem("experience_user", JSON.stringify(response.user));
+                login(response.user, response.token);
                 router.push("/");
             }
         } catch (err) {

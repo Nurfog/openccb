@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { cmsApi, Organization } from '@/lib/api';
+import { cmsApi, Organization, getImageUrl } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 import { Plus, Building2, Globe, Calendar, ExternalLink, ShieldCheck, Palette, Upload, Save, X } from 'lucide-react';
@@ -144,7 +144,7 @@ export default function OrganizationsPage() {
                             <div className="flex items-start gap-4 mb-4">
                                 <div className="p-3 rounded-lg bg-blue-500/10 text-blue-400 overflow-hidden w-12 h-12 flex items-center justify-center relative">
                                     {org.logo_url ? (
-                                        <Image src={org.logo_url} alt={org.name} fill className="object-contain" />
+                                        <Image src={getImageUrl(org.logo_url)} alt={org.name} fill className="object-contain" unoptimized />
                                     ) : (
                                         <Building2 className="w-6 h-6" />
                                     )}
@@ -259,7 +259,7 @@ export default function OrganizationsPage() {
                                     <div className="flex items-center gap-4">
                                         <div className="w-20 h-20 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden relative">
                                             {selectedOrg.logo_url ? (
-                                                <Image src={selectedOrg.logo_url} alt="Preview" fill className="object-contain" />
+                                                <Image src={getImageUrl(selectedOrg.logo_url)} alt="Preview" fill className="object-contain" unoptimized />
                                             ) : (
                                                 <Building2 className="w-8 h-8 text-gray-600" />
                                             )}
@@ -323,7 +323,7 @@ export default function OrganizationsPage() {
                                         <div className="flex items-center gap-2">
                                             <div className="w-5 h-5 bg-white/20 rounded flex items-center justify-center overflow-hidden relative">
                                                 {selectedOrg.logo_url ? (
-                                                    <Image src={selectedOrg.logo_url} alt="Logo" fill className="object-contain" />
+                                                    <Image src={getImageUrl(selectedOrg.logo_url)} alt="Logo" fill className="object-contain" unoptimized />
                                                 ) : <div className="w-3 h-3 bg-white" />}
                                             </div>
                                             <div className="w-16 h-2 bg-white/30 rounded" />

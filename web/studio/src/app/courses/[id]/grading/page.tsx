@@ -163,14 +163,18 @@ export default function GradingPolicyPage() {
 
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest ml-1">Type Name</label>
-                                            <input
-                                                type="text"
-                                                placeholder="e.g. Quizzes, Final Exam"
+                                            <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest ml-1">Assessment Type</label>
+                                            <select
                                                 value={newName}
                                                 onChange={(e) => setNewName(e.target.value)}
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 mt-1.5 focus:outline-none focus:border-blue-500 transition-all text-gray-100"
-                                            />
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 mt-1.5 focus:outline-none focus:border-blue-500 transition-all text-gray-100 appearance-none"
+                                            >
+                                                <option value="" className="bg-gray-900 text-gray-500">Select a type...</option>
+                                                <option value="Continuous Assessment" className="bg-gray-900">Continuous Assessment (Min 4)</option>
+                                                <option value="Midterm" className="bg-gray-900">Midterm</option>
+                                                <option value="Final Test" className="bg-gray-900">Final Test</option>
+                                                <option value="Exam" className="bg-gray-900">Exam</option>
+                                            </select>
                                         </div>
 
                                         <div>

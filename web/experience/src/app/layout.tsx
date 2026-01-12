@@ -4,6 +4,7 @@ import "./globals.css";
 import Link from "next/link";
 import { AuthProvider } from "@/context/AuthContext";
 import { BrandingProvider } from "@/context/BrandingContext";
+import AuthGuard from "@/components/AuthGuard";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,15 +25,17 @@ export default function RootLayout({
       <body className={`${inter.className} bg-[#050505] text-[#e5e5e5] min-h-screen flex flex-col`}>
         <BrandingProvider>
           <AuthProvider>
-            <AppHeader />
-            <main className="flex-1">
-              {children}
-            </main>
-            <footer className="py-12 px-6 border-t border-white/5 text-center bg-black/20">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">
-                Powered by OpenCCB &copy; 2023. Advanced Agentic Coding.
-              </p>
-            </footer>
+            <AuthGuard>
+              <AppHeader />
+              <main className="flex-1">
+                {children}
+              </main>
+              <footer className="py-12 px-6 border-t border-white/5 text-center bg-black/20">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">
+                  Powered by OpenCCB &copy; 2023. Advanced Agentic Coding.
+                </p>
+              </footer>
+            </AuthGuard>
           </AuthProvider>
         </BrandingProvider>
       </body>

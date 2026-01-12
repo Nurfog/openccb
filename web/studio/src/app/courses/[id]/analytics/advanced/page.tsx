@@ -5,9 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { cmsApi, Course, AdvancedAnalytics } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import {
-    LineChart,
-    BarChart3,
-    Users,
     TrendingUp,
     ArrowLeft,
     Layers,
@@ -35,9 +32,10 @@ export default function AdvancedAnalyticsPage() {
                 ]);
                 setCourse(courseData);
                 setAnalytics(advancedData);
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "Failed to load data";
                 console.error("Failed to load advanced analytics", err);
-                setError(err.message || "Failed to load data");
+                setError(message);
             } finally {
                 setLoading(false);
             }
@@ -170,8 +168,8 @@ export default function AdvancedAnalyticsPage() {
                                             <div className="h-4 w-full bg-white/5 rounded-lg overflow-hidden border border-white/5">
                                                 <div
                                                     className={`h-full transition-all duration-1000 ${percentage > 80 ? 'bg-indigo-500' :
-                                                            percentage > 50 ? 'bg-indigo-600/70' :
-                                                                'bg-indigo-700/40'
+                                                        percentage > 50 ? 'bg-indigo-600/70' :
+                                                            'bg-indigo-700/40'
                                                         }`}
                                                     style={{ width: `${percentage}%` }}
                                                 />
