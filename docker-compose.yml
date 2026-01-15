@@ -21,9 +21,12 @@ services:
       DATABASE_URL: postgresql://user:password@db:5432/openccb_cms
       JWT_SECRET: openccb_secret_key_2025_production
       NEXT_PUBLIC_CMS_API_URL: http://localhost:3001
+      LMS_INTERNAL_URL: http://experience:3002
     volumes:
       - uploads_data:/app/uploads
     env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - db
 
@@ -51,13 +54,13 @@ services:
     environment:
       - DEVICE=${WHISPER_DEVICE:-cpu}
     # GPU support for RTX 2070 Super
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [ gpu ]
+    #deploy:
+    #  resources:
+    #    reservations:
+    #      devices:
+    #        - driver: nvidia
+    #          count: 1
+    #          capabilities: [ gpu ]
 
   e2e:
     build:

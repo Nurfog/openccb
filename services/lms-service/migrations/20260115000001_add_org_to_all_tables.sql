@@ -25,8 +25,3 @@ ALTER TABLE user_grades ALTER COLUMN organization_id DROP DEFAULT;
 ALTER TABLE user_badges ADD COLUMN organization_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000001';
 ALTER TABLE user_badges ADD CONSTRAINT fk_user_badge_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
 ALTER TABLE user_badges ALTER COLUMN organization_id DROP DEFAULT;
-
--- 6. Add organization_id to points_log
-ALTER TABLE points_log ADD COLUMN organization_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000001';
-ALTER TABLE points_log ADD CONSTRAINT fk_points_log_organization FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
-ALTER TABLE points_log ALTER COLUMN organization_id DROP DEFAULT;

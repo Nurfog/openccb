@@ -119,6 +119,7 @@ pub async fn upload_organization_logo(
 
             log_action(
                 &pool,
+                claims.org,
                 claims.sub,
                 "UPDATE_LOGO",
                 "Organization",
@@ -197,6 +198,7 @@ pub async fn update_organization_branding(
 
     log_action(
         &pool,
+        claims.org,
         claims.sub,
         "UPDATE_BRANDING",
         "Organization",

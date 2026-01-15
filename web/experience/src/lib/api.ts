@@ -96,6 +96,7 @@ export interface User {
     email: string;
     full_name: string;
     role: string;
+    organization_id: string;
     xp?: number;
     level?: number;
 }
@@ -127,7 +128,7 @@ export interface Module {
     lessons: Lesson[];
 }
 
-const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('experience_token') : null;
 
 const apiFetch = async (url: string, options: RequestInit = {}, isCMS: boolean = false) => {
     const token = getToken();

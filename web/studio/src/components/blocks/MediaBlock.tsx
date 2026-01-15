@@ -3,6 +3,7 @@
 import { useState } from "react";
 import MediaPlayer from "../MediaPlayer";
 import FileUpload from "../FileUpload";
+import { getImageUrl } from "@/lib/api";
 
 interface MediaBlockProps {
     id: string;
@@ -37,7 +38,7 @@ export default function MediaBlock({ title, url, type, config, editMode, onChang
     };
 
     // Full URL for display (handles relative paths from server)
-    const displayUrl = url.startsWith("/") ? `http://localhost:3001${url}` : url;
+    const displayUrl = getImageUrl(url);
 
     return (
         <div className="space-y-6">

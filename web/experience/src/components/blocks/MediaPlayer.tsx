@@ -11,23 +11,40 @@ interface MediaPlayerProps {
     config?: {
         maxPlays?: number;
     };
+    onTimeUpdate?: (time: number) => void;
 }
 
-export default function MediaPlayer({ id, title, url, media_type, config }: MediaPlayerProps) {
+export default function MediaPlayer({ id, title, url, media_type, config, onTimeUpdate }: MediaPlayerProps) {
     const [playCount, setPlayCount] = useState(0);
+    const [hasStarted, setHasStarted] = useState(false);
     const [locked, setLocked] = useState(false);
 
     const maxPlays = config?.maxPlays || 0;
 
+    const CMS_API_URL = process.env.NEXT_PUBLIC_CMS_API_URL || "http://localhost:3001";
+
+    const getFullUrl = (path: string) => {
+        if (path.startsWith('http')) return path;
+        // Map /uploads to /assets for the backend
+        const cleanPath = path.startsWith('/uploads') ? path.replace('/uploads', '/assets') : path;
+        const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+        return `${CMS_API_URL}${finalPath}`;
+    };
+
+    const isLocalFile = url.startsWith('/uploads') || url.startsWith('http://localhost:3001/assets') || url.includes('/assets/');
+
     useEffect(() => {
-        if (maxPlays > 0 && playCount >= maxPlays) {
+        if (maxPlays > 0 && playCount >= maxPlays && !hasStarted) {
             setLocked(true);
         }
-    }, [playCount, maxPlays]);
+    }, [playCount, maxPlays, hasStarted]);
 
     const handlePlay = () => {
         if (locked) return;
-        setPlayCount(prev => prev + 1);
+        if (!hasStarted) {
+            setPlayCount(prev => prev + 1);
+            setHasStarted(true);
+        }
     };
 
     if (locked) {
@@ -72,18 +89,28 @@ export default function MediaPlayer({ id, title, url, media_type, config }: Medi
             </div>
 
             <div className="glass-card !p-2 overflow-hidden aspect-video relative group">
-                <iframe
-                    src={getEmbedUrl(url)}
-                    className="w-full h-full rounded-xl"
-                    allowFullScreen
-                    onLoad={() => {
-                        // In a real app, we'd detect play events from the player API
-                        // For this demo, we'll increment when the iframe loads or specific interaction
-                    }}
-                />
+                {isLocalFile ? (
+                    <video
+                        src={getFullUrl(url)}
+                        controls
+                        className="w-full h-full rounded-xl"
+                        onPlay={handlePlay}
+                        onTimeUpdate={(e) => {
+                            if (onTimeUpdate) {
+                                onTimeUpdate(e.currentTarget.currentTime);
+                            }
+                        }}
+                    />
+                ) : (
+                    <iframe
+                        src={getEmbedUrl(url)}
+                        className="w-full h-full rounded-xl"
+                        allowFullScreen
+                    />
+                )}
 
-                {/* Simulated play tracker overlay (invisible but catches first click) */}
-                {playCount === 0 && (
+                {/* Simulated play tracker overlay for iframes (invisible but catches first click) */}
+                {!isLocalFile && playCount === 0 && (
                     <div
                         onClick={handlePlay}
                         className="absolute inset-0 bg-black/40 flex items-center justify-center cursor-pointer group-hover:bg-black/20 transition-all"

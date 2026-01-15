@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
@@ -251,11 +251,40 @@ pub async fn ingest_course(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // 1. Upsert Course
+    // 1. Upsert Organization
     let org_id = payload.course.organization_id;
     sqlx::query(
-        "INSERT INTO courses (id, title, description, instructor_id, start_date, end_date, passing_percentage, certificate_template, updated_at, organization_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        "INSERT INTO organizations (id, name, domain, logo_url, primary_color, secondary_color, certificate_template, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT (id) DO UPDATE SET
+            name = EXCLUDED.name,
+            domain = EXCLUDED.domain,
+            logo_url = EXCLUDED.logo_url,
+            primary_color = EXCLUDED.primary_color,
+            secondary_color = EXCLUDED.secondary_color,
+            certificate_template = EXCLUDED.certificate_template,
+            updated_at = EXCLUDED.updated_at"
+    )
+    .bind(payload.organization.id)
+    .bind(&payload.organization.name)
+    .bind(&payload.organization.domain)
+    .bind(&payload.organization.logo_url)
+    .bind(&payload.organization.primary_color)
+    .bind(&payload.organization.secondary_color)
+    .bind(&payload.organization.certificate_template)
+    .bind(payload.organization.created_at)
+    .bind(payload.organization.updated_at)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to upsert organization during ingestion: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    // 2. Upsert Course
+    sqlx::query(
+        "INSERT INTO courses (id, title, description, instructor_id, start_date, end_date, passing_percentage, certificate_template, updated_at, organization_id, pacing_mode)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          ON CONFLICT (id) DO UPDATE SET
             title = EXCLUDED.title,
             description = EXCLUDED.description,
@@ -265,7 +294,8 @@ pub async fn ingest_course(
             passing_percentage = EXCLUDED.passing_percentage,
             certificate_template = EXCLUDED.certificate_template,
             updated_at = EXCLUDED.updated_at,
-            organization_id = EXCLUDED.organization_id"
+            organization_id = EXCLUDED.organization_id,
+            pacing_mode = EXCLUDED.pacing_mode"
     )
     .bind(payload.course.id)
     .bind(&payload.course.title)
@@ -277,6 +307,7 @@ pub async fn ingest_course(
     .bind(&payload.course.certificate_template)
     .bind(payload.course.updated_at)
     .bind(org_id)
+    .bind(&payload.course.pacing_mode)
     .execute(&mut *tx)
     .await
     .map_err(|e| {
@@ -333,8 +364,8 @@ pub async fn ingest_course(
 
         for lesson in pub_module.lessons {
             sqlx::query(
-                "INSERT INTO lessons (id, module_id, title, content_type, content_url, transcription, metadata, position, created_at, is_graded, grading_category_id, max_attempts, allow_retry, organization_id)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"
+                "INSERT INTO lessons (id, module_id, title, content_type, content_url, transcription, metadata, position, created_at, is_graded, grading_category_id, max_attempts, allow_retry, organization_id, summary, due_date, important_date_type, transcription_status)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"
             )
             .bind(lesson.id)
             .bind(pub_module.module.id)
@@ -350,6 +381,10 @@ pub async fn ingest_course(
             .bind(lesson.max_attempts)
             .bind(lesson.allow_retry)
             .bind(org_id)
+            .bind(&lesson.summary)
+            .bind(lesson.due_date)
+            .bind(&lesson.important_date_type)
+            .bind(&lesson.transcription_status)
             .execute(&mut *tx)
             .await
             .map_err(|e| {
@@ -371,43 +406,49 @@ pub async fn get_course_outline(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<common::models::PublishedCourse>, StatusCode> {
+    tracing::info!("get_course_outline: fetching course {}", id);
     // 1. Fetch Course
     let course =
-        sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
+        sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1")
             .bind(id)
-            .bind(org_ctx.id)
             .fetch_one(&pool)
             .await
             .map_err(|_| StatusCode::NOT_FOUND)?;
 
     // 2. Fetch Modules
     let modules = sqlx::query_as::<_, Module>(
-        "SELECT * FROM modules WHERE course_id = $1 AND organization_id = $2 ORDER BY position",
+        "SELECT * FROM modules WHERE course_id = $1 ORDER BY position",
     )
     .bind(id)
-    .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // 3. Fetch Grading Categories
+    // 3. Fetch Organization
+    let organization = sqlx::query_as::<_, common::models::Organization>(
+        "SELECT * FROM organizations WHERE id = $1",
+    )
+    .bind(course.organization_id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // 4. Fetch Grading Categories
     let grading_categories = sqlx::query_as::<_, common::models::GradingCategory>(
         "SELECT * FROM grading_categories WHERE course_id = $1 ORDER BY created_at",
     )
     .bind(id)
-    .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // 4. Fetch Lessons
+    // 5. Fetch Lessons
     let mut pub_modules = Vec::new();
     for module in modules {
         let lessons = sqlx::query_as::<_, Lesson>(
-            "SELECT * FROM lessons WHERE module_id = $1 AND organization_id = $2 ORDER BY position",
+            "SELECT * FROM lessons WHERE module_id = $1 ORDER BY position",
         )
         .bind(module.id)
-        .bind(org_ctx.id)
         .fetch_all(&pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -417,6 +458,7 @@ pub async fn get_course_outline(
 
     Ok(Json(common::models::PublishedCourse {
         course,
+        organization,
         grading_categories,
         modules: pub_modules,
     }))
@@ -427,10 +469,10 @@ pub async fn get_lesson_content(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Lesson>, StatusCode> {
+    tracing::info!("get_lesson_content: fetching lesson {}", id);
     let lesson =
-        sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
+        sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1")
             .bind(id)
-            .bind(org_ctx.id)
             .fetch_one(&pool)
             .await
             .map_err(|_| StatusCode::NOT_FOUND)?;
@@ -444,10 +486,9 @@ pub async fn get_user_enrollments(
     Path(user_id): Path<Uuid>,
 ) -> Result<Json<Vec<Enrollment>>, StatusCode> {
     let enrollments = sqlx::query_as::<_, Enrollment>(
-        "SELECT * FROM enrollments WHERE user_id = $1 AND organization_id = $2",
+        "SELECT * FROM enrollments WHERE user_id = $1",
     )
     .bind(user_id)
-    .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -491,10 +532,9 @@ pub async fn submit_lesson_score(
 
     // 1. Get lesson attempt rules
     let max_attempts: Option<Option<i32>> = sqlx::query_scalar(
-        "SELECT max_attempts FROM lessons WHERE id = $1 AND organization_id = $2",
+        "SELECT max_attempts FROM lessons WHERE id = $1",
     )
     .bind(payload.lesson_id)
-    .bind(org_ctx.id)
     .fetch_optional(&mut *tx)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -560,8 +600,7 @@ pub async fn submit_lesson_score(
         .await;
 
     // Detect course completion logic
-    let total_lessons: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM lessons WHERE organization_id = $1 AND module_id IN (SELECT id FROM modules WHERE course_id = $2)")
-        .bind(org_ctx.id)
+    let total_lessons: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM lessons WHERE module_id IN (SELECT id FROM modules WHERE course_id = $1)")
         .bind(payload.course_id)
         .fetch_one(&pool).await.unwrap_or(0);
 
@@ -675,11 +714,10 @@ pub async fn get_user_course_grades(
     Path((user_id, course_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<Vec<common::models::UserGrade>>, StatusCode> {
     let grades = sqlx::query_as::<_, common::models::UserGrade>(
-        "SELECT * FROM user_grades WHERE user_id = $1 AND course_id = $2 AND organization_id = $3",
+        "SELECT * FROM user_grades WHERE user_id = $1 AND course_id = $2",
     )
     .bind(user_id)
     .bind(course_id)
-    .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

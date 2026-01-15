@@ -22,6 +22,7 @@ pub struct Course {
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Module {
     pub id: Uuid,
+    pub organization_id: Uuid,
     pub course_id: Uuid,
     pub title: String,
     pub position: i32,
@@ -31,6 +32,7 @@ pub struct Module {
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Lesson {
     pub id: Uuid,
+    pub organization_id: Uuid,
     pub module_id: Uuid,
     pub title: String,
     pub content_type: String,
@@ -45,12 +47,14 @@ pub struct Lesson {
     pub position: i32,
     pub due_date: Option<DateTime<Utc>>,
     pub important_date_type: Option<String>, // "exam", "assignment", "milestone", etc.
+    pub transcription_status: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct GradingCategory {
     pub id: Uuid,
+    pub organization_id: Uuid,
     pub course_id: Uuid,
     pub name: String,
     pub weight: i32, // 0-100
@@ -160,6 +164,7 @@ pub struct AuthResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PublishedCourse {
     pub course: Course,
+    pub organization: Organization,
     pub grading_categories: Vec<GradingCategory>,
     pub modules: Vec<PublishedModule>,
 }

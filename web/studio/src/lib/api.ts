@@ -63,6 +63,7 @@ export interface Lesson {
     module_id: string;
     title: string;
     content_type: string;
+    content_url?: string;
     metadata?: {
         blocks: Block[];
     };
@@ -78,6 +79,7 @@ export interface Lesson {
         es?: string;
         cues?: { start: number; end: number; text: string }[];
     } | null;
+    transcription_status?: 'idle' | 'queued' | 'processing' | 'completed' | 'failed';
     created_at: string;
 }
 
@@ -271,26 +273,40 @@ export const cmsApi = {
     deleteWebhook: (id: string): Promise<void> => apiFetch(`/webhooks/${id}`, { method: 'DELETE' }),
 
     // Assets
-    uploadAsset: (file: File): Promise<UploadResponse> => {
-        const formData = new FormData();
-        formData.append('file', file);
+    uploadAsset: (file: File, onProgress?: (pct: number) => void): Promise<UploadResponse> => {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('file', file);
 
-        const token = getToken();
-        const selectedOrgId = getSelectedOrgId();
-        const headers: Record<string, string> = {
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-            ...(selectedOrgId ? { 'X-Organization-Id': selectedOrgId } : {})
-        };
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `${API_BASE_URL}/assets/upload`);
 
-        // Note: We don't set 'Content-Type' for multipart/form-data.
-        // The browser will set it automatically with the correct boundary.
-        return fetch(`${API_BASE_URL}/assets/upload`, {
-            method: 'POST',
-            headers,
-            body: formData,
-        }).then(res => {
-            if (!res.ok) return res.json().then(err => Promise.reject(new Error(err.message || 'Upload failed')));
-            return res.json();
+            const token = getToken();
+            if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            const selectedOrgId = getSelectedOrgId();
+            if (selectedOrgId) xhr.setRequestHeader('X-Organization-Id', selectedOrgId);
+
+            xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable && onProgress) {
+                    const percentComplete = Math.round((event.loaded / event.total) * 100);
+                    onProgress(percentComplete);
+                }
+            };
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve(JSON.parse(xhr.responseText));
+                } else {
+                    let msg = 'Upload failed';
+                    try {
+                        msg = JSON.parse(xhr.responseText).message || msg;
+                    } catch { }
+                    reject(new Error(msg));
+                }
+            };
+
+            xhr.onerror = () => reject(new Error('Network error'));
+            xhr.send(formData);
         });
     },
     // Organizations Branding

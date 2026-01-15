@@ -1,3 +1,14 @@
+use axum::{
+    Json,
+    extract::{Path, State},
+    http::StatusCode,
+};
+use common::models::Module;
+use serde_json::json;
+use sqlx::PgPool;
+use uuid::Uuid;
+
+use crate::handlers::log_action;
 
 pub async fn update_module(
     claims: common::auth::Claims,
@@ -24,7 +35,7 @@ pub async fn update_module(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    log_action(&pool, claims.sub, "UPDATE", "Module", id, json!(payload)).await;
+    log_action(&pool, claims.org, claims.sub, "UPDATE", "Module", id, json!(payload)).await;
 
     Ok(Json(updated_module))
 }

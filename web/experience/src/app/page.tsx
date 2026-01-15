@@ -13,7 +13,7 @@ export default function CatalogPage() {
   const [enrollments, setEnrollments] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [gamification, setGamification] = useState<{ points: number, level: number, badges: any[] } | null>(null);
-  const [upcomingDeadlines, setUpcomingDeadlines] = useState<{ lesson: Lesson, courseTitle: string }[]>([]);
+  const [upcomingDeadlines, setUpcomingDeadlines] = useState<{ lesson: Lesson, courseTitle: string, courseId: string }[]>([]);
 
   const { user } = useAuth();
   const router = useRouter();
@@ -21,7 +21,7 @@ export default function CatalogPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const coursesData = await lmsApi.getCatalog();
+        const coursesData = await lmsApi.getCatalog(user?.organization_id);
         setCourses(coursesData);
 
         if (user) {
@@ -32,19 +32,19 @@ export default function CatalogPage() {
           setGamification(gamificationData);
 
           // Fetch deadlines for enrolled courses
-          const deadlines: { lesson: Lesson, courseTitle: string }[] = [];
+          const deadlines: { lesson: Lesson, courseTitle: string, courseId: string }[] = [];
           for (const enrollment of enrollmentData) {
             try {
               const outline = await lmsApi.getCourseOutline(enrollment.course_id);
               outline.modules.forEach(mod => {
                 mod.lessons.forEach(l => {
                   if (l.due_date && new Date(l.due_date) >= new Date()) {
-                    deadlines.push({ lesson: l, courseTitle: outline.title });
+                    deadlines.push({ lesson: l, courseTitle: outline.title, courseId: enrollment.course_id });
                   }
                 });
               });
             } catch (err) {
-              console.error(`Failed to fetch outline for course ${enrollment.course_id}`, err);
+              console.error(`Failed to load outline for course ${enrollment.course_id}`, err);
             }
           }
           setUpcomingDeadlines(deadlines.sort((a, b) => new Date(a.lesson.due_date!).getTime() - new Date(b.lesson.due_date!).getTime()).slice(0, 3));
@@ -182,8 +182,8 @@ export default function CatalogPage() {
             <Calendar size={14} /> Upcoming Deadlines
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {upcomingDeadlines.map(({ lesson, courseTitle }) => (
-              <Link key={lesson.id} href={`/courses/${lesson.module_id}/lessons/${lesson.id}`} className="group">
+            {upcomingDeadlines.map(({ lesson, courseTitle, courseId }) => (
+              <Link key={lesson.id} href={`/courses/${courseId}/lessons/${lesson.id}`} className="block group">
                 <div className="glass-card p-6 border-blue-500/10 bg-blue-500/2 rounded-3xl hover:border-blue-500/30 transition-all">
                   <div className="flex justify-between items-start mb-4">
                     <div className="text-[10px] font-black uppercase tracking-widest text-blue-400 group-hover:text-blue-300 transition-colors">

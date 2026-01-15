@@ -6,11 +6,13 @@ mod webhooks;
 use axum::{
     Router, middleware,
     routing::{delete, get, post},
+    extract::DefaultBodyLimit,
 };
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
 use std::net::SocketAddr;
+use std::time::Duration;
 use tower_http::cors::{Any, CorsLayer};
 
 #[tokio::main]
@@ -25,11 +27,47 @@ async fn main() {
         .await
         .expect("Failed to connect to database");
 
-    // Run migrations automatically
     sqlx::migrate!("./migrations")
         .run(&pool)
         .await
         .expect("Failed to run migrations");
+
+    // Start AI Background Worker
+    let worker_pool = pool.clone();
+    tokio::spawn(async move {
+        tracing::info!("AI Background Worker started");
+        loop {
+            // Check for queued transcriptions
+            let queued_lessons: Vec<sqlx::types::Uuid> = match sqlx::query_scalar(
+                "SELECT id FROM lessons WHERE transcription_status = 'queued' LIMIT 5"
+            )
+            .fetch_all(&worker_pool)
+            .await
+            {
+                Ok(ids) => ids,
+                Err(e) => {
+                    tracing::error!("Failed to fetch queued lessons: {}", e);
+                    tokio::time::sleep(Duration::from_secs(10)).await;
+                    continue;
+                }
+            };
+
+            for lesson_id in queued_lessons {
+                tracing::info!("Processing transcription for lesson: {}", lesson_id);
+                if let Err(e) = handlers::run_transcription_task(worker_pool.clone(), lesson_id).await {
+                    tracing::error!("Transcription task failed for lesson {}: {}", lesson_id, e);
+                    let _ = sqlx::query(
+                        "UPDATE lessons SET transcription_status = 'failed' WHERE id = $1"
+                    )
+                    .bind(lesson_id)
+                    .execute(&worker_pool)
+                    .await;
+                }
+            }
+
+            tokio::time::sleep(Duration::from_secs(5)).await;
+        }
+    });
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -92,6 +130,7 @@ async fn main() {
         .route("/users/{id}", axum::routing::put(handlers::update_user))
         .route("/audit-logs", get(handlers::get_audit_logs))
         .route("/assets/upload", post(handlers::upload_asset))
+        .layer(DefaultBodyLimit::disable())
         .route(
             "/organizations",
             get(handlers::get_organizations).post(handlers::create_organization),

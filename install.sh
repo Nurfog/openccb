@@ -113,29 +113,38 @@ if [ "$HAS_NVIDIA" = true ]; then
     update_env "WHISPER_DEVICE" "cuda"
     update_env "LOCAL_LLM_MODEL" "llama3:8b"
     # Uncomment GPU deploy section in docker-compose.yml while preserving indentation
-    sed -i '/deploy:/s/# //' docker-compose.yml
-    sed -i '/resources:/s/# //' docker-compose.yml
-    sed -i '/reservations:/s/# //' docker-compose.yml
-    sed -i '/devices:/s/# //' docker-compose.yml
-    sed -i '/- driver: nvidia/s/# //' docker-compose.yml
-    sed -i '/count: 1/s/# //' docker-compose.yml
-    sed -i '/capabilities: \[ gpu \]/s/# //' docker-compose.yml
+    sed -i 's/^    #deploy:/    deploy:/' docker-compose.yml
+    sed -i 's/^    #  resources:/      resources:/' docker-compose.yml
+    sed -i 's/^    #    reservations:/        reservations:/' docker-compose.yml
+    sed -i 's/^    #      devices:/          devices:/' docker-compose.yml
+    sed -i 's/^    #        - driver: nvidia/            - driver: nvidia/' docker-compose.yml
+    sed -i 's/^    #          count: 1/              count: 1/' docker-compose.yml
+    sed -i 's/^    #          capabilities: \[ gpu \]/              capabilities: [ gpu ]/' docker-compose.yml
 else
     update_env "WHISPER_IMAGE" "fedirz/faster-whisper-server:latest-cpu"
     update_env "WHISPER_DEVICE" "cpu"
     update_env "LOCAL_LLM_MODEL" "phi3:mini"
-    # Ensure it's commented (if it was previously uncommented)
-    # (Simple approach: we leave it as is or explicitly comment it out)
+    # Comment GPU deploy section in docker-compose.yml
+    sed -i 's/^    deploy:/    #deploy:/' docker-compose.yml
+    sed -i 's/^      resources:/    #  resources:/' docker-compose.yml
+    sed -i 's/^        reservations:/    #    reservations:/' docker-compose.yml
+    sed -i 's/^          devices:/    #      devices:/' docker-compose.yml
+    sed -i 's/^            - driver: nvidia/    #        - driver: nvidia/' docker-compose.yml
+    sed -i 's/^              count: 1/    #          count: 1/' docker-compose.yml
+    sed -i 's/^              capabilities: \[ gpu \]/    #          capabilities: [ gpu ]/' docker-compose.yml
 fi
 
 # Ask for DB credentials if not set
 if ! grep -q "DATABASE_URL=" .env || [[ $(grep "DATABASE_URL=" .env | cut -d'=' -f2) == "" ]]; then
     read -p "Enter Database Password [password]: " DB_PASS
     DB_PASS=${DB_PASS:-password}
-    update_env "DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5432/openccb"
-    update_env "CMS_DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5432/openccb_cms"
-    update_env "LMS_DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5432/openccb_lms"
+    update_env "DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5432/openccb?sslmode=disable"
+    update_env "CMS_DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5432/openccb_cms?sslmode=disable"
+    update_env "LMS_DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5432/openccb_lms?sslmode=disable"
     update_env "JWT_SECRET" "supersecretsecret"
+    update_env "AI_PROVIDER" "local"
+    update_env "LOCAL_WHISPER_URL" "http://whisper:8000"
+    update_env "LOCAL_OLLAMA_URL" "http://host.docker.internal:11434"
     update_env "NEXT_PUBLIC_CMS_API_URL" "http://localhost:3001"
     update_env "NEXT_PUBLIC_LMS_API_URL" "http://localhost:3002"
 fi
@@ -161,12 +170,40 @@ fi
 
 # 6. Database Initialization (Integrated db-mgmt.sh)
 echo ""
+read -p "Do you want a CLEAN installation? (This will DELETE all existing data) [y/N]: " CLEAN_INSTALL
+if [[ "$CLEAN_INSTALL" =~ ^[Yy]$ ]]; then
+    echo "🐘 Resetting database for a clean installation..."
+    docker compose down -v || true
+fi
+
 echo "🐘 Starting database with Docker..."
 docker compose up -d db
-sleep 5 # Simple wait
 
-CMS_URL=$(grep "CMS_DATABASE_URL=" .env | cut -d'=' -f2)
-LMS_URL=$(grep "LMS_DATABASE_URL=" .env | cut -d'=' -f2)
+echo "⏳ Waiting for database to be ready..."
+RETRIES=30
+until docker exec openccb-db-1 pg_isready -U user &> /dev/null || [ $RETRIES -eq 0 ]; do
+  echo -n "."
+  sleep 1
+  RETRIES=$((RETRIES-1))
+done
+echo ""
+
+# Reset retries for the second check and ensure we can actually execute queries
+RETRIES=30
+until docker exec openccb-db-1 psql -U user -d openccb -c "SELECT 1" &> /dev/null || [ $RETRIES -eq 0 ]; do
+  echo -n "+"
+  sleep 1
+  RETRIES=$((RETRIES-1))
+done
+echo ""
+
+if [ $RETRIES -eq 0 ]; then
+    echo "❌ Database failed to start in time."
+    exit 1
+fi
+
+CMS_URL=$(grep "CMS_DATABASE_URL=" .env | cut -d'=' -f2-)
+LMS_URL=$(grep "LMS_DATABASE_URL=" .env | cut -d'=' -f2-)
 
 echo "🏗️  Creating databases and running migrations..."
 DATABASE_URL=$CMS_URL sqlx database create || true
@@ -176,35 +213,49 @@ DATABASE_URL=$LMS_URL sqlx migrate run --source services/lms-service/migrations
 
 # 7. System Initialization (Integrated init-system.sh)
 echo ""
-echo "👤 Creating Initial Administrator..."
-API_URL="http://localhost:3001"
-# Start the Studio service (which contains CMS) to allow admin creation
-echo "🚀 Starting services to allow admin creation..."
-docker compose up -d --build
-echo "⏳ Waiting for CMS API to be ready..."
-START_WAIT=$SECONDS
-until curl -s "$API_URL/auth/login" &> /dev/null || [ $((SECONDS - START_WAIT)) -gt 60 ]; do sleep 2; done
+echo "🔍 Checking for existing administrator..."
+ADMIN_EXISTS=$(docker exec openccb-db-1 psql -U user -d openccb_cms -t -c "SELECT EXISTS (SELECT 1 FROM users WHERE role = 'admin');" | xargs 2>/dev/null || echo "f")
 
-read -p "Admin Email [admin@example.com]: " ADMIN_EMAIL
-ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
-read -s -p "Admin Password [password123]: " ADMIN_PASS
-ADMIN_PASS=${ADMIN_PASS:-password123}
+if [ "$ADMIN_EXISTS" != "t" ]; then
+    echo "👤 Configure Initial Administrator"
+    read -p "Full Name [System Admin]: " ADMIN_NAME
+    ADMIN_NAME=${ADMIN_NAME:-System Admin}
+    read -p "Admin Email [admin@example.com]: " ADMIN_EMAIL
+    ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+    read -s -p "Admin Password [password123]: " ADMIN_PASS
+    ADMIN_PASS=${ADMIN_PASS:-password123}
+    echo ""
+    read -p "Organization Name [Default Organization]: " ORG_NAME
+    ORG_NAME=${ORG_NAME:-Default Organization}
+fi
+
 echo ""
+echo "🚀 Starting all services..."
+docker compose up -d --build
 
-PAYLOAD=$(jq -n \
-  --arg email "$ADMIN_EMAIL" \
-  --arg password "$ADMIN_PASS" \
-  --arg full_name "System Admin" \
-  --arg org_name "Default Organization" \
-  --arg role "admin" \
-  '{email: $email, password: $password, full_name: $full_name, organization_name: $org_name, role: $role}')
+if [ "$ADMIN_EXISTS" != "t" ]; then
+    echo "⏳ Waiting for CMS API to be ready..."
+    API_URL="http://localhost:3001"
+    START_WAIT=$SECONDS
+    until curl -s "$API_URL/auth/login" &> /dev/null || [ $((SECONDS - START_WAIT)) -gt 60 ]; do sleep 2; done
 
-RESPONSE=$(curl -s -X POST "$API_URL/auth/register" -H "Content-Type: application/json" -d "$PAYLOAD")
+    PAYLOAD=$(jq -n \
+      --arg email "$ADMIN_EMAIL" \
+      --arg password "$ADMIN_PASS" \
+      --arg full_name "$ADMIN_NAME" \
+      --arg org_name "$ORG_NAME" \
+      --arg role "admin" \
+      '{email: $email, password: $password, full_name: $full_name, organization_name: $org_name, role: $role}')
 
-if echo "$RESPONSE" | grep -q "token"; then
-    echo "✅ Success! Administrator created."
+    RESPONSE=$(curl -s -X POST "$API_URL/auth/register" -H "Content-Type: application/json" -d "$PAYLOAD")
+
+    if echo "$RESPONSE" | grep -q "token"; then
+        echo "✅ Success! Administrator created."
+    else
+        echo "⚠️  Failed to create administrator."
+    fi
 else
-    echo "⚠️  Failed to create administrator (it might already exist)."
+    echo "✅ Administrator already exists. Skipping registration."
 fi
 
 echo ""

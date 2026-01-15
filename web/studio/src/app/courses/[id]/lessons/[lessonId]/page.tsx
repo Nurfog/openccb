@@ -24,6 +24,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [editMode, setEditMode] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
 
     // Activity State (Blocks)
     const [blocks, setBlocks] = useState<Block[]>([]);
@@ -39,8 +40,58 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
     const [dueDate, setDueDate] = useState<string>("");
     const [importantDateType, setImportantDateType] = useState<string>("");
 
-    const [editingId, setEditingId] = useState<string | null>(null);
     const [editValue, setEditValue] = useState("");
+    const [transcriptionTimer, setTranscriptionTimer] = useState(0);
+
+    // Polling for AI status
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+
+        if (lesson && (lesson.transcription_status === 'queued' || lesson.transcription_status === 'processing')) {
+            interval = setInterval(async () => {
+                try {
+                    const updated = await cmsApi.getLesson(params.lessonId);
+                    setLesson(updated);
+
+                    // If it finished, update local states
+                    if (updated.transcription_status === 'completed') {
+                        if (updated.transcription) {
+                            // Automatically update summary if available? No, wait for manual trigger or auto-trigger?
+                            // For now just update lesson
+                        }
+                    }
+                } catch (err) {
+                    console.error("Polling failed", err);
+                }
+            }, 3000);
+        }
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [lesson, lesson?.transcription_status, params.lessonId]);
+
+    // Timer logic
+    useEffect(() => {
+        let timerInterval: NodeJS.Timeout;
+        if (lesson && (lesson.transcription_status === 'queued' || lesson.transcription_status === 'processing')) {
+            timerInterval = setInterval(() => {
+                setTranscriptionTimer(prev => prev + 1);
+            }, 1000);
+        } else {
+            setTranscriptionTimer(0);
+        }
+
+        return () => {
+            if (timerInterval) clearInterval(timerInterval);
+        };
+    }, [lesson, lesson?.transcription_status]);
+
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
 
     useEffect(() => {
         const loadData = async () => {
@@ -95,8 +146,18 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
         if (!lesson) return;
         setIsSaving(true);
         try {
+            // Sync content_url for video/audio lessons from the first media block
+            let content_url = lesson.content_url;
+            if (lesson.content_type === 'video' || lesson.content_type === 'audio') {
+                const mediaBlock = blocks.find(b => b.type === 'media');
+                if (mediaBlock && mediaBlock.url) {
+                    content_url = mediaBlock.url;
+                }
+            }
+
             const updated = await cmsApi.updateLesson(lesson.id, {
                 metadata: { ...lesson.metadata, blocks },
+                content_url,
                 summary,
                 is_graded: isGraded,
                 grading_category_id: selectedCategoryId || null,
@@ -381,19 +442,35 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                             {(lesson.content_type === 'video' || lesson.content_type === 'audio') && (
                                 <button
                                     onClick={handleTranscribe}
-                                    disabled={isTranscribing}
-                                    className={`p-6 rounded-2xl border transition-all text-left flex flex-col gap-2 ${lesson.transcription ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:border-blue-500/60'}`}
+                                    disabled={isTranscribing || lesson.transcription_status === 'queued' || lesson.transcription_status === 'processing'}
+                                    className={`p-6 rounded-2xl border transition-all text-left flex flex-col gap-2 relative overflow-hidden ${lesson.transcription_status === 'queued' || lesson.transcription_status === 'processing'
+                                        ? 'bg-blue-500/20 border-blue-500/50 text-blue-300 animate-pulse'
+                                        : lesson.transcription_status === 'completed' || lesson.transcription
+                                            ? 'bg-green-500/10 border-green-500/30 text-green-400'
+                                            : 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:border-blue-500/60'
+                                        }`}
                                 >
-                                    <span className="text-xl">{isTranscribing ? '⏳' : '🎤'}</span>
+                                    <span className="text-xl">
+                                        {lesson.transcription_status === 'queued' || lesson.transcription_status === 'processing' ? '⏳' : '🎤'}
+                                    </span>
                                     <div className="text-[10px] font-black uppercase tracking-widest opacity-80">Video/Audio</div>
-                                    <div className="font-bold">{isTranscribing ? 'Transcribing...' : lesson.transcription ? 'Update Transcript' : 'Transcribe Video'}</div>
+                                    <div className="font-bold">
+                                        {lesson.transcription_status === 'queued'
+                                            ? `Queued (${formatTime(transcriptionTimer)})`
+                                            : lesson.transcription_status === 'processing'
+                                                ? `Transcribing (${formatTime(transcriptionTimer)})`
+                                                : lesson.transcription ? 'Update Transcript' : 'Transcribe Video'}
+                                    </div>
+                                    {(lesson.transcription_status === 'queued' || lesson.transcription_status === 'processing') && (
+                                        <div className="absolute bottom-0 left-0 h-1 bg-blue-500 animate-[progress_2s_ease-in-out_infinite]" style={{ width: '100%' }}></div>
+                                    )}
                                 </button>
                             )}
 
                             <button
                                 onClick={handleSummarize}
                                 disabled={isGeneratingSummary || !lesson.transcription}
-                                className={`p-6 rounded-2xl border transition-all text-left flex flex-col gap-2 ${summary ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:border-indigo-500/60 disabled:opacity-30 disabled:cursor-not-allowed'}`}
+                                className={`p-6 rounded-2xl border transition-all text-left flex flex-col gap-2 ${isGeneratingSummary ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300 animate-pulse' : summary ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:border-indigo-500/60 disabled:opacity-30 disabled:cursor-not-allowed'}`}
                             >
                                 <span className="text-xl">{isGeneratingSummary ? '⏳' : '✍️'}</span>
                                 <div className="text-[10px] font-black uppercase tracking-widest opacity-80">Summarization</div>
@@ -404,7 +481,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                             <button
                                 onClick={handleGenerateQuiz}
                                 disabled={isGeneratingQuiz || !lesson.transcription}
-                                className="p-6 bg-purple-500/10 border border-purple-500/30 hover:border-purple-500/60 rounded-2xl transition-all text-left flex flex-col gap-2 text-purple-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                                className={`p-6 border rounded-2xl transition-all text-left flex flex-col gap-2 ${isGeneratingQuiz ? 'bg-purple-500/20 border-purple-500/50 text-purple-300 animate-pulse' : 'bg-purple-500/10 border-purple-500/30 hover:border-purple-500/60 text-purple-400 disabled:opacity-30 disabled:cursor-not-allowed'}`}
                             >
                                 <span className="text-xl">{isGeneratingQuiz ? '⏳' : '💡'}</span>
                                 <div className="text-[10px] font-black uppercase tracking-widest opacity-80">Assessments</div>
