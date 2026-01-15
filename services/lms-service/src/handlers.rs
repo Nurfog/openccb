@@ -215,13 +215,29 @@ pub async fn login(
     }))
 }
 
+#[derive(Deserialize)]
+pub struct CatalogQuery {
+    pub organization_id: Option<Uuid>,
+}
+
 pub async fn get_course_catalog(
     State(pool): State<PgPool>,
+    Query(query): Query<CatalogQuery>,
 ) -> Result<Json<Vec<Course>>, StatusCode> {
-    let courses = sqlx::query_as::<_, Course>("SELECT * FROM courses")
-        .fetch_all(&pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let courses = match query.organization_id {
+        Some(org_id) => {
+            sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE organization_id = $1")
+                .bind(org_id)
+                .fetch_all(&pool)
+                .await
+        }
+        None => {
+            sqlx::query_as::<_, Course>("SELECT * FROM courses")
+                .fetch_all(&pool)
+                .await
+        }
+    }
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(courses))
 }
@@ -543,14 +559,16 @@ pub async fn submit_lesson_score(
         )
         .await;
 
-    // TODO: Detect course completion logic
-    let total_lessons: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM lessons WHERE module_id IN (SELECT id FROM modules WHERE course_id = $1)")
+    // Detect course completion logic
+    let total_lessons: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM lessons WHERE organization_id = $1 AND module_id IN (SELECT id FROM modules WHERE course_id = $2)")
+        .bind(org_ctx.id)
         .bind(payload.course_id)
         .fetch_one(&pool).await.unwrap_or(0);
 
     let completed_lessons: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM user_grades WHERE user_id = $1 AND course_id = $2",
+        "SELECT COUNT(*) FROM user_grades WHERE organization_id = $1 AND user_id = $2 AND course_id = $3",
     )
+    .bind(org_ctx.id)
     .bind(payload.user_id)
     .bind(payload.course_id)
     .fetch_one(&pool)
@@ -590,12 +608,13 @@ pub struct BadgeResponse {
 }
 
 pub async fn get_user_gamification(
-    Org(_org_ctx): Org,
+    Org(org_ctx): Org,
     State(pool): State<PgPool>,
     Path(user_id): Path<Uuid>,
 ) -> Result<Json<GamificationStatus>, StatusCode> {
-    let user_stats: (i32, i32) = sqlx::query_as("SELECT xp, level FROM users WHERE id = $1")
+    let user_stats: (i32, i32) = sqlx::query_as("SELECT xp, level FROM users WHERE id = $1 AND organization_id = $2")
         .bind(user_id)
+        .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -604,9 +623,10 @@ pub async fn get_user_gamification(
         "SELECT b.id, b.name, b.description, b.icon_url, ub.earned_at 
          FROM user_badges ub 
          JOIN badges b ON ub.badge_id = b.id 
-         WHERE ub.user_id = $1",
+         WHERE ub.user_id = $1 AND ub.organization_id = $2",
     )
     .bind(user_id)
+    .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -732,15 +752,16 @@ pub async fn get_course_analytics(
 }
 
 pub async fn get_advanced_analytics(
-    Org(_org_ctx): Org,
+    Org(org_ctx): Org,
     State(pool): State<PgPool>,
     Path(course_id): Path<Uuid>,
 ) -> Result<Json<common::models::AdvancedAnalytics>, StatusCode> {
     // 1. Cohort Analysis using DB function
     let cohort_data = sqlx::query_as::<_, common::models::CohortData>(
-        "SELECT period, student_count as count, completion_rate FROM fn_get_cohort_analytics($1)",
+        "SELECT period, student_count as count, completion_rate FROM fn_get_cohort_analytics($1, $2)",
     )
     .bind(course_id)
+    .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
     .map_err(|e| {
@@ -750,9 +771,10 @@ pub async fn get_advanced_analytics(
 
     // 2. Retention Analysis using DB function
     let retention_data = sqlx::query_as::<_, common::models::RetentionData>(
-        "SELECT lesson_id, lesson_title, student_count FROM fn_get_retention_data($1)",
+        "SELECT lesson_id, lesson_title, student_count FROM fn_get_retention_data($1, $2)",
     )
     .bind(course_id)
+    .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
     .map_err(|e| {

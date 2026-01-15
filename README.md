@@ -246,17 +246,21 @@ curl -X POST "http://localhost:8000/chat" \
 #### GET /courses/{id}/analytics/advanced
 Métricas de retención y análisis de cohortes.
 
-- **Respuesta ( AdvancedAnalyticsResponse ):**
-  ```json
-  {
-    "cohorts": [
-      { "period": "string", "count": "int", "completion_rate": "float" }
-    ],
-    "retention": [
-      { "lesson_id": "uuid", "lesson_title": "string", "student_count": "int" }
-    ]
-  }
-  ```
+---
+
+### 5. Multi-tenencia y Gestión (Solo Admin)
+OpenCCB permite gestionar múltiples organizaciones desde un único punto de acceso.
+
+#### X-Organization-Id Header
+Los administradores pueden simular el contexto de cualquier organización enviando este encabezado:
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+     -H "X-Organization-Id: $ORG_ID" \
+     http://localhost:3001/courses
+```
+
+#### GET /organizations
+Lista todas las organizaciones registradas.
 
 ---
 
@@ -265,6 +269,7 @@ OpenCCB incluye un sistema integrado de:
 - **XP y Niveles**: Los estudiantes progresan al completar lecciones.
 - **Leaderboards**: Rankings dentro de la organización.
 - **Analíticas Avanzadas**: Análisis de cohortes y mapas de calor de retención para instructores.
+- **Multi-tenencia Nativa**: Aislamiento total de datos entre organizaciones.
 
 ## 📄 Licencia
 Este proyecto es código abierto y está disponible bajo los términos de la licencia especificada en el repositorio.

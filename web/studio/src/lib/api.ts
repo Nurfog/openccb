@@ -191,13 +191,16 @@ export interface CreateWebhookPayload {
 }
 
 const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('studio_token') : null;
+const getSelectedOrgId = () => typeof window !== 'undefined' ? localStorage.getItem('studio_selected_org_id') : null;
 
 const apiFetch = (url: string, options: RequestInit = {}) => {
     const token = getToken();
+    const selectedOrgId = getSelectedOrgId();
     const headers = {
         'Content-Type': 'application/json',
         ...options.headers,
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...(selectedOrgId ? { 'X-Organization-Id': selectedOrgId } : {})
     };
 
     return fetch(`${API_BASE_URL}${url}`, { ...options, headers }).then(async res => {
@@ -273,8 +276,10 @@ export const cmsApi = {
         formData.append('file', file);
 
         const token = getToken();
+        const selectedOrgId = getSelectedOrgId();
         const headers: Record<string, string> = {
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            ...(selectedOrgId ? { 'X-Organization-Id': selectedOrgId } : {})
         };
 
         // Note: We don't set 'Content-Type' for multipart/form-data.
@@ -295,8 +300,10 @@ export const cmsApi = {
         const formData = new FormData();
         formData.append('file', file);
         const token = getToken();
+        const selectedOrgId = getSelectedOrgId();
         const headers: Record<string, string> = {
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            ...(selectedOrgId ? { 'X-Organization-Id': selectedOrgId } : {})
         };
         return fetch(`${API_BASE_URL}/organizations/${id}/logo`, {
             method: 'POST',

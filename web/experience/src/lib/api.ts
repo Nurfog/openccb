@@ -127,86 +127,85 @@ export interface Module {
     lessons: Lesson[];
 }
 
+const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+const apiFetch = async (url: string, options: RequestInit = {}, isCMS: boolean = false) => {
+    const token = getToken();
+    const baseUrl = isCMS ? CMS_API_URL : API_BASE_URL;
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+
+    const response = await fetch(`${baseUrl}${url}`, { ...options, headers });
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(error.message || 'An error occurred');
+    }
+    if (response.status === 204) return;
+    return response.json();
+};
+
 export const lmsApi = {
-    async getCatalog(): Promise<Course[]> {
-        // LMS service uses /catalog for the published courses list
-        const response = await fetch(`${API_BASE_URL}/catalog`);
-        if (!response.ok) throw new Error('Failed to fetch catalog');
-        return response.json();
+    async getCatalog(orgId?: string): Promise<Course[]> {
+        const query = orgId ? `?organization_id=${orgId}` : '';
+        return apiFetch(`/catalog${query}`);
     },
 
     async getCourseOutline(courseId: string): Promise<Course & { modules: Module[], grading_categories: GradingCategory[] }> {
-        const response = await fetch(`${API_BASE_URL}/courses/${courseId}/outline`);
-        if (!response.ok) throw new Error('Failed to fetch course outline');
-        return response.json();
+        return apiFetch(`/courses/${courseId}/outline`);
     },
 
     async getLesson(id: string): Promise<Lesson> {
-        return fetch(`${API_BASE_URL}/lessons/${id}`).then(res => res.json());
+        return apiFetch(`/lessons/${id}`);
     },
 
     async register(payload: AuthPayload): Promise<AuthResponse> {
-        return fetch(`${API_BASE_URL}/auth/register`, {
+        return apiFetch('/auth/register', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-        }).then(res => res.ok ? res.json() : res.json().then(e => Promise.reject(e)));
+        });
     },
 
     async login(payload: AuthPayload): Promise<AuthResponse> {
-        return fetch(`${API_BASE_URL}/auth/login`, {
+        return apiFetch('/auth/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-        }).then(res => res.ok ? res.json() : res.json().then(e => Promise.reject(e)));
+        });
     },
 
     async enroll(courseId: string, userId: string): Promise<void> {
-        return fetch(`${API_BASE_URL}/enroll`, {
+        return apiFetch('/enroll', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ course_id: courseId, user_id: userId })
-        }).then(res => res.ok ? res.json() : res.json().then(e => Promise.reject(e)));
+        });
     },
 
     async getEnrollments(userId: string): Promise<Enrollment[]> {
-        return fetch(`${API_BASE_URL}/enrollments/${userId}`).then(res => res.json());
+        return apiFetch(`/enrollments/${userId}`);
     },
 
     async submitScore(userId: string, courseId: string, lessonId: string, score: number): Promise<UserGrade> {
-        const response = await fetch(`${API_BASE_URL}/grades`, {
+        return apiFetch('/grades', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId, course_id: courseId, lesson_id: lessonId, score })
         });
-        if (!response.ok) throw new Error('Failed to submit score');
-        return response.json();
     },
 
     async getUserGrades(userId: string, courseId: string): Promise<UserGrade[]> {
-        const response = await fetch(`${API_BASE_URL}/users/${userId}/courses/${courseId}/grades`);
-        if (!response.ok) throw new Error('Failed to fetch user grades');
-        return response.json();
+        return apiFetch(`/users/${userId}/courses/${courseId}/grades`);
     },
 
     async getGamification(userId: string): Promise<{ points: number, level: number, badges: { id: string, name: string, description: string, earned_at: string }[] }> {
-        const response = await fetch(`${API_BASE_URL}/users/${userId}/gamification`);
-        if (!response.ok) throw new Error('Failed to fetch gamification data');
-        return response.json();
+        return apiFetch(`/users/${userId}/gamification`);
     },
 
     async getLeaderboard(): Promise<User[]> {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_BASE_URL}/analytics/leaderboard`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!response.ok) throw new Error('Failed to fetch leaderboard');
-        return response.json();
+        return apiFetch('/analytics/leaderboard');
     },
 
     async getBranding(orgId: string): Promise<Organization> {
-        const response = await fetch(`${CMS_API_URL}/organizations/${orgId}/branding`);
-        if (!response.ok) throw new Error('Failed to fetch branding');
-        return response.json();
+        return apiFetch(`/organizations/${orgId}/branding`, {}, true);
     }
 };

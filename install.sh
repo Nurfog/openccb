@@ -135,6 +135,9 @@ if ! grep -q "DATABASE_URL=" .env || [[ $(grep "DATABASE_URL=" .env | cut -d'=' 
     update_env "DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5432/openccb"
     update_env "CMS_DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5432/openccb_cms"
     update_env "LMS_DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5432/openccb_lms"
+    update_env "JWT_SECRET" "supersecretsecret"
+    update_env "NEXT_PUBLIC_CMS_API_URL" "http://localhost:3001"
+    update_env "NEXT_PUBLIC_LMS_API_URL" "http://localhost:3002"
 fi
 
 # 5. AI Stack Setup

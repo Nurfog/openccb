@@ -88,7 +88,7 @@ pub async fn publish_course(
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
 
-    log_action(&pool, Uuid::new_v4(), "PUBLISH", "Course", id, json!({})).await;
+    log_action(&pool, org_ctx.id, Uuid::new_v4(), "PUBLISH", "Course", id, json!({})).await;
 
     // 5. Trigger Webhook
     let webhook_service = WebhookService::new(pool.clone());
@@ -484,13 +484,15 @@ pub async fn create_lesson(
 }
 
 pub async fn process_transcription(
+    Org(org_ctx): Org,
     claims: common::auth::Claims,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Lesson>, StatusCode> {
     // 1. Fetch lesson
-    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1")
+    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
         .bind(id)
+        .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
         .map_err(|e| {
@@ -600,6 +602,7 @@ pub async fn process_transcription(
 
     log_action(
         &pool,
+        org_ctx.id,
         claims.sub,
         "TRANSCRIPTION_PROCESSED",
         "Lesson",
@@ -612,13 +615,15 @@ pub async fn process_transcription(
 }
 
 pub async fn summarize_lesson(
+    Org(org_ctx): Org,
     claims: common::auth::Claims,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Lesson>, StatusCode> {
     // 1. Fetch lesson
-    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1")
+    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
         .bind(id)
+        .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
         .map_err(|_| StatusCode::NOT_FOUND)?;
@@ -708,6 +713,7 @@ pub async fn summarize_lesson(
 
     log_action(
         &pool,
+        org_ctx.id,
         claims.sub,
         "SUMMARY_GENERATED",
         "Lesson",
@@ -720,13 +726,15 @@ pub async fn summarize_lesson(
 }
 
 pub async fn generate_quiz(
+    Org(org_ctx): Org,
     claims: common::auth::Claims,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     // 1. Fetch lesson
-    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1")
+    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
         .bind(id)
+        .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
         .map_err(|_| StatusCode::NOT_FOUND)?;
@@ -816,7 +824,16 @@ pub async fn generate_quiz(
         .cloned()
         .unwrap_or(json!([]));
 
-    log_action(&pool, claims.sub, "QUIZ_GENERATED", "Lesson", id, json!({})).await;
+    log_action(
+        &pool,
+        org_ctx.id,
+        claims.sub,
+        "QUIZ_GENERATED",
+        "Lesson",
+        id,
+        json!({}),
+    )
+    .await;
 
     Ok(Json(quiz_blocks))
 }
@@ -985,11 +1002,13 @@ pub async fn create_grading_category(
 }
 
 pub async fn delete_grading_category(
+    Org(org_ctx): Org,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    sqlx::query("DELETE FROM grading_categories WHERE id = $1")
+    sqlx::query("DELETE FROM grading_categories WHERE id = $1 AND organization_id = $2")
         .bind(id)
+        .bind(org_ctx.id)
         .execute(&pool)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -999,6 +1018,7 @@ pub async fn delete_grading_category(
 
 pub async fn log_action(
     pool: &PgPool,
+    organization_id: Uuid,
     user_id: Uuid,
     action: &str,
     entity_type: &str,
@@ -1006,9 +1026,10 @@ pub async fn log_action(
     changes: serde_json::Value,
 ) {
     let _ = sqlx::query(
-        "INSERT INTO audit_logs (user_id, action, entity_type, entity_id, changes) VALUES ($1, $2, $3, $4, $5)"
+        "INSERT INTO audit_logs (user_id, organization_id, action, entity_type, entity_id, changes) VALUES ($1, $2, $3, $4, $5, $6)"
     )
     .bind(user_id)
+    .bind(organization_id)
     .bind(action)
     .bind(entity_type)
     .bind(entity_id)
@@ -1796,6 +1817,7 @@ pub async fn delete_lesson(
 
 // User Management
 pub async fn get_all_users(
+    Org(org_ctx): Org,
     claims: common::auth::Claims,
     State(pool): State<PgPool>,
 ) -> Result<Json<Vec<UserResponse>>, StatusCode> {
@@ -1804,8 +1826,9 @@ pub async fn get_all_users(
     }
 
     let users = sqlx::query_as::<_, UserResponse>(
-        "SELECT id, email, full_name, role, organization_id FROM users",
+        "SELECT id, email, full_name, role, organization_id FROM users WHERE organization_id = $1",
     )
+    .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
     .map_err(|e| {
@@ -1817,13 +1840,14 @@ pub async fn get_all_users(
 }
 
 pub async fn update_user(
+    Org(org_ctx): Org,
     claims: common::auth::Claims,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    if claims.role != "admin" {
-        return Err((StatusCode::FORBIDDEN, "Admin access required".into()));
+    if claims.role != "admin" && claims.sub != id {
+        return Err((StatusCode::FORBIDDEN, "Not authorized".into()));
     }
 
     let role = payload.get("role").and_then(|r| r.as_str());
@@ -1833,16 +1857,17 @@ pub async fn update_user(
         .and_then(|o| Uuid::parse_str(o).ok());
 
     sqlx::query(
-        "UPDATE users SET role = COALESCE($1, role), organization_id = COALESCE($2, organization_id) WHERE id = $3"
+        "UPDATE users SET role = COALESCE($1, role), organization_id = COALESCE($2, organization_id) WHERE id = $3 AND organization_id = $4"
     )
     .bind(role)
     .bind(organization_id)
     .bind(id)
+    .bind(org_ctx.id)
     .execute(&pool)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    log_action(&pool, claims.sub, "UPDATE_USER", "User", id, payload).await;
+    log_action(&pool, org_ctx.id, claims.sub, "UPDATE_USER", "User", id, payload).await;
 
     Ok(StatusCode::OK)
 }
@@ -1915,7 +1940,7 @@ pub async fn get_webhooks(
     }
 
     let webhooks = sqlx::query_as::<_, common::models::Webhook>(
-        "SELECT * FROM webhooks WHERE organization_id =  ORDER BY created_at DESC",
+        "SELECT * FROM webhooks WHERE organization_id = $1 ORDER BY created_at DESC",
     )
     .bind(org_ctx.id)
     .fetch_all(&pool)
@@ -1938,7 +1963,7 @@ pub async fn create_webhook(
     let webhook = sqlx::query_as::<_, common::models::Webhook>(
         r#"
         INSERT INTO webhooks (organization_id, url, events, secret)
-        VALUES (, , , )
+        VALUES ($1, $2, $3, $4)
         RETURNING *
         "#,
     )
@@ -1952,6 +1977,7 @@ pub async fn create_webhook(
 
     log_action(
         &pool,
+        org_ctx.id,
         claims.sub,
         "CREATE_WEBHOOK",
         "Webhook",
@@ -1973,7 +1999,7 @@ pub async fn delete_webhook(
         return Err((StatusCode::FORBIDDEN, "Admin access required".into()));
     }
 
-    let result = sqlx::query("DELETE FROM webhooks WHERE id =  AND organization_id = ")
+    let result = sqlx::query("DELETE FROM webhooks WHERE id = $1 AND organization_id = $2")
         .bind(id)
         .bind(org_ctx.id)
         .execute(&pool)
@@ -1986,6 +2012,7 @@ pub async fn delete_webhook(
 
     log_action(
         &pool,
+        org_ctx.id,
         claims.sub,
         "DELETE_WEBHOOK",
         "Webhook",

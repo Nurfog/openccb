@@ -81,19 +81,19 @@
   - [x] Custom color schemes (Primary/Secondary)
   - [x] Dynamic Experience Portal adaptation
   - [x] Live Branding Preview in Studio
-- [ ] **Advanced Analytics**:
-  - [ ] Cohort analysis
-  - [ ] Retention metrics
+- [x] **Advanced Analytics**:
+  - [x] Cohort analysis (Implemented)
+  - [x] Retention metrics (Implemented)
   - [ ] Engagement heatmaps
 - [ ] **AI Integration** (Next Up):
   - [x] AI-driven lesson summaries (Implemented)
   - [ ] Implement real-time video transcription via external API
   - [x] Automated quiz generation (Implemented)
   - [ ] Personalized learning paths
-- [x] **Gamification**: (Base system implemented)
+- [x] **Gamification**: (Broadly implemented)
   - [x] Badges and achievements (Implemented base system)
-  - [ ] Leaderboards
-  - [x] XP and leveling system
+  - [x] Leaderboards (Implemented)
+  - [x] XP and leveling system (Implemented)
 - [x] **Course Management Enhancements**:
   - [x] Manual naming for modules, lessons, and activities during creation.
   - [x] Reordering for modules, lessons, and activities (Level up/down).
