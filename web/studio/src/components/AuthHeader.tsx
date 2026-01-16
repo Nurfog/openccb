@@ -20,9 +20,9 @@ export default function AuthHeader() {
             )}
             {user && (
                 <>
-                    <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-xs">
+                    <Link href="/profile" className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-xs hover:border-blue-500/50 transition-colors">
                         {user.full_name.charAt(0)}
-                    </div>
+                    </Link>
                     <button onClick={logout} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                         <LogOut size={16} />
                     </button>

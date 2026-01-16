@@ -225,8 +225,7 @@ if [ "$ADMIN_EXISTS" != "t" ]; then
     read -s -p "Admin Password [password123]: " ADMIN_PASS
     ADMIN_PASS=${ADMIN_PASS:-password123}
     echo ""
-    read -p "Organization Name [Default Organization]: " ORG_NAME
-    ORG_NAME=${ORG_NAME:-Default Organization}
+    ORG_NAME="Default Organization"
 fi
 
 echo ""

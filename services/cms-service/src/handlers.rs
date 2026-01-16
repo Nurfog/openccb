@@ -6,7 +6,7 @@ use axum::{
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
 use chrono::{DateTime, Utc};
-use common::auth::create_jwt;
+use common::auth::{Claims, create_jwt};
 use common::middleware::Org;
 use common::models::{
     AuthResponse, Course, CourseAnalytics, Lesson, Module, Organization, PublishedCourse,
@@ -18,19 +18,41 @@ use sqlx::PgPool;
 use std::env;
 use uuid::Uuid;
 
+#[derive(Deserialize)]
+pub struct PublishPayload {
+    pub target_organization_id: Option<Uuid>,
+}
+
 pub async fn publish_course(
     Org(org_ctx): Org,
+    claims: Claims,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
+    Json(payload_params): Json<PublishPayload>,
 ) -> Result<StatusCode, StatusCode> {
-    // 1. Fetch Course
-    let course =
+    let is_super_admin = claims.role == "admin" && claims.org == Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+
+    // 1. Fetch Course (Super admin can publish any course, others only their org's)
+    let course = if is_super_admin {
+        sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1")
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+    } else {
         sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
             .bind(id)
             .bind(org_ctx.id)
             .fetch_one(&pool)
             .await
-            .map_err(|_| StatusCode::NOT_FOUND)?;
+    }
+    .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    // Determine target organization
+    let target_org_id = if is_super_admin && payload_params.target_organization_id.is_some() {
+        payload_params.target_organization_id.unwrap()
+    } else {
+        course.organization_id
+    };
 
     // 2. Fetch Modules
     let modules =
@@ -51,11 +73,11 @@ pub async fn publish_course(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // 4. Fetch Organization
+    // 4. Fetch Target Organization
     let organization = sqlx::query_as::<_, common::models::Organization>(
         "SELECT * FROM organizations WHERE id = $1",
     )
-    .bind(org_ctx.id)
+    .bind(target_org_id)
     .fetch_one(&pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -73,8 +95,12 @@ pub async fn publish_course(
         pub_modules.push(PublishedModule { module, lessons });
     }
 
+    // Overwrite the course's organization_id in the payload if publishing to a different org
+    let mut course_for_pub = course.clone();
+    course_for_pub.organization_id = target_org_id;
+
     let payload = PublishedCourse {
-        course,
+        course: course_for_pub,
         organization,
         grading_categories,
         modules: pub_modules,
@@ -98,7 +124,7 @@ pub async fn publish_course(
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
 
-    log_action(&pool, org_ctx.id, Uuid::new_v4(), "PUBLISH", "Course", id, json!({})).await;
+    log_action(&pool, org_ctx.id, Uuid::new_v4(), "PUBLISH", "Course", id, json!({ "target_org": target_org_id })).await;
 
     // 5. Trigger Webhook
     let webhook_service = WebhookService::new(pool.clone());
@@ -110,6 +136,7 @@ pub async fn publish_course(
                 "course_id": id,
                 "title": payload.course.title,
                 "pacing_mode": payload.course.pacing_mode,
+                "target_org": target_org_id,
                 "published_at": Utc::now()
             }),
         )
@@ -185,8 +212,18 @@ pub async fn create_course(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    let is_super_admin = claims.role == "admin" && claims.org == Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+    let target_org_id = if is_super_admin {
+        payload.get("organization_id")
+            .and_then(|v| v.as_str())
+            .and_then(|s| Uuid::parse_str(s).ok())
+            .unwrap_or(org_ctx.id)
+    } else {
+        org_ctx.id
+    };
+
     let course = sqlx::query_as::<_, Course>("SELECT * FROM fn_create_course($1, $2, $3, $4)")
-        .bind(org_ctx.id)
+        .bind(target_org_id)
         .bind(instructor_id)
         .bind(title)
         .bind(pacing_mode)
@@ -206,13 +243,22 @@ pub async fn create_course(
 }
 pub async fn get_courses(
     Org(org_ctx): Org,
+    claims: Claims,
     State(pool): State<PgPool>,
 ) -> Result<Json<Vec<Course>>, StatusCode> {
-    let courses = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE organization_id = $1")
-        .bind(org_ctx.id)
-        .fetch_all(&pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let is_super_admin = claims.role == "admin" && claims.org == Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+
+    let courses = if is_super_admin {
+        sqlx::query_as::<_, Course>("SELECT * FROM courses")
+            .fetch_all(&pool)
+            .await
+    } else {
+        sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE organization_id = $1")
+            .bind(org_ctx.id)
+            .fetch_all(&pool)
+            .await
+    }
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(courses))
 }
@@ -1383,11 +1429,8 @@ pub async fn register(
     });
     let role = payload.role.unwrap_or_else(|| "instructor".to_string());
 
-    // Find or create organization based on email domain
-    let org_name = payload.organization_name.unwrap_or_else(|| {
-        let parts: Vec<&str> = payload.email.split('@').collect();
-        parts.get(1).unwrap_or(&"default.com").to_string()
-    });
+    // Find or create organization based on email domain or use default
+    let org_name = payload.organization_name.unwrap_or_default();
 
     let mut tx = pool
         .begin()
@@ -1901,16 +1944,18 @@ pub async fn update_user(
     }
 
     let role = payload.get("role").and_then(|r| r.as_str());
+    let full_name = payload.get("full_name").and_then(|f| f.as_str());
     let organization_id = payload
         .get("organization_id")
         .and_then(|o| o.as_str())
         .and_then(|o| Uuid::parse_str(o).ok());
 
     sqlx::query(
-        "UPDATE users SET role = COALESCE($1, role), organization_id = COALESCE($2, organization_id) WHERE id = $3 AND organization_id = $4"
+        "UPDATE users SET role = COALESCE($1, role), organization_id = COALESCE($2, organization_id), full_name = COALESCE($3, full_name) WHERE id = $4 AND organization_id = $5"
     )
     .bind(role)
     .bind(organization_id)
+    .bind(full_name)
     .bind(id)
     .bind(org_ctx.id)
     .execute(&pool)

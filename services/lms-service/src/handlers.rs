@@ -120,24 +120,28 @@ pub async fn register(
             .to_string()
     });
 
-    // Find or create organization
-    let org_name = payload.organization_name.unwrap_or_else(|| {
-        let parts: Vec<&str> = payload.email.split('@').collect();
-        parts.get(1).unwrap_or(&"default.com").to_string()
-    });
-
+    // Use provided organization name or Default Organization
     let mut tx = pool
         .begin()
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let organization = sqlx::query_as::<_, Organization>(
-        "INSERT INTO organizations (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *"
-    )
-    .bind(&org_name)
-    .fetch_one(&mut *tx)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to find or create organization: {}", e)))?;
+    let organization = if let Some(org_name) = payload.organization_name {
+        sqlx::query_as::<_, Organization>(
+            "INSERT INTO organizations (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *"
+        )
+        .bind(&org_name)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to find or create organization: {}", e)))?
+    } else {
+        sqlx::query_as::<_, Organization>(
+            "SELECT * FROM organizations WHERE id = '00000000-0000-0000-0000-000000000001'"
+        )
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Default organization not found".into()))?
+    };
 
     let user = sqlx::query_as::<_, User>(
         "INSERT INTO users (email, password_hash, full_name, organization_id, role) VALUES ($1, $2, $3, $4, 'student') RETURNING *"
@@ -218,26 +222,51 @@ pub async fn login(
 #[derive(Deserialize)]
 pub struct CatalogQuery {
     pub organization_id: Option<Uuid>,
+    pub user_id: Option<Uuid>,
 }
 
 pub async fn get_course_catalog(
     State(pool): State<PgPool>,
     Query(query): Query<CatalogQuery>,
 ) -> Result<Json<Vec<Course>>, StatusCode> {
-    let courses = match query.organization_id {
-        Some(org_id) => {
-            sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE organization_id = $1")
+    let courses = match (query.organization_id, query.user_id) {
+        (Some(org_id), Some(user_id)) => {
+            sqlx::query_as::<_, Course>(
+                "SELECT DISTINCT c.* FROM courses c 
+                 LEFT JOIN enrollments e ON c.id = e.course_id AND e.user_id = $2
+                 WHERE c.organization_id = $1 OR c.organization_id = '00000000-0000-0000-0000-000000000001' OR e.id IS NOT NULL"
+            )
+            .bind(org_id)
+            .bind(user_id)
+            .fetch_all(&pool)
+            .await
+        }
+        (Some(org_id), None) => {
+            sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE organization_id = $1 OR organization_id = '00000000-0000-0000-0000-000000000001'")
                 .bind(org_id)
                 .fetch_all(&pool)
                 .await
         }
-        None => {
+        (None, Some(user_id)) => {
+            sqlx::query_as::<_, Course>(
+                "SELECT DISTINCT c.* FROM courses c 
+                 JOIN enrollments e ON c.id = e.course_id 
+                 WHERE e.user_id = $1 OR c.organization_id = '00000000-0000-0000-0000-000000000001'"
+            )
+            .bind(user_id)
+            .fetch_all(&pool)
+            .await
+        }
+        (None, None) => {
             sqlx::query_as::<_, Course>("SELECT * FROM courses")
                 .fetch_all(&pool)
                 .await
         }
     }
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!("Catalog fetch failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok(Json(courses))
 }
@@ -824,4 +853,30 @@ pub async fn get_advanced_analytics(
         cohorts: cohort_data,
         retention: retention_data,
     }))
+}
+
+pub async fn update_user(
+    Org(org_ctx): Org,
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    if claims.sub != id {
+        return Err((StatusCode::FORBIDDEN, "Not authorized".into()));
+    }
+
+    let full_name = payload.get("full_name").and_then(|f| f.as_str());
+
+    sqlx::query(
+        "UPDATE users SET full_name = COALESCE($1, full_name) WHERE id = $2 AND organization_id = $3"
+    )
+    .bind(full_name)
+    .bind(id)
+    .bind(org_ctx.id)
+    .execute(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(StatusCode::OK)
 }

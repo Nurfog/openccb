@@ -56,6 +56,7 @@ async fn main() {
             "/users/{id}/gamification",
             get(handlers::get_user_gamification),
         )
+        .route("/users/{id}", post(handlers::update_user))
         .route("/analytics/leaderboard", get(handlers::get_leaderboard))
         .route_layer(middleware::from_fn(
             common::middleware::org_extractor_middleware,

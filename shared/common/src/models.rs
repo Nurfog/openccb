@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct Course {
     pub id: Uuid,
     pub organization_id: Uuid,
@@ -19,7 +19,7 @@ pub struct Course {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct Module {
     pub id: Uuid,
     pub organization_id: Uuid,
@@ -29,7 +29,7 @@ pub struct Module {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct Lesson {
     pub id: Uuid,
     pub organization_id: Uuid,

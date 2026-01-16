@@ -70,22 +70,29 @@
   - [x] Tier-based feedback visualization
   - [x] Real-time grade updates
 
-## Phase 6: Advanced Features (In Progress)
+## Phase 6: Advanced Features ✅
 - [x] **Multi-tenancy**: Support for multiple organizations (Completed)
   - [x] Database schema migration (add `organization_id`)
   - [x] Update Rust models & JWT Claims
   - [x] Implement Axum middleware for organization context
   - [x] Update Frontend registration to support organizations
+  - [x] **Super Admin & Default Org**: Global management of all tenants.
+  - [x] **Global Course Visibility**: System-wide courses available to all organizations.
 - [x] **Organization Branding**: Custom identity per tenant (Completed)
   - [x] Logo upload & optimization
   - [x] Custom color schemes (Primary/Secondary)
   - [x] Dynamic Experience Portal adaptation
   - [x] Live Branding Preview in Studio
+- [x] **Advanced UI**:
+  - [x] **Premium Organization Selector**: For search-as-you-type multi-tenant management.
+  - [x] **Searchable Combobox**: Elegant glassmorphism filtering component.
+
+## Phase 7: User Engagement & Social (In Progress)
 - [x] **Advanced Analytics**:
   - [x] Cohort analysis (Implemented)
   - [x] Retention metrics (Implemented)
   - [ ] Engagement heatmaps
-- [ ] **AI Integration** (Next Up):
+- [ ] **AI Integration**:
   - [x] AI-driven lesson summaries (Implemented)
   - [ ] Implement real-time video transcription via external API
   - [x] Automated quiz generation (Implemented)
@@ -104,63 +111,27 @@
   - [x] **Course Calendar**:
     - [x] Management of important dates (exams, assignments, milestones).
     - [ ] Automated reminders for upcoming deadlines.
-- [ ] **Content Library**:
-  - [ ] Reusable content blocks
-  - [ ] Template courses
-  - [ ] Shared resource pool
 
-## Phase 7: Enterprise Features (Future)
+## Phase 8: Enterprise Features (Future)
+- [x] **User Profiles & Lifecycle**:
+  - [x] **Integrated Logout**: Standardized session management in both portals.
+  - [ ] **Profile Management**: Self-service user info updates.
 - [ ] **Advanced Reporting**:
-  - [ ] Custom report builder
-  - [ ] Export to PDF/CSV
-  - [ ] Scheduled reports
 - [ ] **Integration Ecosystem**:
-  - [ ] LTI 1.3 support
-  - [ ] SCORM compliance
-  - [ ] Third-party integrations (Zoom, Google Meet, BigBlueButton)
 - [ ] **Mobile Apps**:
-  - [ ] Native iOS app
-  - [ ] Native Android app
-  - [ ] Offline mode
 - [ ] **Accessibility**:
-  - [ ] WCAG 2.1 AA compliance
-  - [ ] Screen reader optimization
-  - [ ] Keyboard navigation
-
-## Phase 8: Future Innovations (Next Gen)
-- [ ] **AI & Adaptive Learning**:
-  - [ ] **AI Tutor**: Real-time context-aware assistant for students.
-  - [ ] **Auto-grading**: LLM-based evaluation for short answers and essays.
-  - [ ] **Adaptive Paths**: Dynamic content unlocking based on performance.
-- [ ] **Monetization & Marketplace**:
-  - [ ] **Multi-tenant Payments**: Integrated Stripe/Mercado Pago per organization.
-  - [ ] **Subscriptions**: Monthly/Yearly membership support.
-  - [ ] **Promotions**: Coupons, scholarships, and referral systems.
-- [ ] **Social & Collaborative**:
-  - [ ] **Peer Review**: Structured student-to-student evaluation flows.
-  - [ ] **Co-working Spaces**: Real-time shared whiteboards and documents.
-  - [ ] **AI-Threaded Forums**: Automatic discussion summaries and sentiment analysis.
-- [ ] **Enterprise Ecosystem**:
-  - [ ] **SSO (Single Sign-On)**: Azure AD, Okta, and Google Workspace integration.
-  - [ ] **HRIS Integration**: Sync with Workday, SAP, and other HR tools.
-  - [ ] **Webhooks & API**: Extensibility for third-party automation.
-- [ ] **Deep Analytics**:
-  - [ ] **Dropout Prediction**: ML models to detect students at risk.
-  - [ ] **Engagement Heatmaps**: Detailed video and interaction tracking.
-- [ ] **Offline-First Experience**:
-  - [ ] **Mobile Offline Mode**: Encrypted downloads for learning on the go.
 
 ## Current Status
 
-**Platform Maturity**: Core functionality is production-ready. Advanced features like AI integration are under active development.
+**Platform Maturity**: Core multi-tenant architecture is stable and performance-optimized.
 
 **Recent Milestones**:
-- ✅ **Gamification System**: XP, Levels, and Leaderboards integrated into the student experience.
-- ✅ **Organization Branding**: Full customization of logos and brand colors across both portals.
-- ✅ **Multi-Tenancy**: Full support for multiple organizations, from the database to the frontend.
-- ✅ **Holistic Grading System**: Weighted categories, attempt tracking, and dynamic passing thresholds.
+- ✅ **Super Admin Portal**: Unified management for multi-tenant deployments.
+- ✅ **Premium Organization Selector**: High-performance searchable UI for tenant selection.
+- ✅ **Global Courses**: Seamless content sharing across isolated organizations.
+- ✅ **Gamification & Analytics**: Fully integrated student engagement loops.
 
 **Next Priorities**:
-1. **AI Integration**: Implement real-time video transcription (external and local provider).
-2. **Advanced Analytics**: Develop cohort analysis and retention metrics.
-3. **Enterprise Ecosystem**: SSO (Single Sign-On) and Webhooks.
+1. **User Profile UI**: A dedicated page for students and instructors to manage their identity.
+2. **AI Transcription**: Finalizing the integration for automatic video subtitling.
+3. **SSO Integration**: SAML/OIDC support for enterprise clients.

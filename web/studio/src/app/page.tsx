@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cmsApi, Course } from "@/lib/api";
+import { cmsApi, Course, Organization } from "@/lib/api";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { Plus, BookOpen } from "lucide-react";
+import OrganizationSelector from "@/components/OrganizationSelector";
+import Modal from "@/components/Modal";
 
 export default function StudioDashboard() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -29,16 +31,50 @@ export default function StudioDashboard() {
     loadCourses();
   }, [user]);
 
-  const handleCreateCourse = async () => {
-    const title = prompt("Enter new course title:");
-    if (title) {
-      try {
-        const newCourse = await cmsApi.createCourse(title);
-        setCourses(prev => [...prev, newCourse]);
-      } catch (err) {
-        console.error("Failed to create course", err);
-        alert("Failed to create course. Please ensure the backend is running.");
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
+  const [isTitleModalOpen, setIsTitleModalOpen] = useState(false);
+  const [newCourseTitle, setNewCourseTitle] = useState("");
+
+  useEffect(() => {
+    const loadOrgs = async () => {
+      if (user?.role === 'admin' && user?.organization_id === '00000000-0000-0000-0000-000000000001') {
+        try {
+          const orgs = await cmsApi.getOrganizations();
+          setOrganizations(orgs);
+        } catch (err) {
+          console.error("Failed to load organizations", err);
+        }
       }
+    };
+    loadOrgs();
+  }, [user]);
+
+  const handleCreateCourse = async () => {
+    setIsTitleModalOpen(true);
+  };
+
+  const onTitleConfirm = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCourseTitle) return;
+    setIsTitleModalOpen(false);
+
+    const isSuperAdmin = user?.role === 'admin' && user?.organization_id === '00000000-0000-0000-0000-000000000001';
+    if (isSuperAdmin && organizations.length > 0) {
+      setIsOrgModalOpen(true);
+    } else {
+      createCourse();
+    }
+  };
+
+  const createCourse = async (targetOrgId?: string) => {
+    try {
+      const newCourse = await cmsApi.createCourse(newCourseTitle, targetOrgId);
+      setCourses((prev: Course[]) => [...prev, newCourse]);
+      setNewCourseTitle("");
+    } catch (err) {
+      console.error("Failed to create course", err);
+      alert("Failed to create course. Please ensure the backend is running.");
     }
   };
 
@@ -74,7 +110,7 @@ export default function StudioDashboard() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courses.map(course => (
+            {courses.map((course: Course) => (
               <Link href={`/courses/${course.id}`} key={course.id}>
                 <div className="glass-card h-full flex flex-col group hover:border-blue-500/50 transition-all">
                   <div className="flex-1">
@@ -94,6 +130,55 @@ export default function StudioDashboard() {
           </div>
         )}
       </div>
+
+      {/* New Course Title Modal */}
+      <Modal
+        isOpen={isTitleModalOpen}
+        onClose={() => setIsTitleModalOpen(false)}
+        title="Create New Course"
+      >
+        <form onSubmit={onTitleConfirm} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-2">
+              Course Title
+            </label>
+            <input
+              autoFocus
+              required
+              type="text"
+              value={newCourseTitle}
+              onChange={(e) => setNewCourseTitle(e.target.value)}
+              placeholder="e.g. Advanced Rust Development"
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white"
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setIsTitleModalOpen(false)}
+              className="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-[2] px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all shadow-lg shadow-blue-500/20 font-bold text-sm"
+            >
+              Next
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Organization Selector Modal */}
+      <OrganizationSelector
+        isOpen={isOrgModalOpen}
+        onClose={() => setIsOrgModalOpen(false)}
+        organizations={organizations}
+        title="Target Organization"
+        actionLabel="Create Course"
+        onConfirm={(orgId) => createCourse(orgId)}
+      />
     </div>
   );
 }

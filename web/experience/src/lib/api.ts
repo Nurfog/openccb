@@ -149,8 +149,11 @@ const apiFetch = async (url: string, options: RequestInit = {}, isCMS: boolean =
 };
 
 export const lmsApi = {
-    async getCatalog(orgId?: string): Promise<Course[]> {
-        const query = orgId ? `?organization_id=${orgId}` : '';
+    async getCatalog(orgId?: string, userId?: string): Promise<Course[]> {
+        const params = new URLSearchParams();
+        if (orgId) params.append('organization_id', orgId);
+        if (userId) params.append('user_id', userId);
+        const query = params.toString() ? `?${params.toString()}` : '';
         return apiFetch(`/catalog${query}`);
     },
 
@@ -208,5 +211,12 @@ export const lmsApi = {
 
     async getBranding(orgId: string): Promise<Organization> {
         return apiFetch(`/organizations/${orgId}/branding`, {}, true);
+    },
+
+    async updateUser(userId: string, payload: { full_name?: string }): Promise<void> {
+        return apiFetch(`/users/${userId}`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
     }
 };

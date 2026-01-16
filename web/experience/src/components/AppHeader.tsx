@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useBranding } from "@/context/BrandingContext";
+import { useAuth } from "@/context/AuthContext";
+import { LogOut } from "lucide-react";
 
 export default function AppHeader() {
     const { branding } = useBranding();
+    const { user, logout } = useAuth();
 
     return (
         <header className="h-16 glass sticky top-0 z-50 px-6 flex items-center justify-between backdrop-blur-xl bg-black/40 border-b border-white/5">
@@ -26,8 +29,22 @@ export default function AppHeader() {
 
             <nav className="hidden md:flex items-center gap-8">
                 <Link href="/" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">Catalog</Link>
-                <Link href="#" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">My Learning</Link>
-                <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10" />
+                <Link href="/my-learning" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">My Learning</Link>
+
+                <div className="flex items-center gap-4 pl-4 border-l border-white/10">
+                    <Link href="/profile" className="flex items-center gap-2 group/profile">
+                        <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-bold text-xs text-blue-400 group-hover/profile:border-blue-500/50 transition-colors">
+                            {user?.full_name?.charAt(0) || 'U'}
+                        </div>
+                    </Link>
+                    <button
+                        onClick={logout}
+                        className="p-2 hover:bg-red-500/10 rounded-full text-gray-400 hover:text-red-400 transition-colors"
+                        title="Logout"
+                    >
+                        <LogOut size={16} />
+                    </button>
+                </div>
             </nav>
         </header>
     );

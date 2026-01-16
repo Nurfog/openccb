@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cmsApi, Course, Module, Lesson } from "@/lib/api";
+import { cmsApi, Course, Module, Lesson, Organization } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 import {
     Plus,
     Pencil,
@@ -16,9 +17,11 @@ import {
     X,
     GripVertical,
     Trash2,
-    ArrowLeft
+    ArrowLeft,
+    Send,
 } from "lucide-react";
 import CourseEditorLayout from "@/components/CourseEditorLayout";
+import OrganizationSelector from "@/components/OrganizationSelector";
 
 interface FullModule extends Module {
     lessons: Lesson[];
@@ -32,6 +35,10 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
     const [error, setError] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editValue, setEditValue] = useState("");
+    const [organizations, setOrganizations] = useState<Organization[]>([]);
+    const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
+    const [saving, setSaving] = useState(false); // Added saving state
+    const { user } = useAuth();
 
     const startEditing = (id: string, currentTitle: string) => {
         setEditingId(id);
@@ -56,6 +63,20 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
         loadData();
     }, [params.id]);
 
+    useEffect(() => {
+        const loadOrgs = async () => {
+            if (user?.role === 'admin' && user?.organization_id === '00000000-0000-0000-0000-000000000001') {
+                try {
+                    const orgs = await cmsApi.getOrganizations();
+                    setOrganizations(orgs);
+                } catch (err) {
+                    console.error("Failed to load organizations", err);
+                }
+            }
+        };
+        loadOrgs();
+    }, [user]);
+
     const handleAddModule = async () => {
         const title = "";
         try {
@@ -70,13 +91,13 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
     };
 
     const handleAddLesson = async (moduleId: string) => {
-        const mod = modules.find(m => m.id === moduleId);
+        const mod = modules.find((m: FullModule) => m.id === moduleId);
         if (!mod) return;
 
         const title = "New Lesson";
         try {
             const newLesson = await cmsApi.createLesson(moduleId, title, "video", mod.lessons.length + 1);
-            setModules(modules.map(m =>
+            setModules(modules.map((m: FullModule) =>
                 m.id === moduleId
                     ? { ...m, lessons: [...m.lessons, newLesson] }
                     : m
@@ -96,12 +117,12 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
         try {
             if (type === 'module') {
                 await cmsApi.updateModule(id, { title: editValue });
-                setModules(modules.map(m => m.id === id ? { ...m, title: editValue } : m));
+                setModules(modules.map((m: FullModule) => m.id === id ? { ...m, title: editValue } : m));
             } else {
                 await cmsApi.updateLesson(id, { title: editValue });
-                setModules(modules.map(mod => ({
+                setModules(modules.map((mod: FullModule) => ({
                     ...mod,
-                    lessons: mod.lessons.map(l => l.id === id ? { ...l, title: editValue } : l)
+                    lessons: mod.lessons.map((l: Lesson) => l.id === id ? { ...l, title: editValue } : l)
                 })));
             }
             setEditingId(null);
@@ -114,7 +135,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
         if (!confirm("Are you sure you want to delete this module and all its lessons?")) return;
         try {
             await cmsApi.deleteModule(id);
-            setModules(modules.filter(m => m.id !== id));
+            setModules(modules.filter((m: FullModule) => m.id !== id));
         } catch {
             alert("Failed to delete module");
         }
@@ -124,9 +145,9 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
         if (!confirm("Are you sure you want to delete this lesson?")) return;
         try {
             await cmsApi.deleteLesson(lessonId);
-            setModules(modules.map(m =>
+            setModules(modules.map((m: FullModule) =>
                 m.id === moduleId
-                    ? { ...m, lessons: m.lessons.filter(l => l.id !== lessonId) }
+                    ? { ...m, lessons: m.lessons.filter((l: Lesson) => l.id !== lessonId) }
                     : m
             ));
         } catch {
@@ -141,8 +162,8 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
 
         [newModules[index], newModules[targetIndex]] = [newModules[targetIndex], newModules[index]];
 
-        const items = newModules.map((m, i) => ({ id: m.id, position: i + 1 }));
-        setModules(newModules.map((m, i) => ({ ...m, position: i + 1 })));
+        const items = newModules.map((m: FullModule, i: number) => ({ id: m.id, position: i + 1 }));
+        setModules(newModules.map((m: FullModule, i: number) => ({ ...m, position: i + 1 })));
 
         try {
             await cmsApi.reorderModules({ items });
@@ -152,7 +173,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
     };
 
     const handleReorderLesson = async (moduleId: string, lessonIndex: number, direction: 'up' | 'down') => {
-        const mod = modules.find(m => m.id === moduleId);
+        const mod = modules.find((m: FullModule) => m.id === moduleId);
         if (!mod) return;
 
         const newLessons = [...mod.lessons];
@@ -161,8 +182,8 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
 
         [newLessons[lessonIndex], newLessons[targetIndex]] = [newLessons[targetIndex], newLessons[lessonIndex]];
 
-        const items = newLessons.map((l, i) => ({ id: l.id, position: i + 1 }));
-        setModules(modules.map(m => m.id === moduleId ? { ...m, lessons: newLessons.map((l, i) => ({ ...l, position: i + 1 })) } : m));
+        const items = newLessons.map((l: Lesson, i: number) => ({ id: l.id, position: i + 1 }));
+        setModules(modules.map((m: FullModule) => m.id === moduleId ? { ...m, lessons: newLessons.map((l: Lesson, i: number) => ({ ...l, position: i + 1 })) } : m));
 
         try {
             await cmsApi.reorderLessons({ items });
@@ -171,19 +192,29 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
         }
     };
 
-    const [isPublishing, setIsPublishing] = useState(false);
-
     const handlePublish = async () => {
         if (!course) return;
-        setIsPublishing(true);
+
+        const isSuperAdmin = user?.role === 'admin' && user?.organization_id === '00000000-0000-0000-0000-000000000001';
+
+        if (isSuperAdmin && organizations.length > 0) {
+            setIsOrgModalOpen(true);
+        } else {
+            publishCourse();
+        }
+    };
+
+    const publishCourse = async (targetOrgId?: string) => {
         try {
-            await cmsApi.publishCourse(params.id);
-            alert("Course published successfully to LMS!");
+            setSaving(true);
+            await cmsApi.publishCourse(params.id as string, targetOrgId);
+            alert("Course published successfully!");
         } catch (err) {
-            console.error("Publish failed:", err);
+            console.error("Failed to publish course", err);
             alert("Failed to publish course.");
         } finally {
-            setIsPublishing(false);
+            setSaving(false);
+            setIsOrgModalOpen(false); // Close modal after publishing attempt
         }
     };
 
@@ -220,18 +251,22 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                         </button>
                         <button
                             onClick={handlePublish}
-                            disabled={isPublishing}
-                            className={`flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 transition-all active:scale-95 ${isPublishing ? "opacity-75 cursor-wait" : ""}`}
+                            disabled={saving}
+                            className={`flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                            <PlayCircle className="w-5 h-5 transition-transform group-active:scale-90" />
-                            {isPublishing ? "Publishing..." : "Publish to LMS"}
+                            {saving ? (
+                                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <Send size={18} />
+                            )}
+                            {saving ? 'Publishing...' : 'Publish Course'}
                         </button>
                     </div>
                 </div>
 
                 <CourseEditorLayout activeTab="outline">
                     <div className="p-8 space-y-6">
-                        {modules.map((module, mIndex) => (
+                        {modules.map((module: FullModule, mIndex: number) => (
                             <div key={module.id} className="glass rounded-xl overflow-hidden border-white/5">
                                 <div className="bg-white/5 px-6 py-4 flex justify-between items-center border-b border-white/5">
                                     <div className="flex items-center gap-4 flex-1">
@@ -296,7 +331,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                                     </div>
                                 </div>
                                 <div className="p-6 space-y-3">
-                                    {module.lessons.map((lesson, lIndex) => (
+                                    {module.lessons.map((lesson: Lesson, lIndex: number) => (
                                         <div key={lesson.id} className="flex items-center gap-3 group/row">
                                             <div className="flex flex-col opacity-0 group-hover/row:opacity-100 transition-opacity">
                                                 <button
@@ -395,6 +430,15 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                     </div>
                 </CourseEditorLayout>
             </div>
+            {/* Organization Selector Modal */}
+            <OrganizationSelector
+                isOpen={isOrgModalOpen}
+                onClose={() => setIsOrgModalOpen(false)}
+                organizations={organizations}
+                title="Publish to Organization"
+                actionLabel="Publish Course"
+                onConfirm={(orgId) => publishCourse(orgId)}
+            />
         </div>
     );
 }

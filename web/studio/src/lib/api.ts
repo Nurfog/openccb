@@ -16,6 +16,7 @@ export interface Course {
     description?: string;
     instructor_id: string;
     pacing_mode: 'self_paced' | 'instructor_led';
+    organization_id: string;
     start_date?: string;
     end_date?: string;
     passing_percentage: number;
@@ -233,11 +234,11 @@ export const cmsApi = {
 
     // Courses
     getCourses: (): Promise<Course[]> => apiFetch('/courses'),
-    createCourse: (title: string): Promise<Course> => apiFetch('/courses', { method: 'POST', body: JSON.stringify({ title }) }),
+    createCourse: (title: string, organizationId?: string): Promise<Course> => apiFetch('/courses', { method: 'POST', body: JSON.stringify({ title, organization_id: organizationId }) }),
     getCourse: (id: string): Promise<Course> => apiFetch(`/courses/${id}`),
     getCourseWithFullOutline: (id: string): Promise<Course> => apiFetch(`/courses/${id}/outline`),
     updateCourse: (id: string, payload: Partial<Course>): Promise<Course> => apiFetch(`/courses/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
-    publishCourse: (id: string): Promise<void> => apiFetch(`/courses/${id}/publish`, { method: 'POST' }),
+    publishCourse: (id: string, targetOrganizationId?: string): Promise<void> => apiFetch(`/courses/${id}/publish`, { method: 'POST', body: JSON.stringify({ target_organization_id: targetOrganizationId }) }),
 
     // Modules & Lessons
     createModule: (course_id: string, title: string, position: number): Promise<Module> => apiFetch('/modules', { method: 'POST', body: JSON.stringify({ course_id, title, position }) }),

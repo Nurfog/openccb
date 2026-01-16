@@ -21,7 +21,7 @@ export default function CatalogPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const coursesData = await lmsApi.getCatalog(user?.organization_id);
+        const coursesData = await lmsApi.getCatalog(user?.organization_id, user?.id);
         setCourses(coursesData);
 
         if (user) {

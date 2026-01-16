@@ -248,28 +248,38 @@ Métricas de retención y análisis de cohortes.
 
 ---
 
-### 5. Multi-tenencia y Gestión (Solo Admin)
-OpenCCB permite gestionar múltiples organizaciones desde un único punto de acceso.
+### 5. Multi-tenancy and Global Management (Super Admin)
+OpenCCB is built for multi-tenancy. Organizations are isolated, but a **Super Admin** can manage everything.
+
+#### Super Admin Definition
+- **Default Organization ID**: `00000000-0000-0000-0000-000000000001`
+- Any user with `role: admin` in this organization is a **Super Admin**.
+
+#### Global Courses
+Courses created by Super Admins in the **Default Organization** are automatically marked as **Global**.
+- They appear in the catalog of **all organizations**.
+- Users from any organization can enroll in global courses.
+
+#### Cross-Tenant Publishing
+Super Admins can publish courses to **any organization**. When publishing through the Studio, a premium **Organization Selector** (with search-as-you-type) allows choosing the target destination.
 
 #### X-Organization-Id Header
-Los administradores pueden simular el contexto de cualquier organización enviando este encabezado:
+Super Admins can simulate the context of any organization by sending this header in their requests:
 ```bash
-curl -H "Authorization: Bearer $TOKEN" \
-     -H "X-Organization-Id: $ORG_ID" \
+curl -H "Authorization: Bearer $SUPER_ADMIN_TOKEN" \
+     -H "X-Organization-Id: $TARGET_ORG_ID" \
      http://localhost:3001/courses
 ```
 
 #### GET /organizations
-Lista todas las organizaciones registradas.
+Returns a searchable list of all organizations. (Admin only).
 
 ---
 
-## 🏆 Gamificación y Analíticas
-OpenCCB incluye un sistema integrado de:
-- **XP y Niveles**: Los estudiantes progresan al completar lecciones.
-- **Leaderboards**: Rankings dentro de la organización.
-- **Analíticas Avanzadas**: Análisis de cohortes y mapas de calor de retención para instructores.
-- **Multi-tenencia Nativa**: Aislamiento total de datos entre organizaciones.
+## 🏆 Premium UI Components
+- **Organization Selector**: A searchable combobox for managing large lists of tenants.
+- **Glassmorphism Design**: Consistent aesthetic across Studio and Experience portals.
+- **Micro-animations**: Enhanced feedback for publishing and content management.
 
 ## 📄 Licencia
 Este proyecto es código abierto y está disponible bajo los términos de la licencia especificada en el repositorio.
