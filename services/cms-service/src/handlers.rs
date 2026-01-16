@@ -594,6 +594,14 @@ pub async fn process_transcription(
     )
     .await;
 
+    // 4. Spawn background task
+    let pool_clone = pool.clone();
+    tokio::spawn(async move {
+        if let Err(e) = run_transcription_task(pool_clone, id).await {
+            tracing::error!("Transcription task failed for lesson {}: {}", id, e);
+        }
+    });
+
     Ok(Json(updated_lesson))
 }
 
@@ -1842,7 +1850,7 @@ pub async fn delete_module(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    Ok(StatusCode::OK)
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub async fn delete_lesson(
@@ -1897,7 +1905,7 @@ pub async fn delete_lesson(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    Ok(StatusCode::OK)
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // User Management

@@ -189,7 +189,40 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                                 />
                                             )}
                                             {block.type === 'quiz' && (
-                                                <QuizPlayer id={block.id} title={block.title} quizData={block.quiz_data || { questions: [] }} allowRetry={lesson.allow_retry} />
+                                                <QuizPlayer
+                                                    id={block.id}
+                                                    title={block.title}
+                                                    quizData={block.quiz_data || { questions: [] }}
+                                                    allowRetry={lesson.allow_retry}
+                                                    maxAttempts={lesson.max_attempts || undefined}
+                                                    initialAttempts={
+                                                        userGrade?.metadata?.block_attempts
+                                                            ? (userGrade.metadata.block_attempts as Record<string, number>)[block.id] || 0
+                                                            : 0
+                                                    }
+                                                    onAttempt={async () => {
+                                                        if (user) {
+                                                            const currentAttempts = (userGrade?.metadata?.block_attempts as Record<string, number>) || {};
+                                                            const newAttempts = {
+                                                                ...currentAttempts,
+                                                                [block.id]: (currentAttempts[block.id] || 0) + 1
+                                                            };
+
+                                                            try {
+                                                                const res = await lmsApi.submitScore(
+                                                                    user.id,
+                                                                    params.id,
+                                                                    params.lessonId,
+                                                                    userGrade?.score || 0,
+                                                                    { ...userGrade?.metadata, block_attempts: newAttempts }
+                                                                );
+                                                                setUserGrade(res);
+                                                            } catch (err) {
+                                                                console.error("Failed to persist block attempts", err);
+                                                            }
+                                                        }
+                                                    }}
+                                                />
                                             )}
                                             {block.type === 'fill-in-the-blanks' && (
                                                 <FillInTheBlanksPlayer id={block.id} title={block.title} content={block.content || ""} allowRetry={lesson.allow_retry} />

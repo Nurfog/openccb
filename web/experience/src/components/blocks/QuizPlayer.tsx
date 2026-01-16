@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface QuizQuestion {
     id: string;
@@ -17,13 +17,24 @@ interface QuizPlayerProps {
         questions: QuizQuestion[];
     };
     allowRetry?: boolean;
+    maxAttempts?: number;
+    initialAttempts?: number;
+    onAttempt?: () => void;
 }
 
-export default function QuizPlayer({ id, title, quizData, allowRetry = true }: QuizPlayerProps) {
+export default function QuizPlayer({ id, title, quizData, allowRetry = true, maxAttempts = 0, initialAttempts = 0, onAttempt }: QuizPlayerProps) {
     const [userAnswers, setUserAnswers] = useState<Record<string, number[]>>({});
     const [submitted, setSubmitted] = useState(false);
+    const [attempts, setAttempts] = useState(initialAttempts || 0);
 
     const questions = quizData?.questions || [];
+
+    // Sync attempts with prop
+    useEffect(() => {
+        if (initialAttempts !== undefined) {
+            setAttempts(initialAttempts);
+        }
+    }, [initialAttempts]);
 
     const handleAnswer = (qId: string, optionIndex: number, isMulti: boolean) => {
         if (submitted) return;
@@ -40,12 +51,27 @@ export default function QuizPlayer({ id, title, quizData, allowRetry = true }: Q
         });
     };
 
+    const handleValidate = () => {
+        if (maxAttempts > 0 && attempts >= maxAttempts) return;
+
+        setSubmitted(true);
+        if (onAttempt) {
+            onAttempt();
+            setAttempts(prev => prev + 1);
+        }
+    };
+
     return (
         <div className="space-y-8" id={id}>
             <div className="space-y-2">
                 <h3 className="text-xl font-bold border-l-4 border-blue-500 pl-4 py-1 tracking-tight text-white uppercase tracking-widest text-[10px]">
                     {title || "Knowledge Check"}
                 </h3>
+                {maxAttempts > 0 && (
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-white/5 border border-white/5 text-gray-500">
+                        Attempt {attempts} / {maxAttempts}
+                    </span>
+                )}
             </div>
 
             <div className="space-y-8">
@@ -93,18 +119,24 @@ export default function QuizPlayer({ id, title, quizData, allowRetry = true }: Q
                     <>
                         {!submitted && questions.length > 0 && (
                             <button
-                                onClick={() => setSubmitted(true)}
-                                className="btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20"
+                                onClick={handleValidate}
+                                disabled={maxAttempts > 0 && attempts >= maxAttempts}
+                                className={`btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20 ${maxAttempts > 0 && attempts >= maxAttempts ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                Validate Answers
+                                {maxAttempts > 0 && attempts >= maxAttempts ? 'Max Attempts Reached' : 'Validate Answers'}
                             </button>
                         )}
                         {submitted && (
                             <button
-                                onClick={() => { setSubmitted(false); setUserAnswers({}); }}
-                                className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-3xl border-white/5"
+                                onClick={() => {
+                                    if (maxAttempts > 0 && attempts >= maxAttempts) return;
+                                    setSubmitted(false);
+                                    setUserAnswers({});
+                                }}
+                                disabled={maxAttempts > 0 && attempts >= maxAttempts}
+                                className={`w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-3xl border-white/5 ${maxAttempts > 0 && attempts >= maxAttempts ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                Try Again
+                                {maxAttempts > 0 && attempts >= maxAttempts ? 'Max Attempts Reached' : 'Try Again'}
                             </button>
                         )}
                     </>

@@ -21,6 +21,12 @@ export default function MediaPlayer({ id, title, url, media_type, config, initia
     const [hasStarted, setHasStarted] = useState(false);
     const [locked, setLocked] = useState(false);
 
+    useEffect(() => {
+        if (initialPlayCount !== undefined) {
+            setPlayCount(initialPlayCount);
+        }
+    }, [initialPlayCount]);
+
     const maxPlays = config?.maxPlays || 0;
 
     const CMS_API_URL = process.env.NEXT_PUBLIC_CMS_API_URL || "http://localhost:3001";
