@@ -159,6 +159,33 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                                     media_type={block.media_type || 'video'}
                                                     config={block.config}
                                                     onTimeUpdate={setCurrentTime}
+                                                    initialPlayCount={
+                                                        userGrade?.metadata?.play_counts
+                                                            ? (userGrade.metadata.play_counts as Record<string, number>)[block.id] || 0
+                                                            : 0
+                                                    }
+                                                    onPlay={async () => {
+                                                        if (user && lesson.max_attempts && (!userGrade || userGrade.attempts_count < lesson.max_attempts)) {
+                                                            const currentPlayCounts = (userGrade?.metadata?.play_counts as Record<string, number>) || {};
+                                                            const newPlayCounts = {
+                                                                ...currentPlayCounts,
+                                                                [block.id]: (currentPlayCounts[block.id] || 0) + 1
+                                                            };
+
+                                                            try {
+                                                                const res = await lmsApi.submitScore(
+                                                                    user.id,
+                                                                    params.id,
+                                                                    params.lessonId,
+                                                                    userGrade?.score || 0,
+                                                                    { ...userGrade?.metadata, play_counts: newPlayCounts }
+                                                                );
+                                                                setUserGrade(res);
+                                                            } catch (err) {
+                                                                console.error("Failed to persist play count", err);
+                                                            }
+                                                        }
+                                                    }}
                                                 />
                                             )}
                                             {block.type === 'quiz' && (

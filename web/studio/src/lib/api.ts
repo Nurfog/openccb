@@ -266,7 +266,7 @@ export const cmsApi = {
 
     // Users
     getAllUsers: (): Promise<User[]> => apiFetch('/users'),
-    updateUser: (id: string, role: string, organization_id: string): Promise<void> => apiFetch(`/users/${id}`, { method: 'PUT', body: JSON.stringify({ role, organization_id }) }),
+    updateUser: (id: string, payload: { role?: string, organization_id?: string, full_name?: string }): Promise<void> => apiFetch(`/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
 
     // Webhooks
     getWebhooks: (): Promise<Webhook[]> => apiFetch('/webhooks'),

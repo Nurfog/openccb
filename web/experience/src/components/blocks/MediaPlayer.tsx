@@ -11,11 +11,13 @@ interface MediaPlayerProps {
     config?: {
         maxPlays?: number;
     };
+    initialPlayCount?: number;
     onTimeUpdate?: (time: number) => void;
+    onPlay?: () => void;
 }
 
-export default function MediaPlayer({ id, title, url, media_type, config, onTimeUpdate }: MediaPlayerProps) {
-    const [playCount, setPlayCount] = useState(0);
+export default function MediaPlayer({ id, title, url, media_type, config, initialPlayCount, onTimeUpdate, onPlay }: MediaPlayerProps) {
+    const [playCount, setPlayCount] = useState(initialPlayCount || 0);
     const [hasStarted, setHasStarted] = useState(false);
     const [locked, setLocked] = useState(false);
 
@@ -44,6 +46,7 @@ export default function MediaPlayer({ id, title, url, media_type, config, onTime
         if (!hasStarted) {
             setPlayCount(prev => prev + 1);
             setHasStarted(true);
+            if (onPlay) onPlay();
         }
     };
 

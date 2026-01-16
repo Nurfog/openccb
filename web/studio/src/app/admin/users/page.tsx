@@ -34,7 +34,7 @@ export default function UsersPage() {
 
     const handleUpdateUser = async (userId: string, role: string, orgId: string) => {
         try {
-            await cmsApi.updateUser(userId, role, orgId);
+            await cmsApi.updateUser(userId, { role, organization_id: orgId });
             loadData();
         } catch (error) {
             console.error('Failed to update user', error);

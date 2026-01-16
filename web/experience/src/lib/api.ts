@@ -190,10 +190,10 @@ export const lmsApi = {
         return apiFetch(`/enrollments/${userId}`);
     },
 
-    async submitScore(userId: string, courseId: string, lessonId: string, score: number): Promise<UserGrade> {
+    async submitScore(userId: string, course_id: string, lessonId: string, score: number, metadata: Record<string, unknown> = {}): Promise<UserGrade> {
         return apiFetch('/grades', {
             method: 'POST',
-            body: JSON.stringify({ user_id: userId, course_id: courseId, lesson_id: lessonId, score })
+            body: JSON.stringify({ user_id: userId, course_id, lesson_id: lessonId, score, metadata })
         });
     },
 

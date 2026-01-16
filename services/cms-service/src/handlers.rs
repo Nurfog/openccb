@@ -199,7 +199,7 @@ pub async fn create_course(
         .map(|s| s.to_string());
 
     crate::db_util::set_session_context(
-        &mut tx,
+        &mut *tx,
         Some(instructor_id),
         Some(org_ctx.id),
         ip,
@@ -400,7 +400,7 @@ pub async fn create_module(
         .map(|s| s.to_string());
 
     crate::db_util::set_session_context(
-        &mut tx,
+        &mut *tx,
         Some(claims.sub),
         Some(org_ctx.id),
         ip,
@@ -498,7 +498,7 @@ pub async fn create_lesson(
         .map(|s| s.to_string());
 
     crate::db_util::set_session_context(
-        &mut tx,
+        &mut *tx,
         Some(claims.sub),
         Some(org_ctx.id),
         ip,
@@ -1008,7 +1008,7 @@ pub async fn update_lesson(
         .map(|s| s.to_string());
 
     crate::db_util::set_session_context(
-        &mut tx,
+        &mut *tx,
         Some(claims.sub),
         Some(org_ctx.id),
         ip,
@@ -1231,7 +1231,7 @@ pub async fn reorder_modules(
         .map(|s| s.to_string());
 
     crate::db_util::set_session_context(
-        &mut tx,
+        &mut *tx,
         Some(claims.sub),
         Some(org_ctx.id),
         ip,
@@ -1282,7 +1282,7 @@ pub async fn reorder_lessons(
         .map(|s| s.to_string());
 
     crate::db_util::set_session_context(
-        &mut tx,
+        &mut *tx,
         Some(claims.sub),
         Some(org_ctx.id),
         ip,
@@ -1759,7 +1759,7 @@ pub async fn update_module(
         .map(|s| s.to_string());
 
     crate::db_util::set_session_context(
-        &mut tx,
+        &mut *tx,
         Some(claims.sub),
         Some(org_ctx.id),
         ip,
@@ -1801,8 +1801,8 @@ pub async fn delete_module(
     headers: axum::http::HeaderMap,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, StatusCode> {
-    let mut tx = pool
-        .begin()
+    let mut conn = pool
+        .acquire()
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -1818,7 +1818,7 @@ pub async fn delete_module(
         .map(|s| s.to_string());
 
     crate::db_util::set_session_context(
-        &mut tx,
+        &mut conn,
         Some(claims.sub),
         Some(org_ctx.id),
         ip,
@@ -1831,7 +1831,7 @@ pub async fn delete_module(
     let success = sqlx::query_scalar::<_, bool>("SELECT fn_delete_module($1, $2)")
         .bind(id)
         .bind(org_ctx.id)
-        .fetch_one(&mut *tx)
+        .fetch_one(&mut *conn)
         .await
         .map_err(|e| {
             tracing::error!("Delete module failed: {}", e);
@@ -1841,10 +1841,6 @@ pub async fn delete_module(
     if !success {
         return Err(StatusCode::NOT_FOUND);
     }
-
-    tx.commit()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::OK)
 }
@@ -1860,8 +1856,8 @@ pub async fn delete_lesson(
         return Err(StatusCode::FORBIDDEN);
     }
 
-    let mut tx = pool
-        .begin()
+    let mut conn = pool
+        .acquire()
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -1877,7 +1873,7 @@ pub async fn delete_lesson(
         .map(|s| s.to_string());
 
     crate::db_util::set_session_context(
-        &mut tx,
+        &mut conn,
         Some(claims.sub),
         Some(org_ctx.id),
         ip,
@@ -1890,7 +1886,7 @@ pub async fn delete_lesson(
     let success = sqlx::query_scalar::<_, bool>("SELECT fn_delete_lesson($1, $2)")
         .bind(id)
         .bind(org_ctx.id)
-        .fetch_one(&mut *tx)
+        .fetch_one(&mut *conn)
         .await
         .map_err(|e| {
             tracing::error!("Delete lesson failed: {}", e);
@@ -1900,10 +1896,6 @@ pub async fn delete_lesson(
     if !success {
         return Err(StatusCode::NOT_FOUND);
     }
-
-    tx.commit()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::OK)
 }

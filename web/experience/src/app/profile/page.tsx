@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { lmsApi } from "@/lib/api";
-import { User, Save, Shield, Mail, User as UserIcon, Building, Trophy, Flame } from "lucide-react";
+import { Save, Shield, Mail, User as UserIcon, Building, Trophy, Flame } from "lucide-react";
 
 export default function ProfilePage() {
     const { user, logout } = useAuth();

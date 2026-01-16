@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { cmsApi } from "@/lib/api";
-import { User, Save, Shield, Mail, User as UserIcon, Building } from "lucide-react";
+import { Save, Shield, Mail, User as UserIcon, Building } from "lucide-react";
 
 export default function ProfilePage() {
-    const { user, token, logout } = useAuth();
+    const { user, logout } = useAuth();
     const [fullName, setFullName] = useState(user?.full_name || "");
     const [email, setEmail] = useState(user?.email || "");
     const [saving, setSaving] = useState(false);
