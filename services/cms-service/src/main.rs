@@ -140,6 +140,9 @@ async fn main() {
             get(handlers::get_webhooks).post(handlers::create_webhook),
         )
         .route("/webhooks/{id}", delete(handlers::delete_webhook))
+        .route("/tasks", get(handlers::tasks::get_background_tasks))
+        .route("/tasks/{id}/retry", post(handlers::tasks::retry_task))
+        .route("/tasks/{id}", delete(handlers::tasks::cancel_task))
         .route("/organization", get(handlers::get_organization))
         .route(
             "/organizations/{id}/logo",

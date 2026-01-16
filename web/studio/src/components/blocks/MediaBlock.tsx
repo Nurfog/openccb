@@ -13,9 +13,10 @@ interface MediaBlockProps {
     config: {
         maxPlays?: number;
         currentPlays?: number;
+        show_transcript?: boolean;
     };
     editMode: boolean;
-    onChange: (updates: { title?: string; url?: string; config?: { maxPlays?: number; currentPlays?: number } }) => void;
+    onChange: (updates: { title?: string; url?: string; config?: { maxPlays?: number; currentPlays?: number; show_transcript?: boolean } }) => void;
     transcription?: {
         en?: string;
         es?: string;
@@ -108,6 +109,23 @@ export default function MediaBlock({ title, url, type, config, editMode, onChang
                                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm focus:border-blue-500/50 focus:outline-none h-11"
                             />
                             <p className="text-[10px] text-gray-500 uppercase leading-relaxed mt-2">Prevent content fatigue by limiting how many times a student can watch/listen.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Additional Options</label>
+                            <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-lg px-4 py-2 h-11">
+                                <input
+                                    type="checkbox"
+                                    id={`show-transcript-${title}`} // Unique ID
+                                    checked={config.show_transcript !== false} // Default to true
+                                    onChange={(e) => onChange({ config: { ...config, show_transcript: e.target.checked } })}
+                                    className="w-4 h-4 rounded border-gray-600 text-blue-600 focus:ring-blue-500 bg-gray-700"
+                                />
+                                <label htmlFor={`show-transcript-${title}`} className="text-sm text-gray-300 font-medium select-none cursor-pointer">
+                                    Show Interactive Transcript
+                                </label>
+                            </div>
+                            <p className="text-[10px] text-gray-500 uppercase leading-relaxed mt-2">Uncheck to hide transcription text (e.g. for listening tests).</p>
                         </div>
                     </div>
                 </div>

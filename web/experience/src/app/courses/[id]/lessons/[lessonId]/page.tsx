@@ -58,7 +58,8 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
     const prevLesson = allLessons[currentIndex - 1];
     const nextLesson = allLessons[currentIndex + 1];
 
-    const hasTranscription = lesson.transcription && lesson.transcription.cues && lesson.transcription.cues.length > 0;
+    const hasTranscription = lesson.transcription && lesson.transcription.cues && lesson.transcription.cues.length > 0 &&
+        !(lesson.metadata?.blocks || []).some(b => b.type === 'media' && b.config?.show_transcript === false);
 
     const handleSeek = (time: number) => {
         const videoElement = document.querySelector('video');

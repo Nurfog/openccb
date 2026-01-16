@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, ShieldAlert, Building2 } from "lucide-react";
+import { LogOut, ShieldAlert, Building2, Activity } from "lucide-react";
 import Link from "next/link";
 
 export default function AuthHeader() {
@@ -15,6 +15,9 @@ export default function AuthHeader() {
                     </Link>
                     <Link href="/admin/audit" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors flex items-center gap-2">
                         <ShieldAlert size={16} /> Audit
+                    </Link>
+                    <Link href="/admin/tasks" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors flex items-center gap-2">
+                        <Activity size={16} /> Tasks
                     </Link>
                 </>
             )}

@@ -62,7 +62,7 @@ export default function QuizPlayer({ id, title, quizData, allowRetry = true, max
     };
 
     return (
-        <div className="space-y-8" id={id}>
+        <div className="space-y-8 notranslate" id={id} translate="no">
             <div className="space-y-2">
                 <h3 className="text-xl font-bold border-l-4 border-blue-500 pl-4 py-1 tracking-tight text-white uppercase tracking-widest text-[10px]">
                     {title || "Knowledge Check"}

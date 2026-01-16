@@ -22,6 +22,7 @@ services:
       JWT_SECRET: openccb_secret_key_2025_production
       NEXT_PUBLIC_CMS_API_URL: http://localhost:3001
       LMS_INTERNAL_URL: http://experience:3002
+      LOCAL_WHISPER_URL: http://whisper:8000
     volumes:
       - uploads_data:/app/uploads
     env_file: .env

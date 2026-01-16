@@ -331,4 +331,17 @@ export const cmsApi = {
             return res.json();
         });
     },
+
+    // Background Tasks
+    getBackgroundTasks: (): Promise<BackgroundTask[]> => apiFetch('/tasks'),
+    retryTask: (id: string): Promise<void> => apiFetch(`/tasks/${id}/retry`, { method: 'POST' }),
+    cancelTask: (id: string): Promise<void> => apiFetch(`/tasks/${id}`, { method: 'DELETE' }),
 };
+
+export interface BackgroundTask {
+    id: string;
+    title: string;
+    course_title?: string;
+    transcription_status?: 'idle' | 'queued' | 'processing' | 'failed' | 'completed';
+    updated_at: string;
+}
