@@ -1,0 +1,30 @@
+{
+    "common": {
+        "loading": "Cargando...",
+        "back": "Volver",
+        "next": "Siguiente",
+        "finish": "Finalizar",
+        "error": "Error",
+        "retry": "Reintentar"
+    },
+    "nav": {
+        "catalog": "Catálogo",
+        "myLearning": "Mi Aprendizaje",
+        "profile": "Perfil",
+        "signOut": "Cerrar Sesión"
+    },
+    "course": {
+        "modules": "Módulos",
+        "lessons": "Lecciones",
+        "progress": "Progreso",
+        "calendar": "Cronología",
+        "start": "Comenzar",
+        "continue": "Continuar"
+    },
+    "lesson": {
+        "summary": "Resumen AI",
+        "transcription": "Transcripción",
+        "complete": "Marcar como Completado",
+        "nextLesson": "Siguiente Lección"
+    }
+}

@@ -1,12 +1,12 @@
+use crate::handlers::run_transcription_task;
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
-    Json,
 };
-use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, FromRow};
+use serde::Serialize;
+use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
-use crate::handlers::run_transcription_task;
 
 #[derive(Debug, Serialize, FromRow)]
 pub struct BackgroundTask {
@@ -24,10 +24,10 @@ pub async fn get_background_tasks(
     // For now, assuming super-admin visibility or scoped by org_id in headers (which middleware handles)
     // But since this is a new "Admin" feature, let's keep it simple and list all tasks for the current org context
     // Ideally we should extract OrgId from request extensions, but let's query all active tasks for now.
-    
+
     // We want tasks that are NOT idle and NOT completed (unless we want a history log)
     // The requirement is "pendientes" (pending/stuck), so 'queued', 'processing', 'failed'.
-    
+
     let query = r#"
         SELECT 
             l.id, 
@@ -44,7 +44,12 @@ pub async fn get_background_tasks(
     let tasks = sqlx::query_as::<_, BackgroundTask>(query)
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to fetch tasks: {}", e)))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to fetch tasks: {}", e),
+            )
+        })?;
 
     Ok(Json(tasks))
 }
@@ -55,7 +60,7 @@ pub async fn retry_task(
 ) -> Result<StatusCode, (StatusCode, String)> {
     // 1. Reset status to 'queued' or directly spawn
     // It's safer to spawn essentially identical logic to the upload handler
-    
+
     // First verify it exists
     let exists = sqlx::query("SELECT 1 FROM lessons WHERE id = $1")
         .bind(id)
@@ -70,7 +75,7 @@ pub async fn retry_task(
     // Spawn the task
     let pool_clone = pool.clone();
     tokio::spawn(async move {
-        // Reset to queued first to indicate we are trying again? 
+        // Reset to queued first to indicate we are trying again?
         // Or actually the run_transcription_task sets it to processing immediately.
         // Let's explicitly set to queued just in case, though the task runs fast.
         let _ = sqlx::query("UPDATE lessons SET transcription_status = 'queued' WHERE id = $1")
@@ -79,9 +84,9 @@ pub async fn retry_task(
             .await;
 
         if let Err(e) = run_transcription_task(pool_clone, id).await {
-             tracing::error!("Retry transcription task failed for lesson {}: {}", id, e);
-             // Verify we mark it as failed is handled inside run_transcription_task?
-             // Let's double check that later.
+            tracing::error!("Retry transcription task failed for lesson {}: {}", id, e);
+            // Verify we mark it as failed is handled inside run_transcription_task?
+            // Let's double check that later.
         }
     });
 
@@ -95,12 +100,17 @@ pub async fn cancel_task(
     // "Cancel" in this context mainly means setting it to 'idle' or 'failed' so it stops showing up as stuck.
     // We can't easily kill a running tokio task unless we had a handle map, which we don't.
     // So this is effectively "Dismiss".
-    
+
     sqlx::query("UPDATE lessons SET transcription_status = 'idle' WHERE id = $1")
         .bind(id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to cancel task: {}", e)))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to cancel task: {}", e),
+            )
+        })?;
 
     Ok(StatusCode::NO_CONTENT)
 }

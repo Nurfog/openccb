@@ -1,4 +1,5 @@
 mod db_util;
+pub mod exporter;
 mod handlers;
 mod handlers_branding;
 mod webhooks;
@@ -97,6 +98,7 @@ async fn main() {
             "/courses/{id}/analytics/advanced",
             get(handlers::get_advanced_analytics),
         )
+        .route("/lessons/{id}/heatmap", get(handlers::get_lesson_heatmap))
         .route(
             "/modules",
             get(handlers::get_modules).post(handlers::create_module),
@@ -124,6 +126,9 @@ async fn main() {
         .route("/lessons/{id}/vtt", get(handlers::get_lesson_vtt))
         .route("/lessons/{id}/summarize", post(handlers::summarize_lesson))
         .route("/lessons/{id}/generate-quiz", post(handlers::generate_quiz))
+        .route("/courses/generate", post(handlers::generate_course))
+        .route("/courses/{id}/export", get(handlers::export_course))
+        .route("/courses/import", post(handlers::import_course))
         .route("/grading", post(handlers::create_grading_category))
         .route("/grading/{id}", delete(handlers::delete_grading_category))
         .route(

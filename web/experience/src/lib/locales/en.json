@@ -1,0 +1,30 @@
+{
+    "common": {
+        "loading": "Loading...",
+        "back": "Back",
+        "next": "Next",
+        "finish": "Finish",
+        "error": "Error",
+        "retry": "Retry"
+    },
+    "nav": {
+        "catalog": "Catalog",
+        "myLearning": "My Learning",
+        "profile": "Profile",
+        "signOut": "Sign Out"
+    },
+    "course": {
+        "modules": "Modules",
+        "lessons": "Lessons",
+        "progress": "Progress",
+        "calendar": "Timeline",
+        "start": "Start",
+        "continue": "Continue"
+    },
+    "lesson": {
+        "summary": "AI Summary",
+        "transcription": "Transcription",
+        "complete": "Mark as Completed",
+        "nextLesson": "Next Lesson"
+    }
+}

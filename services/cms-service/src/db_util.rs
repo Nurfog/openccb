@@ -1,4 +1,4 @@
-use sqlx::{Postgres, PgConnection};
+use sqlx::PgConnection;
 use uuid::Uuid;
 
 pub async fn set_session_context(

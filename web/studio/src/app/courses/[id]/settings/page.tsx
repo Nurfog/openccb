@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { cmsApi, Course } from "@/lib/api";
-import { ArrowLeft, Save, Settings as SettingsIcon, BookOpen, Calendar, Clock } from "lucide-react";
+import { ArrowLeft, Save, Settings as SettingsIcon, BookOpen, Calendar, Clock, Download, Upload } from "lucide-react";
 
 const DEFAULT_CERTIFICATE_TEMPLATE = `
 <div style="width: 800px; height: 600px; padding: 40px; text-align: center; border: 10px solid #787878; font-family: 'Times New Roman', serif; background-color: #fff; color: #333;">
@@ -33,6 +33,8 @@ export default function CourseSettingsPage() {
     const [pacingMode, setPacingMode] = useState<'self_paced' | 'instructor_led'>("self_paced");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
+    const [exporting, setExporting] = useState(false);
+    const [importing, setImporting] = useState(false);
 
     useEffect(() => {
         const fetchCourse = async () => {
@@ -70,6 +72,47 @@ export default function CourseSettingsPage() {
             alert("Failed to save settings");
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const data = await cmsApi.exportCourse(id);
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `course_${id}_export.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Export failed", err);
+            alert("Error al exportar el curso");
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setImporting(true);
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            const newCourse = await cmsApi.importCourse(data);
+            alert(`Curso importado con éxito: ${newCourse.title}`);
+            router.push(`/courses/${newCourse.id}/settings`);
+        } catch (err) {
+            console.error("Import failed", err);
+            alert("Error al importar el curso. Asegúrate de que el formato sea válido.");
+        } finally {
+            setImporting(false);
+            if (e.target) e.target.value = ''; // Reset input
         }
     };
 
@@ -293,6 +336,57 @@ export default function CourseSettingsPage() {
                                         />
                                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 pointer-events-none transition-colors" />
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    {/* Course Portability Section */}
+                    <section className="bg-white/5 border border-white/10 rounded-3xl p-8">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400">
+                                <Download size={24} />
+                            </div>
+                            <h2 className="text-2xl font-black">Course Portability</h2>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold text-gray-300">Export Course</h3>
+                                <p className="text-xs text-gray-500">
+                                    Download the entire course structure, modules, and lessons as a JSON file.
+                                    You can use this to backup or move content between organizations.
+                                </p>
+                                <button
+                                    onClick={handleExport}
+                                    disabled={exporting}
+                                    className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-bold transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    <Download size={18} />
+                                    {exporting ? "Exporting..." : "Download JSON"}
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold text-gray-300">Import Course</h3>
+                                <p className="text-xs text-gray-500">
+                                    Upload a previously exported course JSON file. This will create a NEW course
+                                    within the current organization based on that data.
+                                </p>
+                                <div className="relative">
+                                    <input
+                                        type="file"
+                                        accept=".json"
+                                        onChange={handleImport}
+                                        disabled={importing}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                                    />
+                                    <button
+                                        disabled={importing}
+                                        className="flex items-center gap-2 px-6 py-3 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-400 rounded-xl font-bold transition-all pointer-events-none"
+                                    >
+                                        <Upload size={18} />
+                                        {importing ? "Importing..." : "Upload JSON"}
+                                    </button>
                                 </div>
                             </div>
                         </div>

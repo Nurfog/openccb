@@ -32,8 +32,8 @@ export interface QuizQuestion {
 
 export interface Block {
     id: string;
-    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer';
-    title?: string;
+    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'code' | 'hotspot' | 'memory-match' | 'document';
+    title: string;
     content?: string;
     url?: string;
     media_type?: 'video' | 'audio';
@@ -45,6 +45,9 @@ export interface Block {
     items?: string[];
     prompt?: string;
     correctAnswers?: string[];
+    instructions?: string;
+    initialCode?: string;
+    metadata?: any;
 }
 
 export interface Lesson {
@@ -102,6 +105,16 @@ export interface User {
     avatar_url?: string;
     bio?: string;
     language?: string;
+}
+
+export interface Notification {
+    id: string;
+    title: string;
+    message: string;
+    notification_type: string;
+    is_read: boolean;
+    link_url?: string;
+    created_at: string;
 }
 
 export interface AuthResponse {
@@ -242,5 +255,26 @@ export const lmsApi = {
             },
             body: formData
         }).then(res => res.json());
+    },
+
+    async recordInteraction(lessonId: string, payload: { video_timestamp?: number, event_type: string, metadata?: any }): Promise<void> {
+        return apiFetch(`/lessons/${lessonId}/interactions`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+    },
+
+    async getHeatmap(lessonId: string): Promise<{ second: number, count: number }[]> {
+        return apiFetch(`/lessons/${lessonId}/heatmap`);
+    },
+
+    async getNotifications(): Promise<Notification[]> {
+        return apiFetch('/notifications');
+    },
+
+    async markNotificationAsRead(id: string): Promise<void> {
+        return apiFetch(`/notifications/${id}/read`, {
+            method: 'POST'
+        });
     }
 };

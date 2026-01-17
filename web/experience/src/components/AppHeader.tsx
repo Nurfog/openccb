@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { useBranding } from "@/context/BrandingContext";
 import { useAuth } from "@/context/AuthContext";
-import { LogOut } from "lucide-react";
+import { useTranslation } from "@/context/I18nContext";
+import { LogOut, Globe } from "lucide-react";
+import NotificationCenter from "./NotificationCenter";
 
 export default function AppHeader() {
+    const { t, language, setLanguage } = useTranslation();
     const { branding } = useBranding();
     const { user, logout } = useAuth();
 
@@ -27,11 +30,32 @@ export default function AppHeader() {
                 </div>
             </Link>
 
-            <nav className="hidden md:flex items-center gap-8">
-                <Link href="/" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">Catálogo</Link>
-                <Link href="/my-learning" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">Mi Aprendizaje</Link>
+            <nav className="flex items-center gap-2 md:gap-8">
+                <div className="hidden md:flex items-center gap-8 mr-4">
+                    <Link href="/" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">
+                        {t('nav.catalog')}
+                    </Link>
+                    <Link href="/my-learning" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">
+                        {t('nav.myLearning')}
+                    </Link>
+                </div>
 
-                <div className="flex items-center gap-4 pl-4 border-l border-white/10">
+                <NotificationCenter />
+
+                <div className="flex items-center gap-2 border-l border-white/10 pl-4">
+                    <Globe size={14} className="text-gray-500" />
+                    <select
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        className="bg-transparent text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors focus:outline-none cursor-pointer"
+                    >
+                        <option value="en" className="bg-[#0f1115]">EN</option>
+                        <option value="es" className="bg-[#0f1115]">ES</option>
+                        <option value="pt" className="bg-[#0f1115]">PT</option>
+                    </select>
+                </div>
+
+                <div className="flex items-center gap-2 md:gap-4 pl-4 border-l border-white/10">
                     <Link href="/profile" className="flex items-center gap-2 group/profile">
                         <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-bold text-xs text-blue-400 group-hover/profile:border-blue-500/50 transition-colors">
                             {user?.full_name?.charAt(0) || 'U'}
@@ -40,7 +64,7 @@ export default function AppHeader() {
                     <button
                         onClick={logout}
                         className="p-2 hover:bg-red-500/10 rounded-full text-gray-400 hover:text-red-400 transition-colors"
-                        title="Cerrar Sesión"
+                        title={t('nav.signOut')}
                     >
                         <LogOut size={16} />
                     </button>

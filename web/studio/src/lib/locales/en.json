@@ -1,0 +1,37 @@
+{
+    "common": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "create": "Create",
+        "loading": "Loading...",
+        "search": "Search",
+        "back": "Back",
+        "next": "Next",
+        "publish": "Publish",
+        "preview": "Preview"
+    },
+    "nav": {
+        "courses": "Courses",
+        "globalControl": "Global Control",
+        "webhooks": "Webhooks",
+        "profile": "Profile",
+        "signOut": "Sign Out"
+    },
+    "dashboard": {
+        "title": "Studio Dashboard",
+        "newCourse": "New Course",
+        "aiBuilder": "AI Builder",
+        "noCourses": "No courses available."
+    },
+    "editor": {
+        "outline": "Outline",
+        "settings": "Settings",
+        "newModule": "New Module",
+        "newLesson": "New Lesson",
+        "addBlock": "Add Content Block",
+        "publishToOrg": "Publish to Organization",
+        "reading": "Reading"
+    }
+}

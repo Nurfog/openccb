@@ -91,7 +91,7 @@
 - [x] **Advanced Analytics**:
   - [x] Cohort analysis (Implemented)
   - [x] Retention metrics (Implemented)
-  - [ ] Engagement heatmaps
+  - [x] Engagement heatmaps (Implemented)
 - [x] **AI Integration**:
   - [x] AI-driven lesson summaries (Implemented)
   - [x] Real-time video transcription & translation via Local AI (Implemented)
@@ -110,27 +110,66 @@
     - [x] Instructor-led mode (Cohort-based with start/end dates).
   - [x] **Course Calendar**:
     - [x] Management of important dates (exams, assignments, milestones).
-    - [ ] Automated reminders for upcoming deadlines.
+    - [x] Automated reminders for upcoming deadlines. (Implemented)
 
 ## Phase 8: Enterprise Features (In Progress)
 - [x] **User Profiles & Lifecycle**:
   - [x] **Integrated Logout**: Standardized session management in both portals.
   - [x] **Profile Management**: Self-service user info updates (Avatar, Bio, Language).
-- [ ] **Advanced Reporting**:
-- [ ] **Integration Ecosystem**: (SSO Next)
+- [x] **Advanced Reporting**: Custom report builder and CSV exports. (Implemented)
+- [x] **Integration Ecosystem**:
+  - [x] **SSO (Single Sign-On)**: Soporte completo para OIDC (Google, Okta, Azure AD) con autoprovisionamiento. (Completado)
 - [ ] **Mobile Apps**:
 - [ ] **Accessibility**:
+
+## Phase 9: Course Portability (Import/Export) ✅
+- [x] **Universal JSON Schema**: Standardized format for course interchange. (Completed)
+- [x] **Recursive Exporter**: Serialization of full course hierarchies. (Completed)
+- [x] **Atomic Importer**: Batch creation with dependency re-mapping. (Completed)
+- [x] **Portability UI**: Integrated Export/Import buttons in Settings. (Completed)
+
+## Phase 10: Global Admin Console (Admin Interface) ✅
+- [x] **The "Django" Panel**: Dedicated UI for Super-Admins to manage Orgs, Users, and Health. (Completed)
+- [x] **System Monitoring**: Real-time stats on AI usage and service heartbeats. (Completed)
+- [x] **Universal Audit Log**: Centralized dashboard for cross-tenant activity. (Completed)
+
+## Phase 11: Extended Assessments & Quizzes (In Progress)
+- [x] **Code Quizzes**: Interactive coding challenges with IDE-like player. (Completed)
+- [ ] **Image Labeling**: Hotspot quizzes for technical training.
+- [ ] **AI Teaching Assistant**: RAG-powered tutor within the lesson player.
+
+## Phase 12: AI-Powered "Auto-Course" Generator ✅
+- [x] **Magic Course Creation**: Structure generation from a single prompt. (Completed)
+- [x] **Atomic Transactional Ingestion**: Create whole structures (Module -> Lesson) in one go. (Completed)
+- [x] **LLM Prompt Engineering**: Professional curriculum design via AI. (Completed)
+
+## Phase 13: Kid-Friendly Gamified Assessments ✅
+- [x] **Image Hotspots**: Visual identification quizzes. (Completed)
+- [x] **Memory Match**: Educational card games. (Completed)
+- [x] **AI Prompt Tuning**: LLM awareness of child-friendly formats. (Completed)
+
+## Phase 14: Globalization & Document-Based Learning ✅
+- [x] **Internationalization (i18n)**: UI support for English, Spanish, and Portuguese. (Completed)
+- [x] **Language Switcher**: Dynamic locale switching in Navbar and User Profile. (Completed)
+- [x] **Document Block**: In-platform PDF preview and DOCX/PPTX downloads. (Completed)
+- [x] **Academic Language Consistency**: Content (graded activities) remains in original language. (Completed)
+- [x] **Multi-language AI Support**: Transcriptions and summaries follow the course context. (Completed)
 
 ## Current Status
 
 **Platform Maturity**: Core multi-tenant architecture is stable and performance-optimized.
 
 **Recent Milestones**:
-- ✅ **Local AI Stack**: 100% free transcription and translation (Whisper + Ollama).
-- ✅ **Native VTT Subtitles**: Enhanced video player with multi-language CC.
-- ✅ **User Profiles**: Glassmorphism UI for identity management.
+- ✅ **Globalization (i18n)**: Multi-language UI (EN/ES/PT) for Studio and Experience.
+- ✅ **Document Learning**: Support for PDF, DOCX, and PPTX reading activities.
+- ✅ **Course Portability**: JSON-based import/export system for multi-tenant mobility.
+- ✅ **Gamified Kids Assessments**: Image Hotspots and Memory Match features.
+- ✅ **AI Course Wizard**: Instant course structure generation from prompts.
+- ✅ **Global Admin Panel**: Centralized control center for system administrators.
+- ✅ **Interactive Code Player**: New technical assessment type for developers.
+- ✅ **SSO Integration**: OIDC support for corporate clients with self-service config.
 
 **Next Priorities**:
-1. **SSO Integration**: SAML/OIDC support for enterprise clients.
-2. **Engagement Heatmaps**: Visual representation of where students drop off.
-3. **Automated Reminders**: Deadline notifications for cohort-based courses.
+1. **Personalized Learning Paths**: AI-driven content recommendations.
+2. **Mobile Apps**: Dedicated iOS and Android wrappers.
+3. **Accessibility**: WCAG 2.1 compliance audit and fixes.

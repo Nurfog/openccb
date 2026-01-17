@@ -29,6 +29,15 @@ async fn main() {
         .await
         .expect("Failed to run migrations");
 
+    // Start background task for deadline notifications
+    let pool_clone = pool.clone();
+    tokio::spawn(async move {
+        loop {
+            handlers::check_deadlines_and_notify(pool_clone.clone()).await;
+            tokio::time::sleep(tokio::time::Duration::from_secs(3600)).await; // Every hour
+        }
+    });
+
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
@@ -58,6 +67,16 @@ async fn main() {
         )
         .route("/users/{id}", post(handlers::update_user))
         .route("/analytics/leaderboard", get(handlers::get_leaderboard))
+        .route(
+            "/lessons/{id}/interactions",
+            post(handlers::record_interaction),
+        )
+        .route("/lessons/{id}/heatmap", get(handlers::get_lesson_heatmap))
+        .route("/notifications", get(handlers::get_notifications))
+        .route(
+            "/notifications/{id}/read",
+            post(handlers::mark_notification_as_read),
+        )
         .route_layer(middleware::from_fn(
             common::middleware::org_extractor_middleware,
         ));

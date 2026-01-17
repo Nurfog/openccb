@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { cmsApi, Course, AdvancedAnalytics } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -13,12 +13,18 @@ import {
 } from "lucide-react";
 import CourseEditorLayout from "@/components/CourseEditorLayout";
 
-export default function AdvancedAnalyticsPage() {
-    const { id } = useParams() as { id: string };
+interface HeatmapPoint {
+    second: number;
+    count: number;
+}
+
+export default function AdvancedAnalyticsPage({ params }: { params: { id: string } }) {
+    const { id } = params;
     const router = useRouter();
     const { user } = useAuth();
     const [course, setCourse] = useState<Course | null>(null);
     const [analytics, setAnalytics] = useState<AdvancedAnalytics | null>(null);
+    const [heatmapData, setHeatmapData] = useState<HeatmapPoint[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -183,6 +189,79 @@ export default function AdvancedAnalyticsPage() {
                                     );
                                 })}
                             </div>
+                        </section>
+
+                        {/* Engagement Heatmap */}
+                        <section>
+                            <div className="flex items-center justify-between mb-8">
+                                <h2 className="text-2xl font-black flex items-center gap-3">
+                                    <TrendingUp size={24} className="text-orange-500" />
+                                    Engagement Heatmap
+                                </h2>
+                                <select
+                                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+                                    onChange={(e) => {
+                                        const lessonId = e.target.value;
+                                        if (lessonId) {
+                                            cmsApi.getLessonHeatmap(lessonId).then(setHeatmapData).catch(console.error);
+                                        } else {
+                                            setHeatmapData([]);
+                                        }
+                                    }}
+                                >
+                                    <option value="">Select a video lesson...</option>
+                                    {course.modules?.flatMap(m => m.lessons)
+                                        .filter(l => l.content_type === 'video' || (l.metadata?.blocks || []).some(b => b.type === 'media'))
+                                        .map(l => (
+                                            <option key={l.id} value={l.id}>{l.title}</option>
+                                        ))
+                                    }
+                                </select>
+                            </div>
+
+                            {heatmapData.length > 0 ? (
+                                <div className="p-8 rounded-3xl border border-white/10 bg-white/[0.02] space-y-8">
+                                    <p className="text-sm text-gray-500 uppercase font-black tracking-widest">
+                                        Playback concentration by second (Total Interactions: {heatmapData.reduce((acc: number, p: HeatmapPoint) => acc + Number(p.count), 0)})
+                                    </p>
+                                    <div className="flex items-end gap-[2px] h-48 w-full group">
+                                        {(() => {
+                                            const counts = heatmapData.map((p: HeatmapPoint) => Number(p.count));
+                                            const maxCount = Math.max(...counts, 1);
+                                            const lastSecond = heatmapData[heatmapData.length - 1].second;
+
+                                            // Fill gaps for a smooth chart
+                                            const fullHeatmap = Array.from({ length: lastSecond + 1 }, (_, i) => {
+                                                const point = heatmapData.find((p: HeatmapPoint) => p.second === i);
+                                                return point ? Number(point.count) : 0;
+                                            });
+
+                                            return fullHeatmap.map((count, i) => (
+                                                <div
+                                                    key={i}
+                                                    className="flex-1 bg-orange-500/20 hover:bg-orange-500 transition-all rounded-t-[1px] relative group/bar"
+                                                    style={{ height: `${(count / maxCount) * 100}%` }}
+                                                >
+                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-[10px] font-black rounded opacity-0 group-hover/bar:opacity-100 whitespace-nowrap z-10 pointer-events-none">
+                                                        {Math.floor(i / 60)}:{(i % 60).toString().padStart(2, '0')} - {count} views
+                                                    </div>
+                                                </div>
+                                            ));
+                                        })()}
+                                    </div>
+                                    <div className="flex justify-between text-[10px] font-black text-gray-600 uppercase tracking-widest pt-4 border-t border-white/5">
+                                        <span>0:00 Start</span>
+                                        <span>Video Timeline</span>
+                                        <span>End</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-20 text-center border-2 border-dashed border-white/5 rounded-3xl">
+                                    <p className="text-gray-600 font-bold uppercase tracking-widest italic">
+                                        Select a lesson to view its engagement signature
+                                    </p>
+                                </div>
+                            )}
                         </section>
                     </div>
                 </CourseEditorLayout>

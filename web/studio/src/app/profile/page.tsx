@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useTranslation } from "@/context/I18nContext";
 import { cmsApi, getImageUrl } from "@/lib/api";
 import {
     Save,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 
 export default function ProfilePage() {
+    const { t, setLanguage: setContextLanguage } = useTranslation();
     const { user, logout } = useAuth();
     const [fullName, setFullName] = useState(user?.full_name || "");
     const [email, setEmail] = useState(user?.email || "");
@@ -73,7 +75,8 @@ export default function ProfilePage() {
                 avatar_url: avatarUrl
             });
 
-            setMessage({ type: 'success', text: 'Profile updated successfully!' });
+            setContextLanguage(language);
+            setMessage({ type: 'success', text: t('common.save') + '!' });
         } catch (err) {
             console.error(err);
             setMessage({ type: 'error', text: 'Failed to update profile.' });
@@ -226,8 +229,8 @@ export default function ProfilePage() {
                                         type="button"
                                         onClick={() => setLanguage(lang.code)}
                                         className={`flex items-center justify-center gap-3 p-4 rounded-2xl border transition-all ${language === lang.code
-                                                ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20'
-                                                : 'bg-black/20 border-white/5 text-gray-400 hover:border-white/20 hover:text-white'
+                                            ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20'
+                                            : 'bg-black/20 border-white/5 text-gray-400 hover:border-white/20 hover:text-white'
                                             }`}
                                     >
                                         <span className="text-xl">{lang.flag}</span>
@@ -239,8 +242,8 @@ export default function ProfilePage() {
 
                         {message && (
                             <div className={`p-5 rounded-2xl text-sm font-bold animate-in fade-in slide-in-from-top-4 ${message.type === 'success'
-                                    ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                                    : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                                : 'bg-red-500/10 text-red-400 border border-red-500/20'
                                 }`}>
                                 {message.text}
                             </div>

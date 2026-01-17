@@ -74,15 +74,34 @@ pub struct UserGrade {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
-pub struct AuditLog {
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct LessonInteraction {
     pub id: Uuid,
+    pub organization_id: Uuid,
     pub user_id: Uuid,
-    pub organization_id: Option<Uuid>,
-    pub action: String,
-    pub entity_type: String,
-    pub entity_id: Uuid,
-    pub changes: serde_json::Value,
+    pub lesson_id: Uuid,
+    pub video_timestamp: Option<f64>,
+    pub event_type: String,
+    pub metadata: Option<serde_json::Value>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct HeatmapPoint {
+    pub second: i32,
+    pub count: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct Notification {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub user_id: Uuid,
+    pub title: String,
+    pub message: String,
+    pub notification_type: String,
+    pub is_read: bool,
+    pub link_url: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -236,6 +255,23 @@ pub struct OrganizationSSOConfig {
     pub enabled: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct AuditLog {
+    pub id: Uuid,
+    pub organization_id: Option<Uuid>,
+    pub user_id: Option<Uuid>,
+    pub action: String,
+    pub entity_type: String,
+    pub entity_id: Uuid,
+    pub event_type: String,
+    pub old_data: Option<serde_json::Value>,
+    pub new_data: Option<serde_json::Value>,
+    pub ip_address: Option<String>,
+    pub user_agent: Option<String>,
+    pub changes: Option<serde_json::Value>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[cfg(test)]

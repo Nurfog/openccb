@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { AuthProvider } from "@/context/AuthContext";
+import { I18nProvider } from "@/context/I18nContext";
 import { BrandingProvider } from "@/context/BrandingContext";
 import AuthGuard from "@/components/AuthGuard";
 
@@ -25,17 +26,19 @@ export default function RootLayout({
       <body className={`${inter.className} bg-[#050505] text-[#e5e5e5] min-h-screen flex flex-col`}>
         <BrandingProvider>
           <AuthProvider>
-            <AuthGuard>
-              <AppHeader />
-              <main className="flex-1">
-                {children}
-              </main>
-              <footer className="py-12 px-6 border-t border-white/5 text-center bg-black/20">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">
-                  Desarrollado por OpenCCB © 2023. Codificación Agente Avanzada.
-                </p>
-              </footer>
-            </AuthGuard>
+            <I18nProvider>
+              <AuthGuard>
+                <AppHeader />
+                <main className="flex-1">
+                  {children}
+                </main>
+                <footer className="py-12 px-6 border-t border-white/5 text-center bg-black/20">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">
+                    Desarrollado por OpenCCB © 2023. Codificación Agente Avanzada.
+                  </p>
+                </footer>
+              </AuthGuard>
+            </I18nProvider>
           </AuthProvider>
         </BrandingProvider>
       </body>

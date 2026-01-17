@@ -55,13 +55,13 @@ services:
     environment:
       - DEVICE=${WHISPER_DEVICE:-cpu}
     # GPU support for RTX 2070 Super
-    #deploy:
-    #  resources:
-    #    reservations:
-    #      devices:
-    #        - driver: nvidia
-    #          count: 1
-    #          capabilities: [ gpu ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
 
   e2e:
     build:

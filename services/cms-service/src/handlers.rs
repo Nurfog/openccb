@@ -1,3 +1,4 @@
+use crate::exporter;
 use crate::webhooks::WebhookService;
 pub mod tasks;
 use axum::{
@@ -1819,6 +1820,37 @@ pub async fn get_advanced_analytics(
     Ok(Json(analytics))
 }
 
+pub async fn get_lesson_heatmap(
+    Org(org_ctx): Org,
+    _claims: common::auth::Claims,
+    State(_pool): State<PgPool>,
+    Path(lesson_id): Path<Uuid>,
+) -> Result<Json<Vec<common::models::HeatmapPoint>>, (StatusCode, String)> {
+    let client = reqwest::Client::new();
+    let lms_url =
+        env::var("LMS_INTERNAL_URL").unwrap_or_else(|_| "http://experience:3002".to_string());
+    let res = client
+        .get(format!("{}/lessons/{}/heatmap", lms_url, lesson_id))
+        .header("X-Organization-Id", org_ctx.id.to_string())
+        .send()
+        .await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+
+    if !res.status().is_success() {
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to fetch heatmap from LMS".into(),
+        ));
+    }
+
+    let heatmap = res
+        .json::<Vec<common::models::HeatmapPoint>>()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(heatmap))
+}
+
 #[derive(Deserialize)]
 pub struct AuditQuery {
     pub page: Option<i64>,
@@ -2665,4 +2697,357 @@ pub async fn delete_webhook(
     .await;
 
     Ok(StatusCode::OK)
+}
+
+// --- Course Portability ---
+
+pub async fn export_course(
+    Org(org_ctx): Org,
+    _claims: Claims,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<exporter::CourseExport>, StatusCode> {
+    // 1. Verify access (ensure course belongs to org)
+    let exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM courses WHERE id = $1 AND organization_id = $2)",
+    )
+    .bind(id)
+    .bind(org_ctx.id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if !exists {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    // 2. Export recursively
+    let export = exporter::get_course_data(&pool, id).await.map_err(|e| {
+        tracing::error!("Export failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(export))
+}
+
+pub async fn import_course(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Json(payload): Json<exporter::CourseExport>,
+) -> Result<Json<Course>, StatusCode> {
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // 1. Create Course
+    let new_course = sqlx::query_as::<_, Course>(
+        "INSERT INTO courses (
+            organization_id, instructor_id, title, pacing_mode, description, 
+            passing_percentage, certificate_template, start_date, end_date
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+        RETURNING *",
+    )
+    .bind(org_ctx.id)
+    .bind(claims.sub)
+    .bind(format!("{} (Importado)", payload.course.title))
+    .bind(payload.course.pacing_mode)
+    .bind(payload.course.description)
+    .bind(payload.course.passing_percentage)
+    .bind(payload.course.certificate_template)
+    .bind(payload.course.start_date)
+    .bind(payload.course.end_date)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to create imported course: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    // 2. Import Grading Categories and create mapping
+    let mut cat_map = std::collections::HashMap::new();
+    for old_cat in payload.grading_categories {
+        let new_cat = sqlx::query_as::<_, common::models::GradingCategory>(
+            "INSERT INTO grading_categories (organization_id, course_id, name, weight, drop_count) 
+             VALUES ($1, $2, $3, $4, $5) 
+             RETURNING *",
+        )
+        .bind(org_ctx.id)
+        .bind(new_course.id)
+        .bind(old_cat.name)
+        .bind(old_cat.weight)
+        .bind(old_cat.drop_count)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        cat_map.insert(old_cat.id, new_cat.id);
+    }
+
+    // 3. Import Modules & Lessons
+    for module_data in payload.modules {
+        let new_module = sqlx::query_as::<_, Module>(
+            "INSERT INTO modules (course_id, organization_id, title, position) 
+             VALUES ($1, $2, $3, $4) 
+             RETURNING *",
+        )
+        .bind(new_course.id)
+        .bind(org_ctx.id)
+        .bind(module_data.module.title)
+        .bind(module_data.module.position)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        for lesson in module_data.lessons {
+            let new_cat_id = lesson
+                .grading_category_id
+                .and_then(|id| cat_map.get(&id))
+                .cloned();
+
+            sqlx::query(
+                "INSERT INTO lessons (
+                    module_id, course_id, organization_id, title, content_type, 
+                    content_url, position, is_graded, metadata, summary, 
+                    transcription, grading_category_id, max_attempts
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
+            )
+            .bind(new_module.id)
+            .bind(new_course.id)
+            .bind(org_ctx.id)
+            .bind(lesson.title)
+            .bind(lesson.content_type)
+            .bind(lesson.content_url)
+            .bind(lesson.position)
+            .bind(lesson.is_graded)
+            .bind(lesson.metadata)
+            .bind(lesson.summary)
+            .bind(lesson.transcription)
+            .bind(new_cat_id)
+            .bind(lesson.max_attempts)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to import lesson: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+        }
+    }
+
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    log_action(
+        &pool,
+        org_ctx.id,
+        claims.sub,
+        "COURSE_IMPORTED",
+        "Course",
+        new_course.id,
+        serde_json::json!({ "original_title": payload.course.title }),
+    )
+    .await;
+
+    Ok(Json(new_course))
+}
+
+// --- AI Course Generation ---
+
+#[derive(Deserialize)]
+pub struct GenerateCoursePayload {
+    pub prompt: String,
+    pub target_organization_id: Option<Uuid>,
+}
+
+pub async fn generate_course(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Json(payload): Json<GenerateCoursePayload>,
+) -> Result<Json<Course>, StatusCode> {
+    tracing::info!(
+        "Starting AI course generation for prompt: {}",
+        payload.prompt
+    );
+
+    // 1. Determine target org
+    let target_org_id = payload.target_organization_id.unwrap_or(org_ctx.id);
+
+    // 2. AI Setup
+    let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+    let client = reqwest::Client::new();
+
+    let (url, auth_header, model) = if provider == "local" {
+        let base_url =
+            env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
+        let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3".to_string());
+        (
+            format!("{}/v1/chat/completions", base_url),
+            "".to_string(),
+            model,
+        )
+    } else {
+        let api_key = env::var("OPENAI_API_KEY").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        (
+            "https://api.openai.com/v1/chat/completions".to_string(),
+            format!("Bearer {}", api_key),
+            "gpt-4o".to_string(),
+        )
+    };
+
+    let system_prompt = r#"You are an expert curriculum designer. 
+Design a structured course based on the topic provided. 
+If the topic is for children or youth, use interactive content types:
+- 'hotspot': Identifying image parts.
+- 'memory-match': Card matching game.
+- 'quiz': Standard questions.
+
+Return ONLY a valid JSON object with the following structure:
+{
+  "title": "Clear and Engaging Course Title",
+  "description": "Short overview and objectives",
+  "modules": [
+    {
+      "title": "Module Name",
+      "position": 1,
+      "lessons": [
+        { "title": "Lesson Name", "position": 1, "content_type": "text|video|hotspot|memory-match|quiz" }
+      ]
+    }
+  ]
+}"#;
+
+    let mut request = client.post(&url).json(&json!({
+        "model": model,
+        "messages": [
+            { "role": "system", "content": system_prompt },
+            { "role": "user", "content": format!("Create a course about: {}", payload.prompt) }
+        ],
+        "response_format": { "type": "json_object" }
+    }));
+
+    if !auth_header.is_empty() {
+        request = request.header("Authorization", auth_header);
+    }
+
+    let response = request.send().await.map_err(|e| {
+        tracing::error!("LLM request failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    if !response.status().is_success() {
+        let err_body = response.text().await.unwrap_or_default();
+        tracing::error!("LLM API error: {}", err_body);
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    let llm_data: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut content_str = llm_data["choices"][0]["message"]["content"]
+        .as_str()
+        .unwrap_or("{}")
+        .trim()
+        .to_string();
+
+    // Clean markdown code blocks if present
+    if content_str.starts_with("```") {
+        content_str = content_str
+            .lines()
+            .filter(|line| !line.starts_with("```"))
+            .collect::<Vec<_>>()
+            .join("\n");
+    }
+
+    let result_json: serde_json::Value = serde_json::from_str(&content_str).map_err(|e| {
+        tracing::error!("Failed to parse AI JSON: {}. Content: {}", e, content_str);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    // 3. Database Transaction
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Create Course
+    let course_title = result_json["title"].as_str().unwrap_or("Untitled Course");
+    let course_desc = result_json["description"].as_str();
+
+    let course = sqlx::query_as::<_, Course>(
+        "INSERT INTO courses (organization_id, instructor_id, title, description, pacing_mode) 
+         VALUES ($1, $2, $3, $4, 'self_paced') 
+         RETURNING *",
+    )
+    .bind(target_org_id)
+    .bind(claims.sub)
+    .bind(course_title)
+    .bind(course_desc)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| {
+        tracing::error!("DB Course creation failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    // Create Modules and Lessons
+    if let Some(modules) = result_json["modules"].as_array() {
+        for (m_idx, m_val) in modules.iter().enumerate() {
+            let m_title = m_val["title"].as_str().unwrap_or("Module");
+
+            let module = sqlx::query_as::<_, Module>(
+                "INSERT INTO modules (course_id, organization_id, title, position) 
+                 VALUES ($1, $2, $3, $4) 
+                 RETURNING *",
+            )
+            .bind(course.id)
+            .bind(target_org_id)
+            .bind(m_title)
+            .bind((m_idx + 1) as i32)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+            if let Some(lessons) = m_val["lessons"].as_array() {
+                for (l_idx, l_val) in lessons.iter().enumerate() {
+                    let l_title = l_val["title"].as_str().unwrap_or("Lesson");
+                    let l_type = l_val["content_type"].as_str().unwrap_or("text");
+
+                    sqlx::query(
+                        "INSERT INTO lessons (module_id, course_id, organization_id, title, content_type, position) 
+                         VALUES ($1, $2, $3, $4, $5, $6)"
+                    )
+                    .bind(module.id)
+                    .bind(course.id)
+                    .bind(target_org_id)
+                    .bind(l_title)
+                    .bind(l_type)
+                    .bind((l_idx + 1) as i32)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+                }
+            }
+        }
+    }
+
+    tx.commit()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    log_action(
+        &pool,
+        target_org_id,
+        claims.sub,
+        "AI_COURSE_GENERATED",
+        "Course",
+        course.id,
+        json!({ "prompt": payload.prompt }),
+    )
+    .await;
+
+    Ok(Json(course))
 }

@@ -10,6 +10,7 @@ import FillInTheBlanksBlock from "@/components/blocks/FillInTheBlanksBlock";
 import MatchingBlock from "@/components/blocks/MatchingBlock";
 import OrderingBlock from "@/components/blocks/OrderingBlock";
 import ShortAnswerBlock from "@/components/blocks/ShortAnswerBlock";
+import DocumentBlock from "@/components/blocks/DocumentBlock";
 import {
     Save,
     X,
@@ -175,7 +176,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
         }
     };
 
-    const addBlock = (type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer') => {
+    const addBlock = (type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'document') => {
         const newBlock: Block = {
             id: Math.random().toString(36).substr(2, 9),
             type,
@@ -186,6 +187,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
             ...(type === 'matching' && { pairs: [{ left: "Item 1", right: "Match 1" }] }),
             ...(type === 'ordering' && { items: ["Item A", "Item B"] }),
             ...(type === 'short-answer' && { prompt: "Question?", correctAnswers: ["Answer"] }),
+            ...(type === 'document' && { url: "", title: "" }),
         };
         setBlocks([...blocks, newBlock]);
     };
@@ -628,6 +630,15 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                     onChange={(updates) => updateBlock(block.id, updates)}
                                 />
                             )}
+                            {block.type === 'document' && (
+                                <DocumentBlock
+                                    id={block.id}
+                                    title={block.title}
+                                    url={block.url || ""}
+                                    editMode={editMode}
+                                    onChange={(updates) => updateBlock(block.id, updates)}
+                                />
+                            )}
                         </div>
                     </div>
                 ))}
@@ -685,6 +696,13 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 >
                                     <span className="text-2xl group-hover:scale-110 transition-transform">💬</span>
                                     <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Short</span>
+                                </button>
+                                <button
+                                    onClick={() => addBlock('document')}
+                                    className="flex flex-col items-center gap-2 p-6 glass hover:border-blue-500/50 transition-all group w-32"
+                                >
+                                    <span className="text-2xl group-hover:scale-110 transition-transform">📚</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Reading</span>
                                 </button>
 
                                 <div className="w-px h-12 bg-white/5"></div>

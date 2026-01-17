@@ -13,6 +13,10 @@ import FillInTheBlanksPlayer from "@/components/blocks/FillInTheBlanksPlayer";
 import MatchingPlayer from "@/components/blocks/MatchingPlayer";
 import OrderingPlayer from "@/components/blocks/OrderingPlayer";
 import ShortAnswerPlayer from "@/components/blocks/ShortAnswerPlayer";
+import CodeExercisePlayer from "@/components/blocks/CodeExercisePlayer";
+import HotspotPlayer from "@/components/blocks/HotspotPlayer";
+import MemoryPlayer from "@/components/blocks/MemoryPlayer";
+import DocumentPlayer from "@/components/blocks/DocumentPlayer"; // Added import
 import InteractiveTranscript from "@/components/InteractiveTranscript";
 import { ListMusic } from "lucide-react";
 
@@ -66,6 +70,31 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
         if (videoElement) {
             videoElement.currentTime = time;
             videoElement.play();
+        }
+    };
+
+    const handleBlockComplete = async (blockId: string, score: number) => {
+        if (user) {
+            try {
+                // Update the score for the specific block in metadata
+                const currentBlockScores = (userGrade?.metadata?.block_scores as Record<string, number>) || {};
+                const newBlockScores = {
+                    ...currentBlockScores,
+                    [blockId]: score
+                };
+
+                const res = await lmsApi.submitScore(
+                    user.id,
+                    params.id,
+                    params.lessonId,
+                    userGrade?.score || 0, // Keep overall score for now, or calculate average/sum
+                    { ...userGrade?.metadata, block_scores: newBlockScores }
+                );
+                setUserGrade(res);
+                console.log(`Score for block ${blockId} submitted: ${score}`);
+            } catch (err) {
+                console.error(`Failed to submit score for block ${blockId}`, err);
+            }
         }
     };
 
@@ -147,104 +176,143 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                             {/* Render Blocks */}
                             {(lesson.metadata?.blocks || []).length > 0 ? (
                                 <div className="space-y-24">
-                                    {lesson.metadata?.blocks?.map((block) => (
-                                        <div key={block.id} className="animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
-                                            {block.type === 'description' && (
-                                                <DescriptionPlayer id={block.id} title={block.title} content={block.content || ""} />
-                                            )}
-                                            {block.type === 'media' && (
-                                                <MediaPlayer
-                                                    id={block.id}
-                                                    title={block.title}
-                                                    url={block.url || ""}
-                                                    media_type={block.media_type || 'video'}
-                                                    config={block.config}
-                                                    onTimeUpdate={setCurrentTime}
-                                                    initialPlayCount={
-                                                        userGrade?.metadata?.play_counts
-                                                            ? (userGrade.metadata.play_counts as Record<string, number>)[block.id] || 0
-                                                            : 0
-                                                    }
-                                                    onPlay={async () => {
-                                                        if (user && lesson.max_attempts && (!userGrade || userGrade.attempts_count < lesson.max_attempts)) {
-                                                            const currentPlayCounts = (userGrade?.metadata?.play_counts as Record<string, number>) || {};
-                                                            const newPlayCounts = {
-                                                                ...currentPlayCounts,
-                                                                [block.id]: (currentPlayCounts[block.id] || 0) + 1
-                                                            };
-
-                                                            try {
-                                                                const res = await lmsApi.submitScore(
-                                                                    user.id,
-                                                                    params.id,
-                                                                    params.lessonId,
-                                                                    userGrade?.score || 0,
-                                                                    { ...userGrade?.metadata, play_counts: newPlayCounts }
-                                                                );
-                                                                setUserGrade(res);
-                                                            } catch (err) {
-                                                                console.error("Error al guardar el recuento de reproducciones", err);
+                                    {lesson.metadata?.blocks?.map((block) => {
+                                        const renderBlock = () => {
+                                            switch (block.type) {
+                                                case 'description':
+                                                    return <DescriptionPlayer id={block.id} title={block.title} content={block.content || ""} />;
+                                                case 'media':
+                                                    return (
+                                                        <MediaPlayer
+                                                            id={block.id}
+                                                            lessonId={params.lessonId}
+                                                            title={block.title}
+                                                            url={block.url || ""}
+                                                            media_type={block.media_type || 'video'}
+                                                            config={block.config}
+                                                            onTimeUpdate={setCurrentTime}
+                                                            initialPlayCount={
+                                                                userGrade?.metadata?.play_counts
+                                                                    ? (userGrade.metadata.play_counts as Record<string, number>)[block.id] || 0
+                                                                    : 0
                                                             }
-                                                        }
-                                                    }}
-                                                />
-                                            )}
-                                            {block.type === 'quiz' && (
-                                                <QuizPlayer
-                                                    id={block.id}
-                                                    title={block.title}
-                                                    quizData={block.quiz_data || { questions: [] }}
-                                                    allowRetry={lesson.allow_retry}
-                                                    maxAttempts={lesson.max_attempts || undefined}
-                                                    initialAttempts={
-                                                        userGrade?.metadata?.block_attempts
-                                                            ? (userGrade.metadata.block_attempts as Record<string, number>)[block.id] || 0
-                                                            : 0
-                                                    }
-                                                    onAttempt={async () => {
-                                                        if (user) {
-                                                            const currentAttempts = (userGrade?.metadata?.block_attempts as Record<string, number>) || {};
-                                                            const newAttempts = {
-                                                                ...currentAttempts,
-                                                                [block.id]: (currentAttempts[block.id] || 0) + 1
-                                                            };
+                                                            onPlay={async () => {
+                                                                if (user && lesson.max_attempts && (!userGrade || userGrade.attempts_count < lesson.max_attempts)) {
+                                                                    const currentPlayCounts = (userGrade?.metadata?.play_counts as Record<string, number>) || {};
+                                                                    const newPlayCounts = {
+                                                                        ...currentPlayCounts,
+                                                                        [block.id]: (currentPlayCounts[block.id] || 0) + 1
+                                                                    };
 
-                                                            try {
-                                                                const res = await lmsApi.submitScore(
-                                                                    user.id,
-                                                                    params.id,
-                                                                    params.lessonId,
-                                                                    userGrade?.score || 0,
-                                                                    { ...userGrade?.metadata, block_attempts: newAttempts }
-                                                                );
-                                                                setUserGrade(res);
-                                                            } catch (err) {
-                                                                console.error("Error al guardar los intentos del bloque", err);
+                                                                    try {
+                                                                        const res = await lmsApi.submitScore(
+                                                                            user.id,
+                                                                            params.id,
+                                                                            params.lessonId,
+                                                                            userGrade?.score || 0,
+                                                                            { ...userGrade?.metadata, play_counts: newPlayCounts }
+                                                                        );
+                                                                        setUserGrade(res);
+                                                                    } catch (err) {
+                                                                        console.error("Error al guardar el recuento de reproducciones", err);
+                                                                    }
+                                                                }
+                                                            }}
+                                                        />
+                                                    );
+                                                case 'document':
+                                                    return <DocumentPlayer id={block.id} title={block.title} url={block.url || ""} />;
+                                                case 'quiz':
+                                                    return (
+                                                        <QuizPlayer
+                                                            id={block.id}
+                                                            title={block.title}
+                                                            quizData={block.quiz_data || { questions: [] }}
+                                                            allowRetry={lesson.allow_retry}
+                                                            maxAttempts={lesson.max_attempts || undefined}
+                                                            initialAttempts={
+                                                                userGrade?.metadata?.block_attempts
+                                                                    ? (userGrade.metadata.block_attempts as Record<string, number>)[block.id] || 0
+                                                                    : 0
                                                             }
-                                                        }
-                                                    }}
-                                                />
-                                            )}
-                                            {block.type === 'fill-in-the-blanks' && (
-                                                <FillInTheBlanksPlayer id={block.id} title={block.title} content={block.content || ""} allowRetry={lesson.allow_retry} />
-                                            )}
-                                            {block.type === 'matching' && (
-                                                <MatchingPlayer id={block.id} title={block.title} pairs={block.pairs || []} allowRetry={lesson.allow_retry} />
-                                            )}
-                                            {block.type === 'ordering' && (
-                                                <OrderingPlayer id={block.id} title={block.title} items={block.items || []} allowRetry={lesson.allow_retry} />
-                                            )}
-                                            {block.type === 'short-answer' && (
-                                                <ShortAnswerPlayer
-                                                    id={block.id}
-                                                    title={block.title}
-                                                    prompt={block.prompt || ""}
-                                                    correctAnswers={block.correctAnswers || []}
-                                                    allowRetry={lesson.allow_retry}
-                                                />
-                                            )}
-                                        </div>
-                                    ))}
+                                                            onAttempt={async () => {
+                                                                if (user) {
+                                                                    const currentAttempts = (userGrade?.metadata?.block_attempts as Record<string, number>) || {};
+                                                                    const newAttempts = {
+                                                                        ...currentAttempts,
+                                                                        [block.id]: (currentAttempts[block.id] || 0) + 1
+                                                                    };
+
+                                                                    try {
+                                                                        const res = await lmsApi.submitScore(
+                                                                            user.id,
+                                                                            params.id,
+                                                                            params.lessonId,
+                                                                            userGrade?.score || 0,
+                                                                            { ...userGrade?.metadata, block_attempts: newAttempts }
+                                                                        );
+                                                                        setUserGrade(res);
+                                                                    } catch (err) {
+                                                                        console.error("Error al guardar los intentos del bloque", err);
+                                                                    }
+                                                                }
+                                                            }}
+                                                        />
+                                                    );
+                                                case 'fill-in-the-blanks':
+                                                    return <FillInTheBlanksPlayer id={block.id} title={block.title} content={block.content || ""} allowRetry={lesson.allow_retry} />;
+                                                case 'matching':
+                                                    return <MatchingPlayer id={block.id} title={block.title} pairs={block.pairs || []} allowRetry={lesson.allow_retry} />;
+                                                case 'ordering':
+                                                    return <OrderingPlayer id={block.id} title={block.title} items={block.items || []} allowRetry={lesson.allow_retry} />;
+                                                case 'short-answer':
+                                                    return (
+                                                        <ShortAnswerPlayer
+                                                            id={block.id}
+                                                            title={block.title}
+                                                            prompt={block.prompt || ""}
+                                                            correctAnswers={block.correctAnswers || []}
+                                                            allowRetry={lesson.allow_retry}
+                                                        />
+                                                    );
+                                                case 'code':
+                                                    return (
+                                                        <CodeExercisePlayer
+                                                            title={block.title}
+                                                            instructions={block.instructions || ""}
+                                                            initialCode={block.initialCode || ""}
+                                                            onComplete={(score) => handleBlockComplete(block.id, score)}
+                                                        />
+                                                    );
+                                                case 'hotspot':
+                                                    return (
+                                                        <HotspotPlayer
+                                                            title={block.title}
+                                                            description={block.content || ""}
+                                                            imageUrl={block.url || ""}
+                                                            hotspots={block.metadata?.hotspots || []}
+                                                            onComplete={(score) => handleBlockComplete(block.id, score)}
+                                                        />
+                                                    );
+                                                case 'memory-match':
+                                                    return (
+                                                        <MemoryPlayer
+                                                            title={block.title}
+                                                            pairs={block.metadata?.pairs || []}
+                                                            onComplete={(score) => handleBlockComplete(block.id, score)}
+                                                        />
+                                                    );
+                                                default:
+                                                    return <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-gray-500 uppercase tracking-widest">Tipo de Bloque Desconocido: {block.type}</div>;
+                                            }
+                                        };
+
+                                        return (
+                                            <div key={block.id} className="animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
+                                                {renderBlock()}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             ) : (
                                 <div className="py-20 text-center glass-card border-dashed border-white/10">

@@ -7,8 +7,8 @@ use bcrypt::{DEFAULT_COST, hash, verify};
 use common::auth::{Claims, create_jwt};
 use common::middleware::Org;
 use common::models::{
-    AuthResponse, Course, CourseAnalytics, Enrollment, Lesson, LessonAnalytics, Module,
-    Organization, User, UserResponse,
+    AuthResponse, Course, CourseAnalytics, Enrollment, HeatmapPoint, Lesson, LessonAnalytics,
+    Module, Notification, Organization, User, UserResponse,
 };
 use serde::Deserialize;
 use sqlx::{PgPool, Row};
@@ -101,6 +101,13 @@ pub struct GradeSubmissionPayload {
     pub course_id: Uuid,
     pub lesson_id: Uuid,
     pub score: f32,
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Deserialize)]
+pub struct InteractionPayload {
+    pub video_timestamp: Option<f64>,
+    pub event_type: String, // 'heartbeat', 'pause', 'seek', 'complete', 'start'
     pub metadata: Option<serde_json::Value>,
 }
 
@@ -442,7 +449,7 @@ pub async fn ingest_course(
 }
 
 pub async fn get_course_outline(
-    Org(org_ctx): Org,
+    Org(_org_ctx): Org,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<common::models::PublishedCourse>, StatusCode> {
@@ -503,7 +510,7 @@ pub async fn get_course_outline(
 }
 
 pub async fn get_lesson_content(
-    Org(org_ctx): Org,
+    Org(_org_ctx): Org,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Lesson>, StatusCode> {
@@ -518,7 +525,7 @@ pub async fn get_lesson_content(
 }
 
 pub async fn get_user_enrollments(
-    Org(org_ctx): Org,
+    Org(_org_ctx): Org,
     State(pool): State<PgPool>,
     Path(user_id): Path<Uuid>,
 ) -> Result<Json<Vec<Enrollment>>, StatusCode> {
@@ -748,7 +755,7 @@ pub async fn get_leaderboard(
 }
 
 pub async fn get_user_course_grades(
-    Org(org_ctx): Org,
+    Org(_org_ctx): Org,
     State(pool): State<PgPool>,
     Path((user_id, course_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<Vec<common::models::UserGrade>>, StatusCode> {
@@ -863,6 +870,129 @@ pub async fn get_advanced_analytics(
         cohorts: cohort_data,
         retention: retention_data,
     }))
+}
+
+pub async fn record_interaction(
+    Org(org_ctx): Org,
+    Path(lesson_id): Path<Uuid>,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Json(payload): Json<InteractionPayload>,
+) -> Result<StatusCode, StatusCode> {
+    sqlx::query(
+        "INSERT INTO lesson_interactions (organization_id, user_id, lesson_id, video_timestamp, event_type, metadata) 
+         VALUES ($1, $2, $3, $4, $5, $6)"
+    )
+    .bind(org_ctx.id)
+    .bind(claims.sub)
+    .bind(lesson_id)
+    .bind(payload.video_timestamp)
+    .bind(payload.event_type)
+    .bind(payload.metadata)
+    .execute(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to record interaction: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(StatusCode::CREATED)
+}
+
+pub async fn get_lesson_heatmap(
+    Org(org_ctx): Org,
+    Path(lesson_id): Path<Uuid>,
+    State(pool): State<PgPool>,
+) -> Result<Json<Vec<HeatmapPoint>>, StatusCode> {
+    let heatmap = sqlx::query_as::<_, HeatmapPoint>(
+        "SELECT floor(video_timestamp)::int as second, count(*)::bigint as count 
+         FROM lesson_interactions 
+         WHERE lesson_id = $1 AND organization_id = $2 AND video_timestamp IS NOT NULL
+         GROUP BY second 
+         ORDER BY second",
+    )
+    .bind(lesson_id)
+    .bind(org_ctx.id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch heatmap: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(heatmap))
+}
+
+pub async fn get_notifications(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+) -> Result<Json<Vec<Notification>>, StatusCode> {
+    let notifications = sqlx::query_as::<_, Notification>(
+        "SELECT * FROM notifications WHERE user_id = $1 AND organization_id = $2 ORDER BY created_at DESC LIMIT 50"
+    )
+    .bind(claims.sub)
+    .bind(org_ctx.id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch notifications: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(notifications))
+}
+
+pub async fn mark_notification_as_read(
+    Org(org_ctx): Org,
+    claims: Claims,
+    Path(id): Path<Uuid>,
+    State(pool): State<PgPool>,
+) -> Result<StatusCode, StatusCode> {
+    sqlx::query(
+        "UPDATE notifications SET is_read = TRUE WHERE id = $1 AND user_id = $2 AND organization_id = $3"
+    )
+    .bind(id)
+    .bind(claims.sub)
+    .bind(org_ctx.id)
+    .execute(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to mark notification as read: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(StatusCode::OK)
+}
+
+pub async fn check_deadlines_and_notify(pool: PgPool) {
+    let result = sqlx::query(
+        "INSERT INTO notifications (organization_id, user_id, title, message, notification_type, link_url)
+         SELECT 
+            l.organization_id, 
+            e.user_id, 
+            'Fecha límite próxima: ' || l.title,
+            'La lección \"' || l.title || '\" del curso \"' || c.title || '\" vence en menos de 24 horas.',
+            'deadline',
+            '/courses/' || c.id || '/lessons/' || l.id
+         FROM enrollments e
+         JOIN lessons l ON l.course_id = e.course_id
+         JOIN courses c ON c.id = l.course_id
+         WHERE l.due_date BETWEEN NOW() AND NOW() + INTERVAL '24 hours'
+         AND NOT EXISTS (
+            SELECT 1 FROM notifications n 
+            WHERE n.user_id = e.user_id 
+            AND n.notification_type = 'deadline' 
+            AND n.link_url = '/courses/' || c.id || '/lessons/' || l.id
+            AND n.created_at > NOW() - INTERVAL '48 hours'
+         )"
+    )
+    .execute(&pool)
+    .await;
+
+    if let Err(e) = result {
+        tracing::error!("Failed to run deadline notifications: {}", e);
+    }
 }
 
 pub async fn update_user(

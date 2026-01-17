@@ -44,7 +44,7 @@ export interface QuizQuestion {
 
 export interface Block {
     id: string;
-    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer';
+    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'document';
     title?: string;
     content?: string;
     url?: string;
@@ -277,6 +277,19 @@ export const cmsApi = {
     getAuditLogs: (): Promise<AuditLog[]> => apiFetch('/audit-logs'),
     getCourseAnalytics: (id: string): Promise<CourseAnalytics> => apiFetch(`/courses/${id}/analytics`),
     getAdvancedAnalytics: (id: string): Promise<AdvancedAnalytics> => apiFetch(`/courses/${id}/analytics/advanced`),
+    getLessonHeatmap: (lessonId: string): Promise<{ second: number, count: number }[]> => apiFetch(`/lessons/${lessonId}/heatmap`),
+    exportCourse: (id: string): Promise<Record<string, unknown>> => apiFetch(`/courses/${id}/export`),
+    importCourse: (data: Record<string, unknown>): Promise<Course> => apiFetch(`/courses/import`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+
+    async generateCourse(prompt: string, targetOrgId?: string): Promise<Course> {
+        return apiFetch(`/courses/generate`, {
+            method: 'POST',
+            body: JSON.stringify({ prompt, target_organization_id: targetOrgId })
+        });
+    },
 
     // Users
     getAllUsers: (): Promise<User[]> => apiFetch('/users'),

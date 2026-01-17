@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Play, Lock, AlertCircle } from "lucide-react";
+import { lmsApi } from "@/lib/api";
 
 interface MediaPlayerProps {
     id: string;
@@ -44,16 +45,35 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
     const isLocalFile = url.startsWith('/uploads') || url.startsWith('http://localhost:3001/assets') || url.includes('/assets/');
 
     useEffect(() => {
-        if (maxPlays > 0 && playCount >= maxPlays && !hasStarted) {
-            setLocked(true);
+        let interval: NodeJS.Timeout;
+        if (hasStarted && isLocalFile && lessonId) {
+            // Heartbeat every 5 seconds
+            interval = setInterval(async () => {
+                const video = document.querySelector('video');
+                if (video && !video.paused) {
+                    await lmsApi.recordInteraction(lessonId, {
+                        video_timestamp: video.currentTime,
+                        event_type: 'heartbeat',
+                        metadata: { block_id: id }
+                    }).catch(console.error);
+                }
+            }, 5000);
         }
-    }, [playCount, maxPlays, hasStarted]);
+        return () => clearInterval(interval);
+    }, [hasStarted, isLocalFile, lessonId, id]);
 
-    const handlePlay = () => {
+    const handlePlay = async () => {
         if (locked) return;
         if (!hasStarted) {
             setPlayCount(prev => prev + 1);
             setHasStarted(true);
+            if (lessonId) {
+                await lmsApi.recordInteraction(lessonId, {
+                    video_timestamp: 0,
+                    event_type: 'start',
+                    metadata: { block_id: id }
+                }).catch(console.error);
+            }
             if (onPlay) onPlay();
         }
     };

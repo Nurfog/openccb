@@ -1,0 +1,37 @@
+{
+    "common": {
+        "save": "Guardar",
+        "cancel": "Cancelar",
+        "delete": "Eliminar",
+        "edit": "Editar",
+        "create": "Crear",
+        "loading": "Cargando...",
+        "search": "Buscar",
+        "back": "Volver",
+        "next": "Siguiente",
+        "publish": "Publicar",
+        "preview": "Previsualizar"
+    },
+    "nav": {
+        "courses": "Cursos",
+        "globalControl": "Control Global",
+        "webhooks": "Webhooks",
+        "profile": "Perfil",
+        "signOut": "Cerrar Sesión"
+    },
+    "dashboard": {
+        "title": "Panel de Control",
+        "newCourse": "Nuevo Curso",
+        "aiBuilder": "Constructor AI",
+        "noCourses": "No hay cursos disponibles."
+    },
+    "editor": {
+        "outline": "Estructura",
+        "settings": "Configuración",
+        "newModule": "Nuevo Módulo",
+        "newLesson": "Nueva Lección",
+        "addBlock": "Añadir Bloque de Contenido",
+        "publishToOrg": "Publicar en Organización",
+        "reading": "Lectura"
+    }
+}

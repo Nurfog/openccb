@@ -184,7 +184,7 @@ export default function StudioLoginPage() {
                                     />
                                 </div>
                                 <p className="text-xs text-gray-500 mt-2 pl-1">
-                                    Contact your administrator if you don't know your Organization ID.
+                                    Contact your administrator if you don&apos;t know your Organization ID.
                                 </p>
                             </div>
                         )}
