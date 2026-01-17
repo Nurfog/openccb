@@ -157,7 +157,7 @@ fi
 echo "⏳ Starting Ollama & downloading models..."
 # Run ollama in background if not running (simple check)
 if ! pgrep ollama &> /dev/null; then
-    ollama serve &
+    OLLAMA_HOST=0.0.0.0 ollama serve &
     sleep 5
 fi
 
