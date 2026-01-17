@@ -2808,13 +2808,12 @@ pub async fn import_course(
 
             sqlx::query(
                 "INSERT INTO lessons (
-                    module_id, course_id, organization_id, title, content_type, 
+                    module_id, organization_id, title, content_type, 
                     content_url, position, is_graded, metadata, summary, 
                     transcription, grading_category_id, max_attempts
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
             )
             .bind(new_module.id)
-            .bind(new_course.id)
             .bind(org_ctx.id)
             .bind(lesson.title)
             .bind(lesson.content_type)
@@ -2942,15 +2941,20 @@ RULES:
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
 
-    let llm_data: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let llm_data: serde_json::Value = response.json().await.map_err(|e| {
+        tracing::error!("Failed to parse LLM JSON response: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    tracing::info!("LLM Response received successfully");
+
     let mut content_str = llm_data["choices"][0]["message"]["content"]
         .as_str()
         .unwrap_or("{}")
         .trim()
         .to_string();
+
+    tracing::info!("Extracted content string (length: {})", content_str.len());
 
     // Clean markdown code blocks if present
     if content_str.starts_with("```") {
@@ -2966,11 +2970,19 @@ RULES:
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    tracing::info!(
+        "JSON parsed successfully. Title: {:?}",
+        result_json["title"]
+    );
+
     // 3. Database Transaction
-    let mut tx = pool
-        .begin()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    tracing::info!("Starting database transaction...");
+    let mut tx = pool.begin().await.map_err(|e| {
+        tracing::error!("Failed to begin transaction: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    tracing::info!("Transaction started");
 
     // Create Course
     let course_title = result_json["title"].as_str().unwrap_or("Untitled Course");
@@ -2992,6 +3004,8 @@ RULES:
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    tracing::info!("Course created with ID: {}", course.id);
+
     // Create Modules and Lessons
     if let Some(modules) = result_json["modules"].as_array() {
         for (m_idx, m_val) in modules.iter().enumerate() {
@@ -3008,7 +3022,12 @@ RULES:
             .bind((m_idx + 1) as i32)
             .fetch_one(&mut *tx)
             .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .map_err(|e| {
+                tracing::error!("DB Module creation failed: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+
+            tracing::info!("Module created: {}", m_title);
 
             if let Some(lessons) = m_val["lessons"].as_array() {
                 for (l_idx, l_val) in lessons.iter().enumerate() {
@@ -3016,26 +3035,34 @@ RULES:
                     let l_type = l_val["content_type"].as_str().unwrap_or("text");
 
                     sqlx::query(
-                        "INSERT INTO lessons (module_id, course_id, organization_id, title, content_type, position) 
-                         VALUES ($1, $2, $3, $4, $5, $6)"
+                        "INSERT INTO lessons (module_id, organization_id, title, content_type, position) 
+                         VALUES ($1, $2, $3, $4, $5)"
                     )
                     .bind(module.id)
-                    .bind(course.id)
                     .bind(target_org_id)
                     .bind(l_title)
                     .bind(l_type)
                     .bind((l_idx + 1) as i32)
                     .execute(&mut *tx)
                     .await
-                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+                    .map_err(|e| {
+                        tracing::error!("DB Lesson creation failed: {}", e);
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    })?;
+
+                    tracing::info!("Lesson created: {}", l_title);
                 }
             }
         }
     }
 
-    tx.commit()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    tracing::info!("Committing transaction...");
+    tx.commit().await.map_err(|e| {
+        tracing::error!("Transaction commit failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    tracing::info!("Transaction committed successfully");
 
     log_action(
         &pool,
