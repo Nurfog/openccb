@@ -41,13 +41,13 @@ export default function MatchingPlayer({ id, title, pairs, allowRetry = true }: 
         <div className="space-y-8" id={id}>
             <div className="space-y-2">
                 <h3 className="text-xl font-bold border-l-4 border-blue-500 pl-4 py-1 tracking-tight text-white uppercase tracking-widest text-[10px]">
-                    {title || "Concept Matching"}
+                    {title || "Emparejamiento de Conceptos"}
                 </h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 p-8 glass border-white/5 rounded-3xl relative">
                 <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4 block">Term</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4 block">Término</label>
                     {(pairs || []).map((pair, i) => (
                         <button
                             key={i}
@@ -63,7 +63,7 @@ export default function MatchingPlayer({ id, title, pairs, allowRetry = true }: 
                 </div>
 
                 <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4 block">Definition</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4 block">Definición</label>
                     {shuffledRight.map((item, i) => {
                         const matchedLeftIdx = Object.keys(matches).find(k => matches[parseInt(k)] === item.originalIdx);
                         const isCorrect = submitted && matchedLeftIdx !== undefined && parseInt(matchedLeftIdx) === item.originalIdx;
@@ -98,7 +98,7 @@ export default function MatchingPlayer({ id, title, pairs, allowRetry = true }: 
                                 onClick={() => setSubmitted(true)}
                                 className="btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20"
                             >
-                                Validate Matching
+                                Validar Emparejamiento
                             </button>
                         )}
                         {submitted && (
@@ -106,7 +106,7 @@ export default function MatchingPlayer({ id, title, pairs, allowRetry = true }: 
                                 onClick={handleReset}
                                 className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-2xl border-white/5"
                             >
-                                Try Again
+                                Intentar de Nuevo
                             </button>
                         )}
                     </div>

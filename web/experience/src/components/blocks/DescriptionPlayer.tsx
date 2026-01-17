@@ -11,7 +11,7 @@ export default function DescriptionPlayer({ id, title, content }: DescriptionPla
         <div className="space-y-8" id={id}>
             <div className="space-y-2">
                 <h3 className="text-xl font-bold border-l-4 border-blue-500 pl-4 py-1 tracking-tight text-white uppercase tracking-widest text-[10px]">
-                    {title || "Overview"}
+                    {title || "Resumen"}
                 </h3>
             </div>
 

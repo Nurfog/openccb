@@ -21,15 +21,15 @@ export default function AppHeader() {
                 </div>
                 <div className="flex flex-col -gap-1">
                     <span className="font-black text-lg tracking-tighter text-white leading-none">
-                        {branding?.name?.toUpperCase() || 'LEARN'}
+                        {branding?.name?.toUpperCase() || 'APRENDER'}
                     </span>
-                    {!branding && <span className="text-[10px] font-black tracking-widest text-blue-500 uppercase">EXPERIENCE</span>}
+                    {!branding && <span className="text-[10px] font-black tracking-widest text-blue-500 uppercase">EXPERIENCIA</span>}
                 </div>
             </Link>
 
             <nav className="hidden md:flex items-center gap-8">
-                <Link href="/" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">Catalog</Link>
-                <Link href="/my-learning" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">My Learning</Link>
+                <Link href="/" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">Catálogo</Link>
+                <Link href="/my-learning" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">Mi Aprendizaje</Link>
 
                 <div className="flex items-center gap-4 pl-4 border-l border-white/10">
                     <Link href="/profile" className="flex items-center gap-2 group/profile">
@@ -40,7 +40,7 @@ export default function AppHeader() {
                     <button
                         onClick={logout}
                         className="p-2 hover:bg-red-500/10 rounded-full text-gray-400 hover:text-red-400 transition-colors"
-                        title="Logout"
+                        title="Cerrar Sesión"
                     >
                         <LogOut size={16} />
                     </button>

@@ -44,7 +44,7 @@ export default function CatalogPage() {
                 });
               });
             } catch (err) {
-              console.error(`Failed to load outline for course ${enrollment.course_id}`, err);
+              console.error(`No se pudo cargar el esquema del curso ${enrollment.course_id}`, err);
             }
           }
           setUpcomingDeadlines(deadlines.sort((a, b) => new Date(a.lesson.due_date!).getTime() - new Date(b.lesson.due_date!).getTime()).slice(0, 3));
@@ -68,7 +68,7 @@ export default function CatalogPage() {
       await lmsApi.enroll(courseId, user.id);
       setEnrollments(prev => [...prev, courseId]);
     } catch (err) {
-      console.error("Enrollment failed", err);
+      console.error("Falló la inscripción", err);
     }
   };
 
@@ -90,18 +90,18 @@ export default function CatalogPage() {
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-blue-500">
             <Star size={14} className="fill-blue-500" />
-            <span>Premier Curriculum</span>
+            <span>Currículo Premier</span>
           </div>
           <h1 className="text-6xl font-black tracking-tighter leading-none">
-            Explore <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600">Courses</span>
+            Explorar <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600">Cursos</span>
           </h1>
           <p className="text-gray-500 font-medium max-w-xl text-lg">
-            Master the skills of the future with our high-fidelity educational content.
+            Domina las habilidades del futuro con nuestro contenido educativo de alta fidelidad.
           </p>
         </div>
         {!user && (
           <Link href="/auth/register" className="btn-premium !bg-white !text-black shadow-none !px-8">
-            Get Started Free
+            Comienza Gratis
           </Link>
         )}
       </div>
@@ -122,8 +122,8 @@ export default function CatalogPage() {
 
                 <div className="flex-1 space-y-4">
                   <div>
-                    <div className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-400 mb-1">Current Standing</div>
-                    <h2 className="text-3xl font-black text-white">Level {gamification.level} Pioneer</h2>
+                    <div className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-400 mb-1">Posición Actual</div>
+                    <h2 className="text-3xl font-black text-white">Nivel {gamification.level} Pionero</h2>
                   </div>
 
                   <div className="space-y-2">
@@ -132,7 +132,7 @@ export default function CatalogPage() {
                         {gamification.points} / {Math.pow(gamification.level, 2) * 100} XP
                       </div>
                       <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest">
-                        {Math.floor(((gamification.points - Math.pow(gamification.level - 1, 2) * 100) / (Math.pow(gamification.level, 2) * 100 - Math.pow(gamification.level - 1, 2) * 100)) * 100)}% to Level {gamification.level + 1}
+                        {Math.floor(((gamification.points - Math.pow(gamification.level - 1, 2) * 100) / (Math.pow(gamification.level, 2) * 100 - Math.pow(gamification.level - 1, 2) * 100)) * 100)}% para el Nivel {gamification.level + 1}
                       </div>
                     </div>
                     <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
@@ -151,11 +151,11 @@ export default function CatalogPage() {
 
             <div className="glass-card p-8 bg-white/[0.01] border-white/5 rounded-3xl">
               <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
-                <CheckCircle2 size={14} /> My Badges
+                <CheckCircle2 size={14} /> Mis Insignias
               </h3>
               <div className="flex flex-wrap gap-4">
                 {gamification.badges.length === 0 ? (
-                  <p className="text-sm text-gray-600 italic">No badges earned yet. Start learning to unlock achievements!</p>
+                  <p className="text-sm text-gray-600 italic">Aún no has ganado insignias. ¡Comienza a aprender para desbloquear logros!</p>
                 ) : (
                   gamification.badges.map(badge => (
                     <div key={badge.id} className="group/badge relative">
@@ -179,7 +179,7 @@ export default function CatalogPage() {
       {user && upcomingDeadlines.length > 0 && (
         <div className="mb-16 animate-in fade-in slide-in-from-top-4 duration-700 delay-200">
           <h3 className="text-xs font-black uppercase tracking-[0.3em] text-gray-500 mb-6 flex items-center gap-2">
-            <Calendar size={14} /> Upcoming Deadlines
+            <Calendar size={14} /> Próximos Vencimientos
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {upcomingDeadlines.map(({ lesson, courseTitle, courseId }) => (
@@ -187,11 +187,11 @@ export default function CatalogPage() {
                 <div className="glass-card p-6 border-blue-500/10 bg-blue-500/2 rounded-3xl hover:border-blue-500/30 transition-all">
                   <div className="flex justify-between items-start mb-4">
                     <div className="text-[10px] font-black uppercase tracking-widest text-blue-400 group-hover:text-blue-300 transition-colors">
-                      {lesson.important_date_type || 'Activity'}
+                      {lesson.important_date_type || 'Actividad'}
                     </div>
                     <div className="text-right">
                       <div className="text-xs font-black text-white">{new Date(lesson.due_date!).toLocaleDateString()}</div>
-                      <div className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">Deadline</div>
+                      <div className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">Vencimiento</div>
                     </div>
                   </div>
                   <h4 className="font-bold text-sm text-gray-200 mb-1 group-hover:text-white transition-colors line-clamp-1">{lesson.title}</h4>
@@ -205,7 +205,7 @@ export default function CatalogPage() {
 
       {courses.length === 0 ? (
         <div className="py-20 text-center glass-card border-dashed border-white/10 rounded-3xl bg-white/[0.01]">
-          <p className="text-gray-500 font-bold uppercase tracking-widest">No courses published yet.</p>
+          <p className="text-gray-500 font-bold uppercase tracking-widest">Aún no se han publicado cursos.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -220,7 +220,7 @@ export default function CatalogPage() {
                   </div>
                   {isEnrolled && (
                     <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">
-                      Enrolled
+                      Inscrito
                     </span>
                   )}
                 </div>
@@ -231,14 +231,14 @@ export default function CatalogPage() {
 
                 <div className="flex-1">
                   <p className="text-gray-500 text-sm font-medium line-clamp-3 mb-10 leading-relaxed">
-                    {course.description || "In-depth curriculum covering foundational principles to advanced mastery, crafted by industry veterans."}
+                    {course.description || "Currículo detallado que cubre desde los principios fundamentales hasta el dominio avanzado, elaborado por veteranos de la industria."}
                   </p>
                 </div>
 
                 <div className="pt-8 border-t border-white/5 flex items-center justify-between mt-auto">
                   {isEnrolled ? (
                     <Link href={`/courses/${course.id}`} className="btn-premium w-full !bg-blue-600/10 !text-blue-400 border border-blue-500/20 hover:!bg-blue-600/20 !shadow-none gap-2">
-                      Continue Learning <ArrowRight size={16} />
+                      Continuar Aprendiendo <ArrowRight size={16} />
                     </Link>
                   ) : (
                     <button
@@ -246,7 +246,7 @@ export default function CatalogPage() {
                       className="btn-premium w-full group-hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 group/btn"
                     >
                       <CheckCircle2 size={18} className="text-white/50 group-hover/btn:text-white transition-colors" />
-                      Enroll for Free
+                      Inscribirse Gratis
                     </button>
                   )}
                 </div>

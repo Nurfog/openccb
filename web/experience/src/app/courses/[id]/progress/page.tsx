@@ -40,7 +40,7 @@ export default function StudentProgressPage() {
                 setUserGrades(grades);
             }
         } catch (err) {
-            console.error("Failed to load progress data", err);
+            console.error("Error al cargar los datos de progreso", err);
         } finally {
             setLoading(false);
         }
@@ -56,7 +56,7 @@ export default function StudentProgressPage() {
         </div>
     );
 
-    if (!course) return <div className="p-20 text-center text-white">Course not found.</div>;
+    if (!course) return <div className="p-20 text-center text-white">Curso no encontrado.</div>;
 
     const gradingCategories = course.grading_categories || [];
 
@@ -103,7 +103,7 @@ export default function StudentProgressPage() {
                 <div className="lg:col-span-1 space-y-8">
                     <div className="bg-gradient-to-br from-blue-600/20 to-indigo-600/20 rounded-[2.5rem] p-12 border border-blue-500/20 text-center relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/20 transition-all duration-700"></div>
-                        <h2 className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-8">Overall Standing</h2>
+                        <h2 className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-8">Estado General</h2>
 
                         <div className="relative inline-flex items-center justify-center mb-8">
                             <svg className="w-48 h-48 -rotate-90">
@@ -131,7 +131,7 @@ export default function StudentProgressPage() {
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
                                 <span className="text-6xl font-black">{Math.round(totalWeightedGrade)}%</span>
-                                <span className="text-xs text-blue-400 font-bold uppercase tracking-widest mt-1">Current Grade</span>
+                                <span className="text-xs text-blue-400 font-bold uppercase tracking-widest mt-1">Calificación Actual</span>
                             </div>
                         </div>
 
@@ -146,7 +146,7 @@ export default function StudentProgressPage() {
 
                     <div className="bg-white/5 rounded-3xl p-8 border border-white/10 space-y-6">
                         <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-gray-500 flex items-center gap-2">
-                            <BarChart3 className="w-4 h-4" /> Assessment Summary
+                            <BarChart3 className="w-4 h-4" /> Resumen de Evaluaciones
                         </h3>
                         <div className="space-y-4">
                             {categoryStats.map(stat => (
@@ -167,7 +167,7 @@ export default function StudentProgressPage() {
                     <section>
                         <h2 className="text-2xl font-black mb-8 flex items-center gap-3">
                             <Target className="w-8 h-8 text-blue-500" />
-                            Detailed Breakdown
+                            Desglose Detallado
                         </h2>
 
                         <div className="space-y-4">
@@ -177,12 +177,12 @@ export default function StudentProgressPage() {
                                         <div>
                                             <h3 className="text-xl font-bold">{cat.name}</h3>
                                             <p className="text-gray-400 text-sm mt-1">
-                                                Weight: {cat.weight}% of total course grade
+                                                Peso: {cat.weight}% de la calificación total del curso
                                             </p>
                                         </div>
                                         <div className="text-right">
                                             <div className="text-4xl font-black text-blue-500">{Math.round(cat.avgScore)}%</div>
-                                            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Average Score</div>
+                                            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Puntuación Promedio</div>
                                         </div>
                                     </div>
 
@@ -198,13 +198,13 @@ export default function StudentProgressPage() {
                                             <div className="flex items-center gap-4">
                                                 <div className="flex items-center gap-2">
                                                     <BookOpen className="w-4 h-4 text-gray-500" />
-                                                    <span className="text-gray-400">{cat.completedCount} / {cat.count} assessments completed</span>
+                                                    <span className="text-gray-400">{cat.completedCount} / {cat.count} evaluaciones completadas</span>
                                                 </div>
                                             </div>
                                             {cat.completedCount === cat.count && (
                                                 <div className="flex items-center gap-2 text-green-400 font-bold">
                                                     <CheckCircle2 className="w-4 h-4" />
-                                                    Category Finished
+                                                    Categoría Finalizada
                                                 </div>
                                             )}
                                         </div>
@@ -222,16 +222,16 @@ export default function StudentProgressPage() {
                                     <Award className="w-8 h-8" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-green-400">Course Completed!</h3>
+                                    <h3 className="text-lg font-bold text-green-400">¡Curso Completado!</h3>
                                     <p className="text-sm text-green-300/60 mt-0.5">
-                                        Congratulations! You have passed <b>{course.title}</b>.
+                                        ¡Felicidades! Has aprobado <b>{course.title}</b>.
                                     </p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => {
                                     if (!course.certificate_template || !user) {
-                                        alert("Certificate template not available.");
+                                        alert("Plantilla de certificado no disponible.");
                                         return;
                                     }
                                     const filledTemplate = course.certificate_template
@@ -254,7 +254,7 @@ export default function StudentProgressPage() {
                                 className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl transition-colors shadow-lg shadow-green-900/20 flex items-center gap-2"
                             >
                                 <Award className="w-4 h-4" />
-                                Download Certificate
+                                Descargar Certificado
                             </button>
                         </section>
                     ) : (
@@ -264,14 +264,14 @@ export default function StudentProgressPage() {
                                     <TrendingUp className="w-8 h-8" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold">Certification Track</h3>
+                                    <h3 className="text-lg font-bold">Ruta de Certificación</h3>
                                     <p className="text-sm text-indigo-300/60 mt-0.5">
-                                        Maintain {course.passing_percentage || 70}% or higher to earn your verified certificate.
+                                        Mantén {course.passing_percentage || 70}% o más para obtener tu certificado verificado.
                                     </p>
                                 </div>
                             </div>
                             <div className="text-indigo-400 font-bold text-sm">
-                                {Math.max(0, (course.passing_percentage || 70) - Math.round(totalWeightedGrade))}% to go
+                                Falta {Math.max(0, (course.passing_percentage || 70) - Math.round(totalWeightedGrade))}%
                             </div>
                         </section>
                     )}

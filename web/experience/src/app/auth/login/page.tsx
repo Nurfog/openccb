@@ -28,7 +28,7 @@ export default function ExperienceLoginPage() {
 
                 // Verify user is a student
                 if (response.user.role !== "student") {
-                    setError("Access denied. This portal is for students only. Please use the Studio portal for instructors.");
+                    setError("Acceso denegado. Este portal es solo para estudiantes. Utiliza el portal de Studio para instructores.");
                     setLoading(false);
                     return;
                 }
@@ -47,7 +47,7 @@ export default function ExperienceLoginPage() {
                 router.push("/");
             }
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Authentication failed");
+            setError(err instanceof Error ? err.message : "Falló la autenticación");
         } finally {
             setLoading(false);
         }
@@ -61,8 +61,8 @@ export default function ExperienceLoginPage() {
                     <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-2xl mb-4">
                         <GraduationCap className="w-8 h-8 text-white" />
                     </div>
-                    <h1 className="text-3xl font-black text-white mb-2">OpenCCB Experience</h1>
-                    <p className="text-gray-400">Student Learning Portal</p>
+                    <h1 className="text-3xl font-black text-white mb-2">Experiencia OpenCCB</h1>
+                    Portal de Aprendizaje para Estudiantes
                 </div>
 
                 {/* Login/Register Form */}
@@ -72,15 +72,12 @@ export default function ExperienceLoginPage() {
                             onClick={() => setIsLogin(true)}
                             className={`flex-1 py-2 px-4 rounded-lg font-bold transition-all ${isLogin ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-white"
                                 }`}
-                        >
-                            Login
-                        </button>
+                        Iniciar Sesión/button>
                         <button
                             onClick={() => setIsLogin(false)}
                             className={`flex-1 py-2 px-4 rounded-lg font-bold transition-all ${!isLogin ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-white"
                                 }`}
-                        >
-                            Register
+                        > Registrarse
                         </button>
                     </div>
 
@@ -88,7 +85,7 @@ export default function ExperienceLoginPage() {
                         {!isLogin && (
                             <div>
                                 <label className="block text-sm font-bold text-gray-300 mb-2">
-                                    Full Name
+                                    Nombre Completo
                                 </label>
                                 <div className="relative">
                                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -106,7 +103,7 @@ export default function ExperienceLoginPage() {
                         {!isLogin && (
                             <div>
                                 <label className="block text-sm font-bold text-gray-300 mb-2">
-                                    Organization Name (Optional)
+                                    Nombre de la Organización (Opcional)
                                 </label>
                                 <div className="relative">
                                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -115,16 +112,16 @@ export default function ExperienceLoginPage() {
                                         value={organizationName}
                                         onChange={(e) => setOrganizationName(e.target.value)}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        placeholder="Your School or Company"
+                                        placeholder="Tu Escuela o Empresa"
                                     />
                                 </div>
-                                <p className="text-xs text-gray-500 mt-2 pl-1">If left blank, an organization will be created based on your email domain.</p>
+                                <p className="text-xs text-gray-500 mt-2 pl-1">Si se deja en blanco, se creará una organización basada en el dominio de tu correo electrónico.</p>
                             </div>
                         )}
 
                         <div>
                             <label className="block text-sm font-bold text-gray-300 mb-2">
-                                Email
+                                Correo Electrónico
                             </label>
                             <div className="relative">
                                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -133,7 +130,7 @@ export default function ExperienceLoginPage() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    placeholder="student@example.com"
+                                    placeholder="estudiante@ejemplo.com"
                                     required
                                 />
                             </div>
@@ -141,7 +138,7 @@ export default function ExperienceLoginPage() {
 
                         <div>
                             <label className="block text-sm font-bold text-gray-300 mb-2">
-                                Password
+Contraseña
                             </label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -167,22 +164,22 @@ export default function ExperienceLoginPage() {
                             disabled={loading}
                             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {loading ? "Processing..." : isLogin ? "Sign In" : "Create Account"}
+                            {loading ? "Procesando..." : isLogin ? "Iniciar Sesión" : "Crear Cuenta"}
                         </button>
                     </form>
 
                     <div className="mt-6 pt-6 border-t border-white/10 text-center">
                         <p className="text-sm text-gray-400">
-                            Are you an instructor?{" "}
+                            ¿Eres un instructor?{" "}
                             <a href="http://localhost:3000/auth/login" className="text-indigo-400 hover:text-indigo-300 font-bold">
-                                Go to Instructor Portal
+                                Ir al Portal de Instructores
                             </a>
                         </p>
                     </div>
                 </div>
 
                 <p className="text-center text-xs text-gray-500 mt-6">
-                    OpenCCB Experience - Student Learning Portal
+                    Experiencia OpenCCB - Portal de Aprendizaje para Estudiantes
                 </p>
             </div>
         </div>

@@ -37,14 +37,14 @@ export default function OrderingPlayer({ id, title, items, allowRetry = true }: 
         <div className="space-y-8" id={id}>
             <div className="space-y-2">
                 <h3 className="text-xl font-bold border-l-4 border-blue-500 pl-4 py-1 tracking-tight text-white uppercase tracking-widest text-[10px]">
-                    {title || "Sequence Ordering"}
+                    {title || "Ordenamiento de Secuencia"}
                 </h3>
             </div>
 
             <div className="space-y-8 p-8 glass border-white/5 rounded-3xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4 block">Available Items</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4 block">Elementos Disponibles</label>
                         <div className="flex flex-wrap gap-3">
                             {shuffledItems.map((item, i) => {
                                 const isPicked = userOrder.includes(item.originalIdx);
@@ -65,9 +65,9 @@ export default function OrderingPlayer({ id, title, items, allowRetry = true }: 
                     </div>
 
                     <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4 block">Your Sequence</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4 block">Tu Secuencia</label>
                         <div className="space-y-3">
-                            {userOrder.length === 0 && <p className="text-xs text-gray-600 italic py-4">Click items to build the sequence...</p>}
+                            {userOrder.length === 0 && <p className="text-xs text-gray-600 italic py-4">Haz clic en los elementos para construir la secuencia...</p>}
                             {userOrder.map((idx, i) => {
                                 const isItemCorrect = submitted && idx === i;
                                 const isItemWrong = submitted && idx !== i;
@@ -100,7 +100,7 @@ export default function OrderingPlayer({ id, title, items, allowRetry = true }: 
                                 onClick={() => setSubmitted(true)}
                                 className="btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20"
                             >
-                                Validate Sequence
+                                Validar Secuencia
                             </button>
                         )}
                         {submitted && (
@@ -108,7 +108,7 @@ export default function OrderingPlayer({ id, title, items, allowRetry = true }: 
                                 onClick={handleReset}
                                 className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-2xl border-white/5"
                             >
-                                Try Again
+                                Intentar de Nuevo
                             </button>
                         )}
                     </div>

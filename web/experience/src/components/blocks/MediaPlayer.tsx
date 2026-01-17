@@ -59,15 +59,15 @@ export default function MediaPlayer({ id, title, url, media_type, config, initia
     if (locked) {
         return (
             <div className="space-y-4" id={id}>
-                <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">{title || "Multimedia Content"}</h3>
+                <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">{title || "Contenido Multimedia"}</h3>
                 <div className="glass-card aspect-video flex flex-col items-center justify-center gap-6 border-red-500/20 bg-red-500/5">
                     <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
                         <Lock size={32} />
                     </div>
                     <div className="text-center">
-                        <p className="text-xl font-bold text-white mb-2">Content Locked</p>
+                        <p className="text-xl font-bold text-white mb-2">Contenido Bloqueado</p>
                         <p className="text-sm text-gray-500 max-w-xs uppercase tracking-widest font-black">
-                            You have reached the limit of {maxPlays} plays for this content.
+                            Has alcanzado el límite de {maxPlays} reproducciones para este contenido.
                         </p>
                     </div>
                 </div>
@@ -89,10 +89,10 @@ export default function MediaPlayer({ id, title, url, media_type, config, initia
     return (
         <div className="space-y-6" id={id}>
             <div className="flex items-center justify-between">
-                <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">{title || "Multimedia Content"}</h3>
+                <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">{title || "Contenido Multimedia"}</h3>
                 {maxPlays > 0 && (
                     <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-white/5 border border-white/5 text-gray-500">
-                        {playCount} / {maxPlays} PLAYS
+                        {playCount} / {maxPlays} REPRODUCCIONES
                     </span>
                 )}
             </div>
@@ -134,7 +134,7 @@ export default function MediaPlayer({ id, title, url, media_type, config, initia
             {maxPlays > 0 && playCount > 0 && (
                 <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-orange-500/70 p-4 rounded-xl bg-orange-500/5 border border-orange-500/10">
                     <AlertCircle size={14} />
-                    <span>Watch carefully. Content will lock after {maxPlays} plays.</span>
+                    <span>Presta atención. El contenido se bloqueará después de {maxPlays} reproducciones.</span>
                 </div>
             )}
         </div>

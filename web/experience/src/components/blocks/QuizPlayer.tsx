@@ -65,11 +65,11 @@ export default function QuizPlayer({ id, title, quizData, allowRetry = true, max
         <div className="space-y-8 notranslate" id={id} translate="no">
             <div className="space-y-2">
                 <h3 className="text-xl font-bold border-l-4 border-blue-500 pl-4 py-1 tracking-tight text-white uppercase tracking-widest text-[10px]">
-                    {title || "Knowledge Check"}
+                    {title || "Verificación de Conocimientos"}
                 </h3>
                 {maxAttempts > 0 && (
                     <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-white/5 border border-white/5 text-gray-500">
-                        Attempt {attempts} / {maxAttempts}
+                        Intento {attempts} / {maxAttempts}
                     </span>
                 )}
             </div>
@@ -106,7 +106,7 @@ export default function QuizPlayer({ id, title, quizData, allowRetry = true, max
                                             <span>{opt}</span>
                                             {submitted && isActuallyCorrect && <span>✅</span>}
                                             {submitted && isWrongSelection && <span>❌</span>}
-                                            {submitted && missedCorrect && <span className="text-[10px] uppercase font-black tracking-tighter">Correct Answer</span>}
+                                            {submitted && missedCorrect && <span className="text-[10px] uppercase font-black tracking-tighter">Respuesta Correcta</span>}
                                         </div>
                                     </button>
                                 );
@@ -123,7 +123,7 @@ export default function QuizPlayer({ id, title, quizData, allowRetry = true, max
                                 disabled={maxAttempts > 0 && attempts >= maxAttempts}
                                 className={`btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20 ${maxAttempts > 0 && attempts >= maxAttempts ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                {maxAttempts > 0 && attempts >= maxAttempts ? 'Max Attempts Reached' : 'Validate Answers'}
+                                {maxAttempts > 0 && attempts >= maxAttempts ? 'Máximo de Intentos Alcanzado' : 'Validar Respuestas'}
                             </button>
                         )}
                         {submitted && (
@@ -136,7 +136,7 @@ export default function QuizPlayer({ id, title, quizData, allowRetry = true, max
                                 disabled={maxAttempts > 0 && attempts >= maxAttempts}
                                 className={`w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-3xl border-white/5 ${maxAttempts > 0 && attempts >= maxAttempts ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                {maxAttempts > 0 && attempts >= maxAttempts ? 'Max Attempts Reached' : 'Try Again'}
+                                {maxAttempts > 0 && attempts >= maxAttempts ? 'Máximo de Intentos Alcanzado' : 'Intentar de Nuevo'}
                             </button>
                         )}
                     </>

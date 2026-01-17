@@ -25,12 +25,12 @@ export default function ShortAnswerPlayer({ id, title, prompt, correctAnswers, a
         <div className="space-y-8" id={id}>
             <div className="space-y-2">
                 <h3 className="text-xl font-bold border-l-4 border-blue-500 pl-4 py-1 tracking-tight text-white uppercase tracking-widest text-[10px]">
-                    {title || "Short Answer"}
+                    {title || "Respuesta Corta"}
                 </h3>
             </div>
 
             <div className="p-8 glass border-white/5 rounded-3xl space-y-8">
-                <p className="text-xl font-bold text-gray-100">{prompt || "Please enter your answer below:"}</p>
+                <p className="text-xl font-bold text-gray-100">{prompt || "Por favor, introduce tu respuesta a continuación:"}</p>
 
                 <div className="space-y-4">
                     <input
@@ -42,12 +42,12 @@ export default function ShortAnswerPlayer({ id, title, prompt, correctAnswers, a
                             ? (isCorrect ? "border-green-500 bg-green-500/10 text-green-400" : "border-red-500 bg-red-500/10 text-red-100")
                             : "border-white/10 focus:border-blue-500 text-white"
                             }`}
-                        placeholder="Type your answer..."
+                        placeholder="Escribe tu respuesta..."
                     />
 
                     {submitted && !isCorrect && (
                         <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl animate-in fade-in duration-500">
-                            <p className="text-[10px] text-orange-400 uppercase font-black tracking-widest">Suggested Answer(s):</p>
+                            <p className="text-[10px] text-orange-400 uppercase font-black tracking-widest">Respuesta(s) Sugerida(s):</p>
                             <p className="text-sm text-gray-400 mt-1">{(correctAnswers || [])[0]}</p>
                         </div>
                     )}
@@ -61,7 +61,7 @@ export default function ShortAnswerPlayer({ id, title, prompt, correctAnswers, a
                                 disabled={!userAnswer.trim()}
                                 className="btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20 disabled:opacity-50 disabled:grayscale"
                             >
-                                Submit Answer
+                                Enviar Respuesta
                             </button>
                         )}
 
@@ -70,7 +70,7 @@ export default function ShortAnswerPlayer({ id, title, prompt, correctAnswers, a
                                 onClick={handleReset}
                                 className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-3xl border-white/5"
                             >
-                                Try Again
+                                Intentar de Nuevo
                             </button>
                         )}
                     </>

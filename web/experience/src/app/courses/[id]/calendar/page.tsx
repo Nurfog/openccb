@@ -34,7 +34,7 @@ export default function StudentCalendarPage({ params }: { params: { id: string }
                 });
                 setLessons(allLessons);
             } catch (err) {
-                console.error("Failed to load course data", err);
+                console.error("Error al cargar los datos del curso", err);
             } finally {
                 setLoading(false);
             }
@@ -67,7 +67,7 @@ export default function StudentCalendarPage({ params }: { params: { id: string }
                 <div key={day} className={`h-28 border border-white/5 p-2 relative hover:bg-white/5 transition-colors group ${isToday ? 'bg-blue-500/5' : ''}`}>
                     <span className={`text-sm font-black ${isToday ? 'text-blue-400' : 'text-gray-600'}`}>
                         {day}
-                        {isToday && <span className="ml-2 text-[8px] uppercase tracking-widest px-1.5 py-0.5 bg-blue-500 text-white rounded">Today</span>}
+                        {isToday && <span className="ml-2 text-[8px] uppercase tracking-widest px-1.5 py-0.5 bg-blue-500 text-white rounded">Hoy</span>}
                     </span>
                     <div className="mt-1 space-y-1 overflow-y-auto max-h-20">
                         {dayLessons.map(lesson => (
@@ -94,8 +94,8 @@ export default function StudentCalendarPage({ params }: { params: { id: string }
     const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
     const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
 
-    if (loading) return <div className="py-20 text-center animate-pulse text-gray-500 font-bold uppercase tracking-widest text-xs">Syncing your timeline...</div>;
-    if (!course) return <div className="text-center py-20 text-red-400">Course not found.</div>;
+    if (loading) return <div className="py-20 text-center animate-pulse text-gray-500 font-bold uppercase tracking-widest text-xs">Sincronizando tu cronología...</div>;
+    if (!course) return <div className="text-center py-20 text-red-400">Curso no encontrado.</div>;
 
     const monthName = currentDate.toLocaleString('default', { month: 'long' });
     const year = currentDate.getFullYear();
@@ -105,23 +105,23 @@ export default function StudentCalendarPage({ params }: { params: { id: string }
             <div className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div>
                     <div className="flex items-center gap-2 mb-4 text-blue-500 font-bold text-xs uppercase tracking-widest">
-                        <Link href={`/courses/${params.id}`} className="hover:text-white transition-colors">Outline</Link>
+                        <Link href={`/courses/${params.id}`} className="hover:text-white transition-colors">Esquema</Link>
                         <ChevronRightIcon size={14} className="text-gray-600" />
                         <span>Timeline</span>
                     </div>
-                    <h1 className="text-4xl font-black tracking-tight mb-2">Course <span className="text-blue-500">Timeline</span></h1>
+                    <h1 className="text-4xl font-black tracking-tight mb-2">Cronología del Curso</h1>
                     <p className="text-gray-500 font-medium">{course.title}</p>
                 </div>
 
                 <div className="flex flex-wrap gap-4">
                     <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/5 bg-white/2 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                        <div className="w-2 h-2 rounded-full bg-red-500"></div> Exam
+                        <div className="w-2 h-2 rounded-full bg-red-500"></div> Examen
                     </div>
                     <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/5 bg-white/2 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                        <div className="w-2 h-2 rounded-full bg-blue-500"></div> Assignment
+                        <div className="w-2 h-2 rounded-full bg-blue-500"></div> Tarea
                     </div>
                     <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/5 bg-white/2 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                        <div className="w-2 h-2 rounded-full bg-green-500"></div> Task
+                        <div className="w-2 h-2 rounded-full bg-green-500"></div> Actividad
                     </div>
                 </div>
             </div>
@@ -133,13 +133,13 @@ export default function StudentCalendarPage({ params }: { params: { id: string }
                             <h3 className="text-xl font-black uppercase tracking-tight italic">{monthName} {year}</h3>
                             <div className="flex items-center gap-2 bg-white/5 rounded-2xl p-1 border border-white/10">
                                 <button onClick={prevMonth} className="p-2 hover:bg-white/10 rounded-xl transition-colors"><ChevronLeft className="w-5 h-5" /></button>
-                                <button onClick={() => setCurrentDate(new Date())} className="px-4 py-1 text-[10px] font-black uppercase tracking-widest hover:text-blue-400 transition-colors">Today</button>
+                                <button onClick={() => setCurrentDate(new Date())} className="px-4 py-1 text-[10px] font-black uppercase tracking-widest hover:text-blue-400 transition-colors">Hoy</button>
                                 <button onClick={nextMonth} className="p-2 hover:bg-white/10 rounded-xl transition-colors"><ChevronRight className="w-5 h-5" /></button>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-7 border-t border-l border-white/5 rounded-2xl overflow-hidden">
-                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                            {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
                                 <div key={day} className="bg-white/5 py-4 text-center text-[10px] font-black uppercase tracking-widest text-gray-600 border-r border-b border-white/5">
                                     {day}
                                 </div>
@@ -153,7 +153,7 @@ export default function StudentCalendarPage({ params }: { params: { id: string }
                     <div className="glass-card p-8 border-blue-500/20 bg-blue-500/5 rounded-3xl relative overflow-hidden">
                         <div className="relative z-10">
                             <h4 className="text-xs font-black uppercase tracking-[0.2em] text-blue-400 mb-6 flex items-center gap-2">
-                                <AlertCircle size={14} /> Upcoming Deadlines
+                                <AlertCircle size={14} /> Próximos Vencimientos
                             </h4>
                             <div className="space-y-6">
                                 {lessons
@@ -171,7 +171,7 @@ export default function StudentCalendarPage({ params }: { params: { id: string }
                                     ))
                                 }
                                 {lessons.filter(l => l.due_date && new Date(l.due_date) >= new Date()).length === 0 && (
-                                    <div className="text-xs text-gray-600 italic py-4">No upcoming deadlines. You are all caught up!</div>
+                                    <div className="text-xs text-gray-600 italic py-4">No hay próximos vencimientos. ¡Estás al día!</div>
                                 )}
                             </div>
                         </div>
@@ -180,22 +180,22 @@ export default function StudentCalendarPage({ params }: { params: { id: string }
 
                     <div className="glass-card p-8 border-white/5 bg-white/[0.01] rounded-3xl">
                         <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6 flex items-center gap-2">
-                            <Clock size={14} /> Course Pace
+                            <Clock size={14} /> Ritmo del Curso
                         </h4>
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium text-gray-600">Mode</span>
+                                <span className="text-xs font-medium text-gray-600">Modo</span>
                                 <span className="text-xs font-black uppercase tracking-widest text-white">{course.pacing_mode.replace('_', '-')}</span>
                             </div>
                             {course.start_date && (
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-medium text-gray-600">Start Date</span>
+                                    <span className="text-xs font-medium text-gray-600">Fecha de Inicio</span>
                                     <span className="text-xs font-black text-white">{new Date(course.start_date).toLocaleDateString()}</span>
                                 </div>
                             )}
                             {course.end_date && (
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-medium text-gray-600">End Date</span>
+                                    <span className="text-xs font-medium text-gray-600">Fecha de Finalización</span>
                                     <span className="text-xs font-black text-white">{new Date(course.end_date).toLocaleDateString()}</span>
                                 </div>
                             )}

@@ -46,7 +46,7 @@ export default function FillInTheBlanksPlayer({ id, title, content, allowRetry =
         <div className="space-y-8" id={id}>
             <div className="space-y-2">
                 <h3 className="text-xl font-bold border-l-4 border-blue-500 pl-4 py-1 tracking-tight text-white uppercase tracking-widest text-[10px]">
-                    {title || "Fill in the Blanks"}
+                    {title || "Rellena los Espacios en Blanco"}
                 </h3>
             </div>
 
@@ -84,7 +84,7 @@ export default function FillInTheBlanksPlayer({ id, title, content, allowRetry =
                                 onClick={() => setSubmitted(true)}
                                 className="btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20"
                             >
-                                Validate Answers
+                                Validar Respuestas
                             </button>
                         )}
 
@@ -93,7 +93,7 @@ export default function FillInTheBlanksPlayer({ id, title, content, allowRetry =
                                 onClick={handleReset}
                                 className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-3xl border-white/5"
                             >
-                                Try Again
+                                Intentar de Nuevo
                             </button>
                         )}
                     </>

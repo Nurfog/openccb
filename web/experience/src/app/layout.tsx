@@ -9,8 +9,8 @@ import AuthGuard from "@/components/AuthGuard";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "OpenCCB | Learning Experience",
-  description: "Consume high-fidelity educational content with OpenCCB",
+  title: "OpenCCB | Experiencia de Aprendizaje",
+  description: "Consume contenido educativo de alta fidelidad con OpenCCB",
 };
 
 import AppHeader from "@/components/AppHeader";
@@ -32,7 +32,7 @@ export default function RootLayout({
               </main>
               <footer className="py-12 px-6 border-t border-white/5 text-center bg-black/20">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">
-                  Powered by OpenCCB &copy; 2023. Advanced Agentic Coding.
+                  Desarrollado por OpenCCB © 2023. Codificación Agente Avanzada.
                 </p>
               </footer>
             </AuthGuard>

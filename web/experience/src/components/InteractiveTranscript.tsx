@@ -43,7 +43,7 @@ export default function InteractiveTranscript({ cues, currentTime, onSeek }: Int
         <div className="flex flex-col h-full glass-card overflow-hidden border-white/5 bg-black/20">
             <div className="p-6 border-b border-white/5 flex items-center gap-3 bg-white/5">
                 <Clock className="w-4 h-4 text-blue-400" />
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Interactive Transcript</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Transcriptor Interactivo</h3>
             </div>
 
             <div
@@ -53,7 +53,7 @@ export default function InteractiveTranscript({ cues, currentTime, onSeek }: Int
                 {cues.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center p-8">
                         <span className="text-4xl mb-4">🤐</span>
-                        <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">No transcription available for this content</p>
+                        <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">No hay transcripción disponible para este contenido</p>
                     </div>
                 ) : (
                     cues.map((cue, index) => {
@@ -83,7 +83,7 @@ export default function InteractiveTranscript({ cues, currentTime, onSeek }: Int
             </div>
 
             <div className="p-4 bg-white/5 border-t border-white/5 flex items-center justify-between">
-                <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Click any segment to jump</span>
+                <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Haz clic en cualquier segmento para saltar</span>
                 <div className="flex gap-1">
                     <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse"></div>
                     <div className="w-1 h-1 rounded-full bg-blue-500/50"></div>

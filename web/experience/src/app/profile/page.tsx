@@ -31,10 +31,10 @@ export default function ProfilePage() {
                 full_name: fullName
             });
 
-            setMessage({ type: 'success', text: 'Profile updated successfully!' });
+            setMessage({ type: 'success', text: '¡Perfil actualizado con éxito!' });
         } catch (err) {
             console.error(err);
-            setMessage({ type: 'error', text: 'Failed to update profile.' });
+            setMessage({ type: 'error', text: 'Error al actualizar el perfil.' });
         } finally {
             setSaving(false);
         }
@@ -45,8 +45,8 @@ export default function ProfilePage() {
     return (
         <div className="max-w-4xl mx-auto py-12 px-6">
             <div className="mb-12">
-                <h1 className="text-4xl font-black tracking-tight text-white mb-2">My Profile</h1>
-                <p className="text-gray-400">Personalize your learning experience and track your progress.</p>
+                <h1 className="text-4xl font-black tracking-tight text-white mb-2">Mi Perfil</h1>
+                <p className="text-gray-400">Personaliza tu experiencia de aprendizaje y sigue tu progreso.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -57,7 +57,7 @@ export default function ProfilePage() {
                             {user.full_name.charAt(0)}
                         </div>
                         <h2 className="text-xl font-bold text-white">{user.full_name}</h2>
-                        <span className="text-xs font-black uppercase tracking-widest text-blue-500 mt-1">Student</span>
+                        <span className="text-xs font-black uppercase tracking-widest text-blue-500 mt-1">Estudiante</span>
 
                         <div className="w-full h-px bg-white/5 my-6" />
 
@@ -65,7 +65,7 @@ export default function ProfilePage() {
                             <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
                                 <div className="flex items-center gap-3">
                                     <Trophy size={16} className="text-yellow-500" />
-                                    <span className="text-xs font-bold text-white uppercase tracking-tighter">Level</span>
+                                    <span className="text-xs font-bold text-white uppercase tracking-tighter">Nivel</span>
                                 </div>
                                 <span className="text-lg font-black text-white">{user.level || 1}</span>
                             </div>
@@ -82,7 +82,7 @@ export default function ProfilePage() {
                             onClick={logout}
                             className="mt-8 w-full py-3 rounded-xl border border-white/10 text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all"
                         >
-                            Logout Session
+                            Cerrar Sesión
                         </button>
                     </div>
                 </div>
@@ -92,21 +92,21 @@ export default function ProfilePage() {
                     <form onSubmit={handleSave} className="glass p-8 rounded-3xl border border-white/5 space-y-6">
                         <div className="space-y-2">
                             <label className="text-xs font-black uppercase tracking-widest text-gray-500 flex items-center gap-2">
-                                <UserIcon size={14} /> Full Name
+                                <UserIcon size={14} /> Nombre Completo
                             </label>
                             <input
                                 type="text"
                                 value={fullName}
                                 onChange={(e) => setFullName(e.target.value)}
                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500/50 transition-colors placeholder:text-gray-700"
-                                placeholder="Enter your full name"
+                                placeholder="Introduce tu nombre completo"
                                 required
                             />
                         </div>
 
                         <div className="space-y-2 opacity-60">
                             <label className="text-xs font-black uppercase tracking-widest text-gray-500 flex items-center gap-2">
-                                <Mail size={14} /> Email Address
+                                <Mail size={14} /> Dirección de Correo Electrónico
                             </label>
                             <input
                                 type="email"
@@ -114,7 +114,7 @@ export default function ProfilePage() {
                                 disabled
                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white/50 cursor-not-allowed"
                             />
-                            <p className="text-[10px] text-gray-500 italic">Email cannot be changed currently.</p>
+                            <p className="text-[10px] text-gray-500 italic">El correo electrónico no se puede cambiar actualmente.</p>
                         </div>
 
                         {message && (
@@ -133,7 +133,7 @@ export default function ProfilePage() {
                             ) : (
                                 <Save size={20} />
                             )}
-                            Save Changes
+                            Guardar Cambios
                         </button>
                     </form>
 
@@ -143,11 +143,11 @@ export default function ProfilePage() {
                                 <Shield size={18} className="text-gray-400" />
                             </div>
                             <div>
-                                <h3 className="text-white font-bold text-sm">Organization</h3>
+                                <h3 className="text-white font-bold text-sm">Organización</h3>
                                 <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px]">{user.organization_id}</p>
                             </div>
                         </div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">Active Tenant</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">Inquilino Activo</span>
                     </div>
                 </div>
             </div>

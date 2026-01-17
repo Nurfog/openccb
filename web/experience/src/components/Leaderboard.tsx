@@ -14,7 +14,7 @@ export default function Leaderboard() {
                 const data = await lmsApi.getLeaderboard();
                 setTopUsers(data);
             } catch (err) {
-                console.error("Failed to fetch leaderboard", err);
+                console.error("Error al obtener la tabla de clasificación", err);
             } finally {
                 setLoading(false);
             }
@@ -33,7 +33,7 @@ export default function Leaderboard() {
     return (
         <div className="glass-card p-8 border-white/5 bg-white/[0.01] rounded-3xl overflow-hidden relative">
             <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
-                <Trophy size={14} className="text-amber-500" /> Leaderboard
+                <Trophy size={14} className="text-amber-500" /> Tabla de Clasificación
             </h3>
 
             <div className="space-y-3">
@@ -53,7 +53,7 @@ export default function Leaderboard() {
 
                         <div className="flex-1">
                             <div className="text-sm font-bold text-gray-200 line-clamp-1">{user.full_name}</div>
-                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Level {user.level || 1}</div>
+                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Nivel {user.level || 1}</div>
                         </div>
 
                         <div className="text-right">
@@ -65,7 +65,7 @@ export default function Leaderboard() {
 
                 {topUsers.length === 0 && (
                     <div className="text-center py-8 text-gray-600 italic text-sm">
-                        No ranking data available yet.
+                        Aún no hay datos de clasificación disponibles.
                     </div>
                 )}
             </div>
