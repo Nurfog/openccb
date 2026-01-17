@@ -3,11 +3,11 @@
 import React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Layout, CheckCircle2, Calendar, BarChart2, Settings } from "lucide-react";
+import { Layout, CheckCircle2, Calendar, BarChart2, Settings, Folder } from "lucide-react";
 
 interface CourseEditorLayoutProps {
     children: React.ReactNode;
-    activeTab: "outline" | "grading" | "calendar" | "analytics" | "settings";
+    activeTab: "outline" | "grading" | "calendar" | "analytics" | "settings" | "files";
 }
 
 export default function CourseEditorLayout({ children, activeTab }: CourseEditorLayoutProps) {
@@ -18,6 +18,7 @@ export default function CourseEditorLayout({ children, activeTab }: CourseEditor
         { key: "grading", label: "Grading", icon: CheckCircle2, href: `/courses/${id}/grading` },
         { key: "calendar", label: "Calendar", icon: Calendar, href: `/courses/${id}/calendar` },
         { key: "analytics", label: "Analytics", icon: BarChart2, href: `/courses/${id}/analytics` },
+        { key: "files", label: "Files & Uploads", icon: Folder, href: `/courses/${id}/files` },
         { key: "settings", label: "Settings", icon: Settings, href: `/courses/${id}/settings` },
     ];
 
@@ -34,8 +35,8 @@ export default function CourseEditorLayout({ children, activeTab }: CourseEditor
                                 key={tab.key}
                                 href={tab.href}
                                 className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${isActive
-                                        ? "border-b-2 border-blue-500 bg-white/5"
-                                        : "text-gray-500 hover:text-white"
+                                    ? "border-b-2 border-blue-500 bg-white/5"
+                                    : "text-gray-500 hover:text-white"
                                     }`}
                             >
                                 <Icon className="w-4 h-4" />

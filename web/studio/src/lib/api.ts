@@ -206,6 +206,16 @@ export interface CreateWebhookPayload {
     secret?: string;
 }
 
+export interface Asset {
+    id: string;
+    course_id: string | null;
+    filename: string;
+    storage_path: string;
+    mimetype: string;
+    size_bytes: number;
+    created_at: string;
+}
+
 const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('studio_token') : null;
 const getSelectedOrgId = () => typeof window !== 'undefined' ? localStorage.getItem('studio_selected_org_id') : null;
 
@@ -301,10 +311,13 @@ export const cmsApi = {
     deleteWebhook: (id: string): Promise<void> => apiFetch(`/webhooks/${id}`, { method: 'DELETE' }),
 
     // Assets
-    uploadAsset: (file: File, onProgress?: (pct: number) => void): Promise<UploadResponse> => {
+    getCourseAssets: (courseId: string): Promise<Asset[]> => apiFetch(`/courses/${courseId}/assets`),
+    deleteAsset: (id: string): Promise<void> => apiFetch(`/assets/${id}`, { method: 'DELETE' }),
+    uploadAsset: (file: File, onProgress?: (pct: number) => void, courseId?: string): Promise<UploadResponse> => {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
             formData.append('file', file);
+            if (courseId) formData.append('course_id', courseId);
 
             const xhr = new XMLHttpRequest();
             xhr.open('POST', `${API_BASE_URL}/assets/upload`);

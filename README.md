@@ -192,6 +192,7 @@ Agrega contenido multimedia o evaluaciones a un módulo.
 - **Nuevos Tipos Gamificados**:
     - `hotspot`: Identificación visual sobre imágenes (ideal para niños).
     - `memory-match`: Juego de memoria con pares conceptuales.
+    - `video-marker`: Preguntas interactivas en timestamps específicos del video.
 - **Cuerpo ( CreateLessonRequest ):**
     ```json
     {
@@ -385,6 +386,7 @@ Obtiene una lista de todas las organizaciones registradas.
 - **Glassmorphism Design**: Consistent aesthetic across Studio and Experience portals.
 - **Global Localization**: Native support for English, Spanish, and Portuguese.
 - **PDF Integrated Viewer**: Read academic documents without leaving the platform.
+- **Interactive Video Markers**: Pause-and-answer questions embedded in video lessons.
 
 ## 📄 Licencia
 Este proyecto es código abierto y está disponible bajo los términos de la licencia especificada en el repositorio.

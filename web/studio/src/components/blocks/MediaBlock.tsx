@@ -5,6 +5,13 @@ import MediaPlayer from "../MediaPlayer";
 import FileUpload from "../FileUpload";
 import { getImageUrl } from "@/lib/api";
 
+export interface Marker {
+    timestamp: number;
+    question: string;
+    options: string[];
+    correctIndex: number;
+}
+
 interface MediaBlockProps {
     id: string;
     title?: string;
@@ -14,9 +21,19 @@ interface MediaBlockProps {
         maxPlays?: number;
         currentPlays?: number;
         show_transcript?: boolean;
+        markers?: Marker[];
     };
     editMode: boolean;
-    onChange: (updates: { title?: string; url?: string; config?: { maxPlays?: number; currentPlays?: number; show_transcript?: boolean } }) => void;
+    onChange: (updates: {
+        title?: string;
+        url?: string;
+        config?: {
+            maxPlays?: number;
+            currentPlays?: number;
+            show_transcript?: boolean;
+            markers?: Marker[];
+        }
+    }) => void;
     transcription?: {
         en?: string;
         es?: string;
@@ -127,6 +144,150 @@ export default function MediaBlock({ title, url, type, config, editMode, onChang
                             </div>
                             <p className="text-[10px] text-gray-500 uppercase leading-relaxed mt-2">Uncheck to hide transcription text (e.g. for listening tests).</p>
                         </div>
+                    </div>
+
+                    {/* Markers Editor */}
+                    <div className="space-y-4 pt-6 border-t border-white/10">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block">Interactive Questions (Timestamps)</label>
+
+                        <div className="space-y-2">
+                            {(config.markers || []).map((marker, idx) => (
+                                <div key={idx} className="bg-white/5 p-4 rounded-lg border border-white/5 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-mono bg-blue-500/20 text-blue-400 px-2 py-1 rounded">
+                                            {Math.floor(marker.timestamp / 60)}:{String(marker.timestamp % 60).padStart(2, '0')}
+                                        </span>
+                                        <input
+                                            value={marker.question}
+                                            onChange={(e) => {
+                                                const newMarkers = [...(config.markers || [])];
+                                                newMarkers[idx].question = e.target.value;
+                                                onChange({ config: { ...config, markers: newMarkers } });
+                                            }}
+                                            className="text-sm bg-transparent border-b border-white/10 flex-1 focus:border-blue-500 outline-none"
+                                        />
+                                        <button
+                                            onClick={() => {
+                                                const newMarkers = [...(config.markers || [])];
+                                                // Change order safely
+                                                if (idx > 0) {
+                                                    [newMarkers[idx], newMarkers[idx - 1]] = [newMarkers[idx - 1], newMarkers[idx]];
+                                                    newMarkers[idx].timestamp = newMarkers[idx - 1].timestamp; // Keep timestamp (?) No, we sort by timestamp usually.
+                                                    // Simpler delete logic only for now. Reordering happens automatically by sort on Add.
+                                                }
+                                            }}
+                                            className="text-gray-500 hover:text-white hidden"
+                                        >
+                                            ▲
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                const newMarkers = [...(config.markers || [])];
+                                                newMarkers.splice(idx, 1);
+                                                onChange({ config: { ...config, markers: newMarkers } });
+                                            }}
+                                            className="text-red-400 hover:text-red-300 p-1"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+
+                                    {/* Options Management */}
+                                    <div className="pl-14 space-y-2">
+                                        <label className="text-[10px] font-bold text-gray-500 uppercase">Options</label>
+                                        {marker.options.map((opt, optIdx) => (
+                                            <div key={optIdx} className="flex items-center gap-2">
+                                                <input
+                                                    type="radio"
+                                                    name={`correct-${idx}`}
+                                                    checked={marker.correctIndex === optIdx}
+                                                    onChange={() => {
+                                                        const newMarkers = [...(config.markers || [])];
+                                                        newMarkers[idx].correctIndex = optIdx;
+                                                        onChange({ config: { ...config, markers: newMarkers } });
+                                                    }}
+                                                    className="accent-green-500"
+                                                />
+                                                <input
+                                                    value={opt}
+                                                    onChange={(e) => {
+                                                        const newMarkers = [...(config.markers || [])];
+                                                        newMarkers[idx].options[optIdx] = e.target.value;
+                                                        onChange({ config: { ...config, markers: newMarkers } });
+                                                    }}
+                                                    className={`text-xs bg-transparent border border-white/10 rounded px-2 py-1 flex-1 ${marker.correctIndex === optIdx ? 'text-green-400 border-green-500/30' : ''}`}
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        const newMarkers = [...(config.markers || [])];
+                                                        newMarkers[idx].options.splice(optIdx, 1);
+                                                        if (newMarkers[idx].correctIndex >= optIdx) {
+                                                            newMarkers[idx].correctIndex = Math.max(0, newMarkers[idx].correctIndex - 1);
+                                                        }
+                                                        onChange({ config: { ...config, markers: newMarkers } });
+                                                    }}
+                                                    className="text-gray-600 hover:text-red-400 px-2"
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <button
+                                            onClick={() => {
+                                                const newMarkers = [...(config.markers || [])];
+                                                newMarkers[idx].options.push(`Option ${newMarkers[idx].options.length + 1}`);
+                                                onChange({ config: { ...config, markers: newMarkers } });
+                                            }}
+                                            className="text-[10px] text-blue-400 hover:text-blue-300 uppercase font-bold tracking-widest mt-1"
+                                        >
+                                            + Add Option
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-2">
+                            <input
+                                code-type="number"
+                                placeholder="Sec"
+                                id="new-marker-time"
+                                className="col-span-1 bg-white/5 border border-white/10 rounded px-3 py-2 text-sm"
+                            />
+                            <input
+                                type="text"
+                                placeholder="Question?"
+                                id="new-marker-question"
+                                className="col-span-2 bg-white/5 border border-white/10 rounded px-3 py-2 text-sm"
+                            />
+                            <button
+                                onClick={() => {
+                                    const timeInput = document.getElementById('new-marker-time') as HTMLInputElement;
+                                    const questionInput = document.getElementById('new-marker-question') as HTMLInputElement;
+                                    const time = parseInt(timeInput.value);
+                                    const question = questionInput.value;
+
+                                    if (time >= 0 && question) {
+                                        const newMarker: Marker = {
+                                            timestamp: time,
+                                            question,
+                                            options: ["Yes", "No"], // Default options
+                                            correctIndex: 0
+                                        };
+                                        const newMarkers = [...(config.markers || []), newMarker].sort((a, b) => a.timestamp - b.timestamp);
+                                        onChange({ config: { ...config, markers: newMarkers } });
+                                        timeInput.value = "";
+                                        questionInput.value = "";
+                                    }
+                                }}
+                                className="col-span-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-bold uppercase"
+                            >
+                                Add
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-gray-500 uppercase leading-relaxed">
+                            Questions will pause the video at the specified second. Only simple Yes/No questions supported currently.
+                        </p>
                     </div>
                 </div>
             )}

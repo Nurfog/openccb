@@ -1,175 +1,161 @@
-# OpenCCB: Open Comprehensive Course Backbone - Roadmap
+# OpenCCB: Hoja de Ruta (Roadmap) del Proyecto
 
-## Phase 1: Foundation ✅
-- [x] Rust Workspace Setup (Edition 2024)
-- [x] Microservices Scaffolding (CMS & LMS)
-- [x] Multi-Database Infrastructure (PostgreSQL with separate DBs)
-- [x] Frontend Initialization (Next.js Studio & Experience)
-- [x] Dockerization of all services
-- [x] API Integration (Dashboard <-> CMS Service)
-- [x] Unified `install.sh` script with hardware detection & auto-config
+## Fase 1: Cimientos ✅
+- [x] Configuración del Workspace de Rust (Edición 2024)
+- [x] Estructura de Microservicios (CMS y LMS)
+- [x] Infraestructura Multi-Base de Datos (PostgreSQL con DBs separadas)
+- [x] Inicialización del Frontend (Studio y Experience con Next.js)
+- [x] Dockerización de todos los servicios
+- [x] Integración de API (Dashboard <-> Servicio CMS)
+- [x] Script de instalación unificado (`install.sh`) con detección de hardware y auto-configuración
 
-## Phase 2: Core CMS Features ✅
-- [x] Course Outline Editor (Modules & Lessons)
-- [x] File Upload System (Video/Audio/Native Assets)
-- [x] Interactive Content (Activity Builder)
-  - [x] Block Reordering (Move Up/Down)
-  - [x] Rich Text Descriptions
-  - [x] Media Blocks with Playback Constraints
-  - [x] Quiz Blocks (Multiple Choice, True/False, Multiple Select)
-  - [x] Advanced Assessment Types:
-    - [x] Fill-in-the-Blanks
-    - [x] Matching Pairs
-    - [x] Ordering/Sequencing
-    - [x] Short Answer
-- [x] Service-to-Service Communication (CMS -> LMS sync)
-- [x] Premium Video Player with playback limits
-- [x] Full Studio UI with dynamic course management
+## Fase 2: Funcionalidades Core del CMS ✅
+- [x] Editor de Estructura de Cursos (Módulos y Lecciones)
+- [x] Sistema de Carga de Archivos (Video, Audio, Recursos Nativos)
+- [x] Contenido Interactivos (Constructor de Actividades)
+  - [x] Reordenamiento de bloques (Subir/Bajar)
+  - [x] Descripciones con texto enriquecido
+  - [x] Bloques multimedia con restricciones de reproducción
+  - [x] Bloques de Quiz (Opción múltiple, Verdadero/Falso, Selección múltiple)
+  - [x] Tipos de evaluación avanzada:
+    - [x] Completar espacios en blanco
+    - [x] Emparejamiento de parejas
+    - [x] Ordenamiento/Secuenciación
+    - [x] Respuesta corta
+- [x] Comunicación entre servicios (Sincronización CMS -> LMS)
+- [x] Reproductor de video Premium con límites de visualización
+- [x] Interfaz de Studio completa con gestión dinámica de cursos
 
-## Phase 3: Authentication & Security ✅
-- [x] **JWT-Based Authentication**: Common auth across all services
-- [x] **Role-Based Access Control (RBAC)**:
-  - [x] Multi-role support (Admin, Instructor, Student)
-  - [x] Role-specific permissions and UI
-  - [x] Token-based authorization for protected endpoints
-- [x] **Audit Logging**: All CMS mutations tracked
-- [x] **Audit UI**: Admin interface to view audit logs
+## Fase 3: Autenticación y Seguridad ✅
+- [x] **Autenticación Basada en JWT**: Auth común para todos los servicios
+- [x] **Control de Acceso Basado en Roles (RBAC)**:
+  - [x] Soporte multi-rol (Admin, Instructor, Estudiante)
+  - [x] Permisos e interfaces específicas por rol
+  - [x] Autorización basada en tokens para endpoints protegidos
+- [x] **Registro de Auditoría (Audit Log)**: Seguimiento de todos los cambios en el CMS
+- [x] **Interfaz de Auditoría**: Panel de administración para visualizar registros de cambios
 
-## Phase 4: LMS Experience & Grading ✅
-- [x] **Student Portal (Experience)**:
-  - [x] Course catalog and enrollment
-  - [x] Interactive lesson player
-  - [x] Mobile-responsive design
-- [x] **Holistic Grading System**:
-  - [x] Weighted grading categories
-  - [x] Drop lowest N scores per category
-  - [x] Automatic weighted grade calculation
-- [x] **Assessment Policies**:
-  - [x] Configurable max attempts per lesson
-  - [x] Instant corrections and retry policies
-  - [x] Atomic attempt tracking with enforcement
-- [x] **Progress Tracking**:
-  - [x] Real-time score visualization
-  - [x] Category-by-category breakdown
-  - [x] Weighted grade calculation
-- [x] **Dynamic Passing Thresholds**:
-  - [x] Configurable passing percentage per course
-  - [x] 5-tier performance visualization
-  - [x] Color-coded feedback (Reprobado to Excelente)
-- [x] **Certificates**: Automated certificate generation upon completion
+## Fase 4: Experiencia LMS y Calificaciones ✅
+- [x] **Portal del Estudiante (Experience)**:
+  - [x] Catálogo de cursos e inscripciones
+  - [x] Reproductor interactivo de lecciones
+  - [x] Diseño responsivo (móviles/tablets)
+- [x] **Sistema de Calificación Holístico**:
+  - [x] Categorías de calificación con pesos (porcentajes)
+  - [x] Opción de eliminar las N puntuaciones más bajas por categoría
+  - [x] Cálculo automático de la nota ponderada
+- [x] **Políticas de Evaluación**:
+  - [x] Intentos máximos configurables por lección
+  - [x] Correcciones instantáneas y políticas de reintento
+  - [x] Seguimiento atómico de intentos con validación de reglas
+- [x] **Seguimiento del Progreso**:
+  - [x] Visualización de puntuaciones en tiempo real
+  - [x] Desglose categoría por categoría
+- [x] **Umbrales de Aprobación Dinámicos**:
+  - [x] Porcentaje de aprobación configurable por curso
+  - [x] Visualización de rendimiento en 5 niveles
+  - [x] Feedback por colores (desde Reprobado hasta Excelente)
+- [x] **Certificados**: Generación automática de certificados al completar el curso
 
-## Phase 5: Analytics & Insights ✅
-- [x] **Instructor Analytics Dashboard**:
-  - [x] Total enrollments per course
-  - [x] Overall average score
-  - [x] Per-lesson performance breakdown
-  - [x] "Struggling lessons" detection
-  - [x] RBAC enforcement (instructors see only their courses)
-- [x] **Student Progress Dashboard**:
-  - [x] Interactive performance bar
-  - [x] Tier-based feedback visualization
-  - [x] Real-time grade updates
+## Fase 5: Analíticas e Insights ✅
+- [x] **Dashboard de Analíticas para Instructores**:
+  - [x] Total de inscritos por curso
+  - [x] Promedio general de notas
+  - [x] Desglose de rendimiento por lección
+  - [x] Detección de "lecciones difíciles"
+  - [x] Aplicación de RBAC (los instructores solo ven sus cursos)
+- [x] **Dashboard de Progreso del Estudiante**:
+  - [x] Barra de rendimiento interactiva
+  - [x] Visualización de feedback basada en niveles
+  - [x] Actualización de notas en tiempo real
 
-## Phase 6: Advanced Features ✅
-- [x] **Multi-tenancy**: Support for multiple organizations (Completed)
-  - [x] Database schema migration (add `organization_id`)
-  - [x] Update Rust models & JWT Claims
-  - [x] Implement Axum middleware for organization context
-  - [x] Update Frontend registration to support organizations
-  - [x] **Super Admin & Default Org**: Global management of all tenants.
-  - [x] **Global Course Visibility**: System-wide courses available to all organizations.
-- [x] **Organization Branding**: Custom identity per tenant (Completed)
-  - [x] Logo upload & optimization
-  - [x] Custom color schemes (Primary/Secondary)
-  - [x] Dynamic Experience Portal adaptation
-  - [x] Live Branding Preview in Studio
-- [x] **Advanced UI**:
-  - [x] **Premium Organization Selector**: For search-as-you-type multi-tenant management.
-  - [x] **Searchable Combobox**: Elegant glassmorphism filtering component.
+## Fase 6: Funcionalidades Avanzadas ✅
+- [x] **Multi-tenancy**: Soporte para múltiples organizaciones (Completado)
+  - [x] Migración del esquema DB (añadir `organization_id`)
+  - [x] Actualización de modelos Rust y Claims de JWT
+  - [x] Middleware en Axum para contexto de organización
+  - [x] Registro en frontend con soporte para organizaciones
+  - [x] **Super Admin y Org por Defecto**: Gestión global de todos los inquilinos
+  - [x] **Visibilidad Global de Cursos**: Cursos de sistema disponibles para todas las organizaciones
+- [x] **Personalización de Marca (Branding)**: Identidad propia por organización (Completado)
+  - [x] Carga y optimización de logotipos
+  - [x] Esquemas de colores personalizados (Primario/Secundario)
+  - [x] Adaptación dinámica del portal de Experience
+  - [x] Previsualización en vivo del branding en Studio
+- [x] **Interfaz de Usuario Avanzada**:
+  - [x] **Selector de Organizaciones Premium**: Gestión multi-tenant con búsqueda predictiva
+  - [x] **Combobox de Búsqueda**: Componente elegante con filtrado y estilo glassmorphism
 
-## Phase 7: User Engagement & Social (In Progress)
-- [x] **Advanced Analytics**:
-  - [x] Cohort analysis (Implemented)
-  - [x] Retention metrics (Implemented)
-  - [x] Engagement heatmaps (Implemented)
-- [x] **AI Integration**:
-  - [x] AI-driven lesson summaries (Implemented)
-  - [x] Real-time video transcription & translation via Local AI (Implemented)
-  - [x] Automated quiz generation (Implemented)
-  - [ ] Personalized learning paths
-- [x] **Gamification**: (Broadly implemented)
-  - [x] Badges and achievements (Implemented base system)
-  - [x] Leaderboards (Implemented)
-  - [x] XP and leveling system (Implemented)
-- [x] **Course Management Enhancements**:
-  - [x] Manual naming for modules, lessons, and activities during creation.
-  - [x] Reordering for modules, lessons, and activities (Level up/down).
-  - [x] Deletion of modules and lessons with confirmation.
-  - [x] **Pacing Control**:
-    - [x] Self-paced mode (Evergreen).
-    - [x] Instructor-led mode (Cohort-based with start/end dates).
-  - [x] **Course Calendar**:
-    - [x] Management of important dates (exams, assignments, milestones).
-    - [x] Automated reminders for upcoming deadlines. (Implemented)
+## Fase 7: Compromiso y Social (En Progreso)
+- [x] **Analíticas de Vanguardia**:
+  - [x] Análisis de cohortes (Implementado)
+  - [x] Métricas de retención (Implementado)
+  - [x] Mapas de calor de participación (Heatmaps) (Implementado)
+- [x] **Integración de IA**:
+  - [x] Resúmenes de lecciones generados por IA (Implementado)
+  - [x] Transcripción y traducción de video en tiempo real (IA Local) (Implementado)
+  - [x] Generación automática de quices (Implementado)
+- [ ] **Rutas de Aprendizaje Personalizadas**: Recomendaciones impulsadas por IA
+- [x] **Gamificación Base**: (Implementada a nivel de sistema)
+  - [x] Medallas y logros
+  - [x] Tablas de clasificación (Leaderboards)
+  - [x] Sistema de XP y niveles
+- [x] **Mejoras en la Gestión de Cursos**:
+  - [x] Nombrado manual de módulos, lecciones y actividades
+  - [x] Pacing de cursos: Modo autodidacta (Evergreen) o Dirigido por instructor (Cohort)
+  - [x] Calendario de hitos y recordatorios automáticos de fechas límite
 
-## Phase 8: Enterprise Features (In Progress)
-- [x] **User Profiles & Lifecycle**:
-  - [x] **Integrated Logout**: Standardized session management in both portals.
-  - [x] **Profile Management**: Self-service user info updates (Avatar, Bio, Language).
-- [x] **Advanced Reporting**: Custom report builder and CSV exports. (Implemented)
-- [x] **Integration Ecosystem**:
-  - [x] **SSO (Single Sign-On)**: Soporte completo para OIDC (Google, Okta, Azure AD) con autoprovisionamiento. (Completado)
-- [ ] **Mobile Apps**:
-- [ ] **Accessibility**:
+## Fase 8: Funcionalidades Enterprise (En Progreso)
+- [x] **Perfil de Usuario y Ciclo de Vida**:
+  - [x] **Cierre de Sesión Integrado**: Gestión estandarizada en ambos portales
+  - [x] **Gestión del Perfil**: Actualización de avatar, bio e idioma por el usuario
+- [x] **Reportes Avanzados**: Constructor de reportes personalizados y exportación a CSV (Implementado)
+- [x] **Ecosistema de Integración**:
+  - [x] **SSO (Single Sign-On)**: Soporte completo OIDC (Google, Okta, Azure AD) (Completado)
+- [ ] **Apps Móviles**: (Postpuesto por ahora)
+- [ ] **Accesibilidad**: Auditoría y correcciones WCAG 2.1
 
-## Phase 9: Course Portability (Import/Export) ✅
-- [x] **Universal JSON Schema**: Standardized format for course interchange. (Completed)
-- [x] **Recursive Exporter**: Serialization of full course hierarchies. (Completed)
-- [x] **Atomic Importer**: Batch creation with dependency re-mapping. (Completed)
-- [x] **Portability UI**: Integrated Export/Import buttons in Settings. (Completed)
+## Fase 9: Portabilidad de Cursos ✅
+- [x] **Esquema JSON Universal**: Formato estandarizado para intercambio de cursos (Completado)
+- [x] **Exportador Recursivo**: Serialización de jerarquías completas de cursos (Completado)
+- [x] **Importador Atómico**: Creación por lotes con re-mapeo de dependencias (Completado)
+- [x] **Interfaz de Portabilidad**: Botones de Exportación/Importación en Ajustes (Completado)
 
-## Phase 10: Global Admin Console (Admin Interface) ✅
-- [x] **The "Django" Panel**: Dedicated UI for Super-Admins to manage Orgs, Users, and Health. (Completed)
-- [x] **System Monitoring**: Real-time stats on AI usage and service heartbeats. (Completed)
-- [x] **Universal Audit Log**: Centralized dashboard for cross-tenant activity. (Completed)
+## Fase 10: Consola de Administración Global ✅
+- [x] **Panel "Estilo Django"**: Interfaz dedicada para Super-Admins para gestionar Orgs y Usuarios (Completado)
+- [x] **Monitoreo del Sistema**: Estadísticas en tiempo real de uso de IA y estado de servicios (Completado)
+- [x] **Auditoría Universal**: Panel centralizado de actividad para todos los tenants (Completado)
 
-## Phase 11: Extended Assessments & Quizzes (In Progress)
-- [x] **Code Quizzes**: Interactive coding challenges with IDE-like player. (Completed)
-- [ ] **Image Labeling**: Hotspot quizzes for technical training.
-- [ ] **AI Teaching Assistant**: RAG-powered tutor within the lesson player.
+## Fase 11: Evaluaciones y Quizzes Extendidos (En Progreso)
+- [x] **Quices de Código**: Desafíos interactivos con reproductor tipo IDE (Completado)
+- [x] **Identificación Visual**: Quices de "Puntos Calientes" (Hotspots) en imágenes (Completado)
+- [ ] **Tutor de IA Integrado**: Asistente basado en RAG dentro del reproductor de lecciones
+- [ ] **Evaluaciones por Audio**: Preguntas con respuesta oral para idiomas
+- [x] **Marcadores de Video**: Preguntas que pausan el video en timestamps específicos (Completado)
 
-## Phase 12: AI-Powered "Auto-Course" Generator ✅
-- [x] **Magic Course Creation**: Structure generation from a single prompt. (Completed)
-- [x] **Atomic Transactional Ingestion**: Create whole structures (Module -> Lesson) in one go. (Completed)
-- [x] **LLM Prompt Engineering**: Professional curriculum design via AI. (Completed)
+## Fase 12: Generador de Cursos "Mágico" con IA ✅
+- [x] **Creación Instantánea**: Generación de estructura completa a partir de un prompt (Completado)
+- [x] **Ingestión Atómica Transaccional**: Creación de módulos y lecciones en un solo paso (Completado)
+- [x] **Ingeniería de Prompts**: Diseño curricular profesional optimizado para LLMs (Completado)
 
-## Phase 13: Kid-Friendly Gamified Assessments ✅
-- [x] **Image Hotspots**: Visual identification quizzes. (Completed)
-- [x] **Memory Match**: Educational card games. (Completed)
-- [x] **AI Prompt Tuning**: LLM awareness of child-friendly formats. (Completed)
+## Fase 13: Gamificación para Niños ✅
+- [x] **Juego de Memoria**: Emparejamiento conceptual mediante cartas interactivas (Completado)
+- [x] **Arrastrar al Cubo**: Categorización visual por arrastre (Completado)
+- [x] **Feedback Animado**: Animaciones de celebración (confeti, estrellas) para éxitos (Completado)
 
-## Phase 14: Globalization & Document-Based Learning ✅
-- [x] **Internationalization (i18n)**: UI support for English, Spanish, and Portuguese. (Completed)
-- [x] **Language Switcher**: Dynamic locale switching in Navbar and User Profile. (Completed)
-- [x] **Document Block**: In-platform PDF preview and DOCX/PPTX downloads. (Completed)
-- [x] **Academic Language Consistency**: Content (graded activities) remains in original language. (Completed)
-- [x] **Multi-language AI Support**: Transcriptions and summaries follow the course context. (Completed)
+## Fase 14: Globalización y Aprendizaje con Documentos ✅
+- [x] **Internacionalización (i18n)**: Soporte de UI para Inglés, Español y Portugués (Completado)
+- [x] **Selector de Idiomas**: Cambio dinámico en la barra de navegación y perfil (Completado)
+- [x] **Bloque de Documentos**: Previsualización de PDF y descargas de DOCX/PPTX (Completado)
+- [x] **IA Multi-idioma**: Las transcripciones y resúmenes siguen el contexto del curso (Completado)
 
-## Current Status
+---
 
-**Platform Maturity**: Core multi-tenant architecture is stable and performance-optimized.
+## Estado Actual y Próximas Prioridades
 
-**Recent Milestones**:
-- ✅ **Globalization (i18n)**: Multi-language UI (EN/ES/PT) for Studio and Experience.
-- ✅ **Document Learning**: Support for PDF, DOCX, and PPTX reading activities.
-- ✅ **Course Portability**: JSON-based import/export system for multi-tenant mobility.
-- ✅ **Gamified Kids Assessments**: Image Hotspots and Memory Match features.
-- ✅ **AI Course Wizard**: Instant course structure generation from prompts.
-- ✅ **Global Admin Panel**: Centralized control center for system administrators.
-- ✅ **Interactive Code Player**: New technical assessment type for developers.
-- ✅ **SSO Integration**: OIDC support for corporate clients with self-service config.
+**Madurez de la Plataforma**: El núcleo multi-tenant es estable, escalable y está optimizado para alto rendimiento con IA Local.
 
-**Next Priorities**:
-1. **Personalized Learning Paths**: AI-driven content recommendations.
-2. **Mobile Apps**: Dedicated iOS and Android wrappers.
-3. **Accessibility**: WCAG 2.1 compliance audit and fixes.
+**Prioridades Inmediatas**:
+1. **Marcadores de Video & Audio**: Evaluaciones integradas en contenido multimedia.
+2. **IA Teaching Assistant**: Tutor RAG personalizado por curso.
+3. **Rutas de Aprendizaje**: Recomendaciones basadas en el historial.

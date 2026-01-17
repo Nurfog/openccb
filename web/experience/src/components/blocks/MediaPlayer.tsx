@@ -12,17 +12,30 @@ interface MediaPlayerProps {
     media_type: 'video' | 'audio';
     config?: {
         maxPlays?: number;
+        markers?: {
+            timestamp: number;
+            question: string;
+            options: string[];
+            correctIndex: number;
+        }[];
     };
     hasTranscription?: boolean;
     initialPlayCount?: number;
     onTimeUpdate?: (time: number) => void;
     onPlay?: () => void;
+    isGraded?: boolean;
 }
 
-export default function MediaPlayer({ id, lessonId, title, url, media_type, config, hasTranscription, initialPlayCount, onTimeUpdate, onPlay }: MediaPlayerProps) {
+export default function MediaPlayer({ id, lessonId, title, url, media_type, config, hasTranscription, initialPlayCount, onTimeUpdate, onPlay, isGraded }: MediaPlayerProps) {
     const [playCount, setPlayCount] = useState(initialPlayCount || 0);
     const [hasStarted, setHasStarted] = useState(false);
     const [locked, setLocked] = useState(false);
+
+    // Marker State
+    const [activeMarker, setActiveMarker] = useState<{ question: string, options: string[], correctIndex: number } | null>(null);
+    const [handledMarkers, setHandledMarkers] = useState<Set<number>>(new Set());
+    const [lastTime, setLastTime] = useState(0);
+    const [feedback, setFeedback] = useState<{ isCorrect: boolean } | null>(null);
 
     useEffect(() => {
         if (initialPlayCount !== undefined) {
@@ -138,8 +151,28 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
                         className="w-full h-full rounded-xl"
                         onPlay={handlePlay}
                         onTimeUpdate={(e) => {
+                            const time = e.currentTarget.currentTime;
+
+                            // Marker Logic
+                            if (config?.markers && !activeMarker) {
+                                // Check for markers we just crossed
+                                const markers = config.markers;
+
+                                for (const marker of markers) {
+                                    // Trigger if we crossed the timestamp and haven't handled it yet
+                                    // Use a small window to ensure we catch it but don't double trigger
+                                    if (time >= marker.timestamp && lastTime < marker.timestamp && !handledMarkers.has(marker.timestamp)) {
+                                        e.currentTarget.pause();
+                                        setActiveMarker(marker);
+                                        setHandledMarkers(prev => new Set(prev).add(marker.timestamp));
+                                        break;
+                                    }
+                                }
+                            }
+                            setLastTime(time);
+
                             if (onTimeUpdate) {
-                                onTimeUpdate(e.currentTarget.currentTime);
+                                onTimeUpdate(time);
                             }
                         }}
                     >
@@ -175,6 +208,71 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
                 <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-orange-500/70 p-4 rounded-xl bg-orange-500/5 border border-orange-500/10">
                     <AlertCircle size={14} />
                     <span>Presta atención. El contenido se bloqueará después de {maxPlays} reproducciones.</span>
+                </div>
+            )}
+            {/* Question Overlay */}
+            {activeMarker && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md rounded-xl animate-in fade-in duration-300">
+                    <div className="bg-white text-black p-6 rounded-2xl shadow-2xl max-w-sm w-full space-y-4">
+                        <div className="flex items-center gap-2 text-blue-600 font-bold text-xs uppercase tracking-widest">
+                            <AlertCircle size={16} />
+                            <span>Quick Check</span>
+                        </div>
+                        <h4 className="text-xl font-bold">{activeMarker.question}</h4>
+                        <div className="grid grid-cols-2 gap-3">
+                            {activeMarker.options.map((option, idx) => (
+                                <button
+                                    key={idx}
+                                    disabled={!!feedback}
+                                    onClick={() => {
+                                        const isCorrect = idx === activeMarker.correctIndex;
+
+                                        if (isGraded) {
+                                            // Graded Mode: Show feedback then continue
+                                            setFeedback({ isCorrect });
+                                            // Save answer to backend (mocked for now)
+                                            console.log(`Submitted answer for marker at ${activeMarker}: ${isCorrect ? 'Correct' : 'Wrong'}`);
+
+                                            setTimeout(() => {
+                                                setFeedback(null);
+                                                setActiveMarker(null);
+                                                const video = document.querySelector(`div[id="${id}"] video`) as HTMLVideoElement;
+                                                if (video) video.play();
+                                            }, 1500);
+                                        } else {
+                                            // Formative Mode: Block until correct
+                                            if (isCorrect) {
+                                                setFeedback({ isCorrect: true });
+                                                setTimeout(() => {
+                                                    setFeedback(null);
+                                                    setActiveMarker(null);
+                                                    const video = document.querySelector(`div[id="${id}"] video`) as HTMLVideoElement;
+                                                    if (video) video.play();
+                                                }, 1000);
+                                            } else {
+                                                setFeedback({ isCorrect: false });
+                                                alert("Try again! (This is just practice)");
+                                                setFeedback(null);
+                                            }
+                                        }
+                                    }}
+                                    className={`px-4 py-3 rounded-xl font-medium transition-all text-left ${feedback
+                                        ? idx === activeMarker.correctIndex
+                                            ? "bg-green-500 text-white"
+                                            : feedback.isCorrect === false && "bg-red-500 text-white"
+                                        : "bg-gray-100 hover:bg-blue-500 hover:text-white"
+                                        }`}
+                                >
+                                    {option}
+                                </button>
+                            ))}
+                        </div>
+                        {feedback && (
+                            <div className={`mt-2 text-center text-sm font-bold uppercase tracking-widest ${feedback.isCorrect ? 'text-green-600' : 'text-red-500'}`}>
+                                {feedback.isCorrect ? "Correct!" : "Incorrect"}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

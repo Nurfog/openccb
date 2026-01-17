@@ -1526,6 +1526,7 @@ pub async fn upload_asset(
     let mut filename = String::new();
     let mut data = Vec::new();
     let mut mimetype = String::new();
+    let mut course_id: Option<Uuid> = None;
 
     while let Some(field) =
         multipart
@@ -1549,6 +1550,12 @@ pub async fn upload_asset(
                     (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
                 })?
                 .to_vec();
+        } else if name == "course_id" {
+            if let Ok(txt) = field.text().await {
+                if let Ok(id) = Uuid::parse_str(&txt) {
+                    course_id = Some(id);
+                }
+            }
         }
     }
 
@@ -1582,7 +1589,7 @@ pub async fn upload_asset(
         .unwrap_or(0);
 
     sqlx::query(
-        "INSERT INTO assets (id, filename, storage_path, mimetype, size_bytes, organization_id) VALUES ($1, $2, $3, $4, $5, $6)"
+        "INSERT INTO assets (id, filename, storage_path, mimetype, size_bytes, organization_id, course_id) VALUES ($1, $2, $3, $4, $5, $6, $7)"
     )
     .bind(asset_id)
     .bind(&filename)
@@ -1590,6 +1597,7 @@ pub async fn upload_asset(
     .bind(mimetype)
     .bind(size_bytes)
     .bind(org_ctx.id)
+    .bind(course_id)
     .execute(&pool)
     .await
     .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -1602,6 +1610,93 @@ pub async fn upload_asset(
         filename,
         url,
     }))
+}
+
+pub async fn get_course_assets(
+    Org(org_ctx): Org,
+    State(pool): State<PgPool>,
+    Path(course_id): Path<Uuid>,
+) -> Result<Json<Vec<common::models::Asset>>, StatusCode> {
+    let assets = sqlx::query_as::<_, common::models::Asset>(
+        "SELECT * FROM assets WHERE organization_id = $1 AND course_id = $2 ORDER BY created_at DESC"
+    )
+    .bind(org_ctx.id)
+    .bind(course_id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch course assets: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(assets))
+}
+
+pub async fn delete_asset(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Path(asset_id): Path<Uuid>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    // 1. Fetch asset to verify ownership/org
+    let asset = sqlx::query_as::<_, common::models::Asset>(
+        "SELECT * FROM assets WHERE id = $1 AND organization_id = $2",
+    )
+    .bind(asset_id)
+    .bind(org_ctx.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let asset = match asset {
+        Some(a) => a,
+        None => return Err((StatusCode::NOT_FOUND, "Asset not found".to_string())),
+    };
+
+    // 2. Check permissions (only instructor of the course or admin)
+    if claims.role != "admin" {
+        // If linked to a course, check if user owns that course
+        if let Some(cid) = asset.course_id {
+            let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1")
+                .bind(cid)
+                .fetch_optional(&pool)
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+            if let Some(c) = course {
+                if c.instructor_id != claims.sub {
+                    return Err((
+                        StatusCode::FORBIDDEN,
+                        "Not authorized to delete this asset".to_string(),
+                    ));
+                }
+            }
+        }
+        // If not linked to a course, only admins might delete? Or maybe uploader?
+        // For now, let's assume if it's orphaned, only admin deletes.
+        if asset.course_id.is_none() {
+            return Err((
+                StatusCode::FORBIDDEN,
+                "Only admins can delete global assets".to_string(),
+            ));
+        }
+    }
+
+    // 3. Delete file
+    // Note: storage_path is relative to working dir usually "uploads/..."
+    if let Err(e) = tokio::fs::remove_file(&asset.storage_path).await {
+        tracing::warn!("Failed to delete file {}: {}", asset.storage_path, e);
+        // We continue to delete from DB even if file specific deletion failed (maybe already gone)
+    }
+
+    // 4. Delete from DB
+    sqlx::query("DELETE FROM assets WHERE id = $1")
+        .bind(asset_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[derive(Deserialize)]
@@ -2706,7 +2801,7 @@ pub async fn export_course(
     _claims: Claims,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
-) -> Result<Json<exporter::CourseExport>, StatusCode> {
+) -> Result<impl axum::response::IntoResponse, (StatusCode, String)> {
     // 1. Verify access (ensure course belongs to org)
     let exists = sqlx::query_scalar::<_, bool>(
         "SELECT EXISTS(SELECT 1 FROM courses WHERE id = $1 AND organization_id = $2)",
@@ -2715,33 +2810,134 @@ pub async fn export_course(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    if !exists {
-        return Err(StatusCode::NOT_FOUND);
-    }
-
-    // 2. Export recursively
-    let export = exporter::get_course_data(&pool, id).await.map_err(|e| {
-        tracing::error!("Export failed: {}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "DB Check failed".to_string(),
+        )
     })?;
 
-    Ok(Json(export))
+    if !exists {
+        return Err((StatusCode::NOT_FOUND, "Course not found".to_string()));
+    }
+
+    // 2. Generate ZIP
+    let zip_bytes = exporter::generate_course_zip(&pool, id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Export failed: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        })?;
+
+    let filename = format!("course-{}.ccb", id);
+    let disposition = format!("attachment; filename=\"{}\"", filename);
+
+    axum::response::Response::builder()
+        .header(axum::http::header::CONTENT_TYPE, "application/zip")
+        .header(axum::http::header::CONTENT_DISPOSITION, disposition)
+        .body(axum::body::Body::from(zip_bytes))
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to build response".to_string(),
+            )
+        })
 }
 
+
+#[axum::debug_handler]
 pub async fn import_course(
     Org(org_ctx): Org,
     claims: Claims,
     State(pool): State<PgPool>,
-    Json(payload): Json<exporter::CourseExport>,
+    mut multipart: axum::extract::Multipart,
 ) -> Result<Json<Course>, StatusCode> {
+    // 1. Buffer the uploaded ZIP file
+    let mut zip_data = Vec::new();
+    while let Some(field) = multipart.next_field().await.map_err(|_| StatusCode::BAD_REQUEST)? {
+        if field.name() == Some("file") {
+            zip_data = field.bytes().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?.to_vec();
+            break;
+        }
+    }
+
+    if zip_data.is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // 2. Open ZIP
+    let reader = std::io::Cursor::new(zip_data);
+    let mut archive = zip::ZipArchive::new(reader).map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    // 3. Process Assets & Prepare Remapping
+    let mut asset_map = std::collections::HashMap::new(); // Old Filename -> New URL
+
+    let len = archive.len();
+    for i in 0..len {
+        let (old_filename, content) = {
+            let mut file = archive.by_index(i).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            if !file.name().starts_with("assets/") || !file.is_file() {
+                continue;
+            }
+            let old_filename = file.name().trim_start_matches("assets/").to_string();
+            
+            // Read content
+            let mut content = Vec::new();
+            std::io::Read::read_to_end(&mut file, &mut content).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            (old_filename, content)
+        }; // file is dropped here
+
+        // Generate New ID and Path
+        let new_id = Uuid::new_v4();
+        let extension = std::path::Path::new(&old_filename).extension().and_then(|s| s.to_str()).unwrap_or("");
+        let new_storage_filename = format!("{}.{}", new_id, extension);
+        let new_storage_path = format!("uploads/{}", new_storage_filename);
+        let new_url = format!("/assets/{}", new_storage_filename);
+
+        // Write to Disk
+        tokio::fs::create_dir_all("uploads").await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        tokio::fs::write(&new_storage_path, &content).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        // Get mimetype (guess or simple)
+        let mimetype = mime_guess::from_path(&old_filename).first_or_octet_stream().to_string();
+
+        sqlx::query(
+            "INSERT INTO assets (id, filename, storage_path, mimetype, size_bytes, organization_id) 
+             VALUES ($1, $2, $3, $4, $5, $6)"
+        )
+        .bind(new_id)
+        .bind(&old_filename) 
+        .bind(&new_storage_path)
+        .bind(&mimetype)
+        .bind(content.len() as i64)
+        .bind(org_ctx.id)
+        .execute(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        asset_map.insert(format!("/assets/{}", old_filename), new_url);
+    }
+
+    // 4. Read Course JSON and Remap
+    let mut course_json_str = String::new();
+    {
+        let mut json_file = archive.by_name("course.json").map_err(|_| StatusCode::BAD_REQUEST)?;
+        std::io::Read::read_to_string(&mut json_file, &mut course_json_str).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    }
+
+    // Apply Replacements
+    for (old_url, new_url) in &asset_map {
+        course_json_str = course_json_str.replace(old_url, new_url);
+    }
+
+    let payload: exporter::CourseExport = serde_json::from_str(&course_json_str).map_err(|_| StatusCode::BAD_REQUEST)?;
+
     let mut tx = pool
         .begin()
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // 1. Create Course
+    // 5. Create Course
     let new_course = sqlx::query_as::<_, Course>(
         "INSERT INTO courses (
             organization_id, instructor_id, title, pacing_mode, description, 
@@ -2765,7 +2961,7 @@ pub async fn import_course(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    // 2. Import Grading Categories and create mapping
+    // 6. Import Grading Categories
     let mut cat_map = std::collections::HashMap::new();
     for old_cat in payload.grading_categories {
         let new_cat = sqlx::query_as::<_, common::models::GradingCategory>(
@@ -2785,7 +2981,7 @@ pub async fn import_course(
         cat_map.insert(old_cat.id, new_cat.id);
     }
 
-    // 3. Import Modules & Lessons
+    // 7. Import Modules & Lessons
     for module_data in payload.modules {
         let new_module = sqlx::query_as::<_, Module>(
             "INSERT INTO modules (course_id, organization_id, title, position) 

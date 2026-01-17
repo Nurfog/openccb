@@ -130,6 +130,7 @@ pub struct Enrollment {
 pub struct Asset {
     pub id: Uuid,
     pub organization_id: Uuid,
+    pub course_id: Option<Uuid>,
     pub filename: String,
     pub storage_path: String,
     pub mimetype: String,

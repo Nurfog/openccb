@@ -218,6 +218,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                                                     }
                                                                 }
                                                             }}
+                                                            isGraded={lesson.is_graded}
                                                         />
                                                     );
                                                 case 'document':

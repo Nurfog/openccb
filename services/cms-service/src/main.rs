@@ -140,6 +140,8 @@ async fn main() {
         .route("/users/{id}", axum::routing::put(handlers::update_user))
         .route("/audit-logs", get(handlers::get_audit_logs))
         .route("/assets/upload", post(handlers::upload_asset))
+        .route("/assets/{id}", delete(handlers::delete_asset))
+        .route("/courses/{id}/assets", get(handlers::get_course_assets))
         .layer(DefaultBodyLimit::disable())
         .route(
             "/organizations",
