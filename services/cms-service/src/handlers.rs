@@ -2473,7 +2473,7 @@ pub async fn get_all_users(
     }
 
     let users = sqlx::query_as::<_, UserResponse>(
-        "SELECT id, email, full_name, role, organization_id FROM users WHERE organization_id = $1",
+        "SELECT id, email, full_name, role, organization_id, xp, level, avatar_url, bio, language FROM users WHERE organization_id = $1",
     )
     .bind(org_ctx.id)
     .fetch_all(&pool)
@@ -2897,27 +2897,25 @@ pub async fn generate_course(
         )
     };
 
-    let system_prompt = r#"You are an expert curriculum designer. 
-Design a structured course based on the topic provided. 
-If the topic is for children or youth, use interactive content types:
-- 'hotspot': Identifying image parts.
-- 'memory-match': Card matching game.
-- 'quiz': Standard questions.
-
-Return ONLY a valid JSON object with the following structure:
+    let system_prompt = r#"You are a curriculum expert. 
+Generate a course in JSON.
+Structure:
 {
-  "title": "Clear and Engaging Course Title",
-  "description": "Short overview and objectives",
+  "title": "Course Title",
+  "description": "Description",
   "modules": [
     {
-      "title": "Module Name",
-      "position": 1,
+      "title": "Module Title",
       "lessons": [
-        { "title": "Lesson Name", "position": 1, "content_type": "text|video|hotspot|memory-match|quiz" }
+        { "title": "Lesson Title", "content_type": "text" }
       ]
     }
   ]
-}"#;
+}
+RULES:
+1. content_type MUST be one of: text, video, quiz.
+2. NO nested lessons.
+3. Return ONLY the JSON object."#;
 
     let mut request = client.post(&url).json(&json!({
         "model": model,
@@ -2925,7 +2923,8 @@ Return ONLY a valid JSON object with the following structure:
             { "role": "system", "content": system_prompt },
             { "role": "user", "content": format!("Create a course about: {}", payload.prompt) }
         ],
-        "response_format": { "type": "json_object" }
+        "response_format": { "type": "json_object" },
+        "temperature": 0.1
     }));
 
     if !auth_header.is_empty() {

@@ -111,7 +111,7 @@ update_env() {
 if [ "$HAS_NVIDIA" = true ]; then
     update_env "WHISPER_IMAGE" "fedirz/faster-whisper-server:latest-cuda"
     update_env "WHISPER_DEVICE" "cuda"
-    update_env "LOCAL_LLM_MODEL" "llama3:8b"
+    update_env "LOCAL_LLM_MODEL" "llama3.2:1b"
     # Uncomment GPU deploy section in docker-compose.yml while preserving indentation
     sed -i 's/^    #deploy:/    deploy:/' docker-compose.yml
     sed -i 's/^    #  resources:/      resources:/' docker-compose.yml
@@ -163,7 +163,7 @@ fi
 
 until curl -s http://localhost:11434/api/tags &> /dev/null; do sleep 2; done
 if [ "$HAS_NVIDIA" = true ]; then
-    ollama pull llama3:8b
+    ollama pull llama3.2:1b
 else
     ollama pull phi3:mini
 fi
