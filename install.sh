@@ -144,28 +144,23 @@ if ! grep -q "DATABASE_URL=" .env || [[ $(grep "DATABASE_URL=" .env | cut -d'=' 
     update_env "JWT_SECRET" "supersecretsecret"
     update_env "AI_PROVIDER" "local"
     update_env "LOCAL_WHISPER_URL" "http://whisper:8000"
-    update_env "LOCAL_OLLAMA_URL" "http://host.docker.internal:11434"
+    update_env "LOCAL_OLLAMA_URL" "http://ollama:11434"
     update_env "NEXT_PUBLIC_CMS_API_URL" "http://localhost:3001"
     update_env "NEXT_PUBLIC_LMS_API_URL" "http://localhost:3002"
 fi
 
-# 5. AI Stack Setup
-if ! command -v ollama &> /dev/null; then
-    curl -fsSL https://ollama.com/install.sh | sh
-fi
+# 5. AI Stack Setup (Containerized)
+echo "⏳ Starting Ollama container..."
+docker compose up -d ollama
 
-echo "⏳ Starting Ollama & downloading models..."
-# Run ollama in background if not running (simple check)
-if ! pgrep ollama &> /dev/null; then
-    OLLAMA_HOST=0.0.0.0 ollama serve &
-    sleep 5
-fi
+echo "⏳ Waiting for Ollama to be ready..."
+until docker exec openccb-ollama-1 ollama list &> /dev/null; do sleep 2; done
 
-until curl -s http://localhost:11434/api/tags &> /dev/null; do sleep 2; done
+echo "📥 Downloading models..."
 if [ "$HAS_NVIDIA" = true ]; then
-    ollama pull llama3.2:1b
+    docker exec openccb-ollama-1 ollama pull llama3.2:1b
 else
-    ollama pull phi3:mini
+    docker exec openccb-ollama-1 ollama pull phi3:mini
 fi
 
 # 6. Database Initialization (Integrated db-mgmt.sh)

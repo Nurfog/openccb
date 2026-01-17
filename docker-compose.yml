@@ -30,6 +30,7 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       - db
+      - ollama
 
   experience:
     build:
@@ -45,6 +46,7 @@ services:
     env_file: .env
     depends_on:
       - db
+      - ollama
 
   whisper:
     image: ${WHISPER_IMAGE:-fedirz/faster-whisper-server:latest-cpu}
@@ -55,6 +57,20 @@ services:
     environment:
       - DEVICE=${WHISPER_DEVICE:-cpu}
     # GPU support for RTX 2070 Super
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
     deploy:
       resources:
         reservations:
@@ -81,3 +97,4 @@ volumes:
   postgres_data:
   uploads_data:
   whisper_cache:
+  ollama_data:
