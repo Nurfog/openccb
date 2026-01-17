@@ -16,6 +16,8 @@ export default function ExperienceLoginPage() {
     const [fullName, setFullName] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [ssoMode, setSSOMode] = useState(false);
+    const [orgIdForSSO, setOrgIdForSSO] = useState("");
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -69,89 +71,122 @@ export default function ExperienceLoginPage() {
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8">
                     <div className="flex gap-2 mb-6 bg-white/5 rounded-xl p-1">
                         <button
-                            onClick={() => setIsLogin(true)}
-                            className={`flex-1 py-2 px-4 rounded-lg font-bold transition-all ${isLogin ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-white"
+                            onClick={() => {
+                                setIsLogin(true);
+                                setSSOMode(false);
+                            }}
+                            className={`flex-1 py-2 px-4 rounded-lg font-bold transition-all ${isLogin && !ssoMode ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-white"
                                 }`}
-                        Iniciar Sesión/button>
+                        >
+                            Iniciar Sesión
+                        </button>
                         <button
-                            onClick={() => setIsLogin(false)}
-                            className={`flex-1 py-2 px-4 rounded-lg font-bold transition-all ${!isLogin ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-white"
+                            onClick={() => {
+                                setIsLogin(false);
+                                setSSOMode(false);
+                            }}
+                            className={`flex-1 py-2 px-4 rounded-lg font-bold transition-all ${!isLogin && !ssoMode ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-white"
                                 }`}
-                        > Registrarse
+                        >
+                            Registrarse
                         </button>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        {!isLogin && (
-                            <div>
-                                <label className="block text-sm font-bold text-gray-300 mb-2">
-                                    Nombre Completo
-                                </label>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        value={fullName}
-                                        onChange={(e) => setFullName(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        placeholder="Jane Smith"
-                                        required
-                                    />
+                        {!ssoMode ? (
+                            <>
+                                {!isLogin && (
+                                    <>
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-300 mb-2">
+                                                Nombre Completo
+                                            </label>
+                                            <div className="relative">
+                                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                                <input
+                                                    type="text"
+                                                    value={fullName}
+                                                    onChange={(e) => setFullName(e.target.value)}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                    placeholder="Jane Smith"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-300 mb-2">
+                                                Nombre de la Organización (Opcional)
+                                            </label>
+                                            <div className="relative">
+                                                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                                <input
+                                                    type="text"
+                                                    value={organizationName}
+                                                    onChange={(e) => setOrganizationName(e.target.value)}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                    placeholder="Tu Escuela o Empresa"
+                                                />
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-2 pl-1">Si se deja en blanco, se creará una organización basada en el dominio de tu correo electrónico.</p>
+                                        </div>
+                                    </>
+                                )}
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-300 mb-2">
+                                        Correo Electrónico
+                                    </label>
+                                    <div className="relative">
+                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <input
+                                            type="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            placeholder="estudiante@ejemplo.com"
+                                            required
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-                        {!isLogin && (
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-300 mb-2">
+                                        Contraseña
+                                    </label>
+                                    <div className="relative">
+                                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <input
+                                            type="password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            placeholder="••••••••"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
                             <div>
                                 <label className="block text-sm font-bold text-gray-300 mb-2">
-                                    Nombre de la Organización (Opcional)
+                                    ID de la Organización
                                 </label>
                                 <div className="relative">
                                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     <input
                                         type="text"
-                                        value={organizationName}
-                                        onChange={(e) => setOrganizationName(e.target.value)}
+                                        value={orgIdForSSO}
+                                        onChange={(e) => setOrgIdForSSO(e.target.value)}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        placeholder="Tu Escuela o Empresa"
+                                        placeholder="00000000-0000-0000-0000-000000000000"
+                                        required
                                     />
                                 </div>
-                                <p className="text-xs text-gray-500 mt-2 pl-1">Si se deja en blanco, se creará una organización basada en el dominio de tu correo electrónico.</p>
+                                <p className="text-xs text-gray-500 mt-2 pl-1">
+                                    Contacta a tu administrador si no conoces el ID de tu organización.
+                                </p>
                             </div>
                         )}
-
-                        <div>
-                            <label className="block text-sm font-bold text-gray-300 mb-2">
-                                Correo Electrónico
-                            </label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    placeholder="estudiante@ejemplo.com"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-bold text-gray-300 mb-2">
-Contraseña
-                            </label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    placeholder="••••••••"
-                                    required
-                                />
-                            </div>
-                        </div>
 
                         {error && (
                             <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-red-400 text-sm">
@@ -162,9 +197,39 @@ Contraseña
                         <button
                             type="submit"
                             disabled={loading}
+                            onClick={(e) => {
+                                if (ssoMode) {
+                                    e.preventDefault();
+                                    if (!orgIdForSSO) {
+                                        setError("El ID de la organización es requerido");
+                                        return;
+                                    }
+                                    lmsApi.initSSOLogin(orgIdForSSO);
+                                }
+                            }}
                             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {loading ? "Procesando..." : isLogin ? "Iniciar Sesión" : "Crear Cuenta"}
+                            {loading ? "Procesando..." : ssoMode ? "Continuar con SSO" : isLogin ? "Iniciar Sesión" : "Crear Cuenta"}
+                        </button>
+
+                        <div className="relative my-6">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t border-white/10"></span>
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-slate-950 px-2 text-gray-500">O bien</span>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSSOMode(!ssoMode);
+                                setError("");
+                            }}
+                            className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl border border-white/10 transition-colors"
+                        >
+                            {ssoMode ? "Usar Correo y Contraseña" : "Iniciar Sesión con SSO de Empresa"}
                         </button>
                     </form>
 

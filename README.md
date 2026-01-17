@@ -13,7 +13,8 @@ El proyecto ha sido optimizado para reducir la complejidad de la infraestructura
     - **Frontend**: Next.js app para la experiencia del estudiante.
     - **Backend**: API de Rust para entrega de cursos y calificaciones (LMS).
 3.  **Database**: PostgreSQL compartido.
-4.  **AI Services**: Faster-Whisper para transcripción automática.
+4.  **AI Services**: stack local con Faster-Whisper (Transcripción) y Ollama (Traducción y Resúmenes).
+5.  **User Profiles**: Gestión completa de identidad (avatar, bio, preferencias).
 
 ## � Requisitos del Sistema
 
@@ -36,7 +37,9 @@ OpenCCB es altamente escalable. A continuación se detallan los requisitos recom
 - **Frontend**: React, Next.js (App Router), Tailwind CSS, Lucide React.
 - **Base de Datos**: PostgreSQL 16.
 - **Infraestructura**: Docker & Docker Compose.
-- **IA**: Faster-Whisper (Transcriptor de video).
+- **IA Local**:
+  - **Faster-Whisper**: Transcripción de audio a texto.
+  - **Ollama**: Traducción inteligente (EN -> ES), resúmenes y generación de cuestionarios.
 
 ## 📦 Guía de Inicio Rápido
 
@@ -213,7 +216,13 @@ curl -X POST "http://localhost:3002/grades" \
 ---
 
 ### 4. IA y Analíticas Avanzadas
-Funcionalidades inteligentes y métricas de negocio.
+Funcionalidades inteligentes 100% locales y gratuitas.
+
+#### POST /lessons/{id}/transcribe
+Inicia el proceso de transcripción (Whisper) y traducción (Ollama).
+
+#### GET /lessons/{id}/vtt?lang=en|es
+Devuelve los subtítulos en formato WebVTT para integración nativa en el reproductor.
 
 #### POST /chat (Streaming)
 Conversación en tiempo real con la base de conocimientos.

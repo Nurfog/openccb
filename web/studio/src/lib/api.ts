@@ -107,6 +107,19 @@ export interface User {
     full_name: string;
     role: string;
     organization_id?: string;
+    avatar_url?: string;
+    bio?: string;
+    language?: string;
+}
+
+export interface OrganizationSSOConfig {
+    organization_id: string;
+    issuer_url: string;
+    client_id: string;
+    client_secret: string;
+    enabled: boolean;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface AuthResponse {
@@ -231,6 +244,7 @@ export const cmsApi = {
     // Auth
     register: (payload: AuthPayload): Promise<AuthResponse> => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
     login: (payload: AuthPayload): Promise<AuthResponse> => apiFetch('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
+    getMe: (): Promise<User> => apiFetch('/auth/me'),
 
     // Courses
     getCourses: (): Promise<Course[]> => apiFetch('/courses'),
@@ -266,7 +280,7 @@ export const cmsApi = {
 
     // Users
     getAllUsers: (): Promise<User[]> => apiFetch('/users'),
-    updateUser: (id: string, payload: { role?: string, organization_id?: string, full_name?: string }): Promise<void> => apiFetch(`/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    updateUser: (id: string, payload: { role?: string, organization_id?: string, full_name?: string, avatar_url?: string, bio?: string, language?: string }): Promise<void> => apiFetch(`/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
 
     // Webhooks
     getWebhooks: (): Promise<Webhook[]> => apiFetch('/webhooks'),
@@ -330,6 +344,13 @@ export const cmsApi = {
             if (!res.ok) return res.json().then(err => Promise.reject(new Error(err.message || 'Logo upload failed')));
             return res.json();
         });
+    },
+
+    // SSO
+    getSSOConfig: (): Promise<OrganizationSSOConfig | null> => apiFetch('/organization/sso'),
+    updateSSOConfig: (payload: Partial<OrganizationSSOConfig>): Promise<OrganizationSSOConfig> => apiFetch('/organization/sso', { method: 'PUT', body: JSON.stringify(payload) }),
+    initSSOLogin: (orgId: string): void => {
+        window.location.href = `${API_BASE_URL}/auth/sso/login/${orgId}`;
     },
 
     // Background Tasks

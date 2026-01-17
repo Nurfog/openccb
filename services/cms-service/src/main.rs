@@ -4,9 +4,10 @@ mod handlers_branding;
 mod webhooks;
 
 use axum::{
-    Router, middleware,
-    routing::{delete, get, post},
+    Router,
     extract::DefaultBodyLimit,
+    middleware,
+    routing::{delete, get, post},
 };
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
@@ -39,7 +40,7 @@ async fn main() {
         loop {
             // Check for queued transcriptions
             let queued_lessons: Vec<sqlx::types::Uuid> = match sqlx::query_scalar(
-                "SELECT id FROM lessons WHERE transcription_status = 'queued' LIMIT 5"
+                "SELECT id FROM lessons WHERE transcription_status = 'queued' LIMIT 5",
             )
             .fetch_all(&worker_pool)
             .await
@@ -54,10 +55,12 @@ async fn main() {
 
             for lesson_id in queued_lessons {
                 tracing::info!("Processing transcription for lesson: {}", lesson_id);
-                if let Err(e) = handlers::run_transcription_task(worker_pool.clone(), lesson_id).await {
+                if let Err(e) =
+                    handlers::run_transcription_task(worker_pool.clone(), lesson_id).await
+                {
                     tracing::error!("Transcription task failed for lesson {}: {}", lesson_id, e);
                     let _ = sqlx::query(
-                        "UPDATE lessons SET transcription_status = 'failed' WHERE id = $1"
+                        "UPDATE lessons SET transcription_status = 'failed' WHERE id = $1",
                     )
                     .bind(lesson_id)
                     .execute(&worker_pool)
@@ -118,6 +121,7 @@ async fn main() {
             "/lessons/{id}/transcribe",
             post(handlers::process_transcription),
         )
+        .route("/lessons/{id}/vtt", get(handlers::get_lesson_vtt))
         .route("/lessons/{id}/summarize", post(handlers::summarize_lesson))
         .route("/lessons/{id}/generate-quiz", post(handlers::generate_quiz))
         .route("/grading", post(handlers::create_grading_category))
@@ -126,6 +130,7 @@ async fn main() {
             "/courses/{id}/grading",
             get(handlers::get_grading_categories),
         )
+        .route("/auth/me", get(handlers::get_me))
         .route("/users", get(handlers::get_all_users))
         .route("/users/{id}", axum::routing::put(handlers::update_user))
         .route("/audit-logs", get(handlers::get_audit_logs))
@@ -145,6 +150,10 @@ async fn main() {
         .route("/tasks/{id}", delete(handlers::tasks::cancel_task))
         .route("/organization", get(handlers::get_organization))
         .route(
+            "/organization/sso",
+            get(handlers::get_sso_config).put(handlers::update_sso_config),
+        )
+        .route(
             "/organizations/{id}/logo",
             post(handlers_branding::upload_organization_logo),
         )
@@ -160,6 +169,8 @@ async fn main() {
     let public_routes = Router::new()
         .route("/auth/register", post(handlers::register))
         .route("/auth/login", post(handlers::login))
+        .route("/auth/sso/login/{org_id}", get(handlers::sso_login_init))
+        .route("/auth/sso/callback", get(handlers::sso_callback))
         .route(
             "/organizations/{id}/branding",
             get(handlers_branding::get_organization_branding),

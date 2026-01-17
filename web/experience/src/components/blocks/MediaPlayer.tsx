@@ -5,18 +5,20 @@ import { Play, Lock, AlertCircle } from "lucide-react";
 
 interface MediaPlayerProps {
     id: string;
+    lessonId?: string;
     title?: string;
     url: string;
     media_type: 'video' | 'audio';
     config?: {
         maxPlays?: number;
     };
+    hasTranscription?: boolean;
     initialPlayCount?: number;
     onTimeUpdate?: (time: number) => void;
     onPlay?: () => void;
 }
 
-export default function MediaPlayer({ id, title, url, media_type, config, initialPlayCount, onTimeUpdate, onPlay }: MediaPlayerProps) {
+export default function MediaPlayer({ id, lessonId, title, url, media_type, config, hasTranscription, initialPlayCount, onTimeUpdate, onPlay }: MediaPlayerProps) {
     const [playCount, setPlayCount] = useState(initialPlayCount || 0);
     const [hasStarted, setHasStarted] = useState(false);
     const [locked, setLocked] = useState(false);
@@ -86,6 +88,16 @@ export default function MediaPlayer({ id, title, url, media_type, config, initia
         return rawUrl;
     };
 
+    const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('experience_token') : null;
+    const selectedOrgId = typeof window !== 'undefined' ? localStorage.getItem('experience_selected_org_id') : null;
+
+    // Construct VTT URLs with auth if possible, or assume public/handled by backend
+    // Since browser <track> doesn't support custom headers easily, 
+    // we might need to handle this via a proxy or temporary signed URLs.
+    // For now, we'll assume the backend allows VTT access if requested with the correct lesson ID.
+    const vttEn = lessonId ? `${CMS_API_URL}/lessons/${lessonId}/vtt?lang=en` : null;
+    const vttEs = lessonId ? `${CMS_API_URL}/lessons/${lessonId}/vtt?lang=es` : null;
+
     return (
         <div className="space-y-6" id={id}>
             <div className="flex items-center justify-between">
@@ -102,6 +114,7 @@ export default function MediaPlayer({ id, title, url, media_type, config, initia
                     <video
                         src={getFullUrl(url)}
                         controls
+                        crossOrigin="anonymous"
                         className="w-full h-full rounded-xl"
                         onPlay={handlePlay}
                         onTimeUpdate={(e) => {
@@ -109,7 +122,14 @@ export default function MediaPlayer({ id, title, url, media_type, config, initia
                                 onTimeUpdate(e.currentTarget.currentTime);
                             }
                         }}
-                    />
+                    >
+                        {hasTranscription && vttEn && (
+                            <track kind="subtitles" src={vttEn} srcLang="en" label="English" />
+                        )}
+                        {hasTranscription && vttEs && (
+                            <track kind="subtitles" src={vttEs} srcLang="es" label="Español" />
+                        )}
+                    </video>
                 ) : (
                     <iframe
                         src={getEmbedUrl(url)}

@@ -92,9 +92,9 @@
   - [x] Cohort analysis (Implemented)
   - [x] Retention metrics (Implemented)
   - [ ] Engagement heatmaps
-- [ ] **AI Integration**:
+- [x] **AI Integration**:
   - [x] AI-driven lesson summaries (Implemented)
-  - [ ] Implement real-time video transcription via external API
+  - [x] Real-time video transcription & translation via Local AI (Implemented)
   - [x] Automated quiz generation (Implemented)
   - [ ] Personalized learning paths
 - [x] **Gamification**: (Broadly implemented)
@@ -112,12 +112,12 @@
     - [x] Management of important dates (exams, assignments, milestones).
     - [ ] Automated reminders for upcoming deadlines.
 
-## Phase 8: Enterprise Features (Future)
+## Phase 8: Enterprise Features (In Progress)
 - [x] **User Profiles & Lifecycle**:
   - [x] **Integrated Logout**: Standardized session management in both portals.
-  - [ ] **Profile Management**: Self-service user info updates.
+  - [x] **Profile Management**: Self-service user info updates (Avatar, Bio, Language).
 - [ ] **Advanced Reporting**:
-- [ ] **Integration Ecosystem**:
+- [ ] **Integration Ecosystem**: (SSO Next)
 - [ ] **Mobile Apps**:
 - [ ] **Accessibility**:
 
@@ -126,12 +126,11 @@
 **Platform Maturity**: Core multi-tenant architecture is stable and performance-optimized.
 
 **Recent Milestones**:
-- ✅ **Super Admin Portal**: Unified management for multi-tenant deployments.
-- ✅ **Premium Organization Selector**: High-performance searchable UI for tenant selection.
-- ✅ **Global Courses**: Seamless content sharing across isolated organizations.
-- ✅ **Gamification & Analytics**: Fully integrated student engagement loops.
+- ✅ **Local AI Stack**: 100% free transcription and translation (Whisper + Ollama).
+- ✅ **Native VTT Subtitles**: Enhanced video player with multi-language CC.
+- ✅ **User Profiles**: Glassmorphism UI for identity management.
 
 **Next Priorities**:
-1. **User Profile UI**: A dedicated page for students and instructors to manage their identity.
-2. **AI Transcription**: Finalizing the integration for automatic video subtitling.
-3. **SSO Integration**: SAML/OIDC support for enterprise clients.
+1. **SSO Integration**: SAML/OIDC support for enterprise clients.
+2. **Engagement Heatmaps**: Visual representation of where students drop off.
+3. **Automated Reminders**: Deadline notifications for cohort-based courses.

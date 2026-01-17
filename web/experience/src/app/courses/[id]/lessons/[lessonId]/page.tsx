@@ -303,7 +303,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                     {hasTranscription && transcriptOpen && (
                         <aside className="w-[400px] border-l border-white/5 bg-black/20 animate-in slide-in-from-right duration-500">
                             <InteractiveTranscript
-                                cues={lesson.transcription!.cues!}
+                                transcription={lesson.transcription!}
                                 currentTime={currentTime}
                                 onSeek={handleSeek}
                             />

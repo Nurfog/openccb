@@ -128,6 +128,9 @@ pub struct User {
     pub role: String, // admin, instructor, student
     pub xp: i32,
     pub level: i32,
+    pub avatar_url: Option<String>,
+    pub bio: Option<String>,
+    pub language: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -141,6 +144,9 @@ pub struct UserResponse {
     pub organization_id: Uuid,
     pub xp: i32,
     pub level: i32,
+    pub avatar_url: Option<String>,
+    pub bio: Option<String>,
+    pub language: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
@@ -221,6 +227,17 @@ pub struct Webhook {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct OrganizationSSOConfig {
+    pub organization_id: Uuid,
+    pub issuer_url: String,
+    pub client_id: String,
+    pub client_secret: String,
+    pub enabled: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -234,6 +251,7 @@ mod tests {
 
         let lesson = Lesson {
             id: lesson_id,
+            organization_id: course_id, // Use course_id as proxy for org_id in test
             module_id,
             title: "Test Lesson".to_string(),
             content_type: "activity".to_string(),
@@ -261,12 +279,14 @@ mod tests {
             position: 1,
             due_date: None,
             important_date_type: None,
+            transcription_status: None,
             created_at: Utc::now(),
         };
 
         let pub_module = PublishedModule {
             module: Module {
                 id: module_id,
+                organization_id: course_id,
                 course_id,
                 title: "Test Module".to_string(),
                 position: 1,
@@ -286,6 +306,17 @@ mod tests {
                 start_date: None,
                 end_date: None,
                 passing_percentage: 70,
+                certificate_template: None,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            },
+            organization: Organization {
+                id: Uuid::new_v4(),
+                name: "Test Org".to_string(),
+                domain: None,
+                logo_url: None,
+                primary_color: None,
+                secondary_color: None,
                 certificate_template: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),

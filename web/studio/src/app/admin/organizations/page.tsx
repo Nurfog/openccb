@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { cmsApi, Organization, getImageUrl } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
-import { Plus, Building2, Globe, Calendar, ExternalLink, ShieldCheck, Palette, Upload, Save, X } from 'lucide-react';
+import { Plus, Building2, Globe, Calendar, ExternalLink, ShieldCheck, Palette, Upload, Save, X, Fingerprint, Key, Settings2 } from 'lucide-react';
 
 export default function OrganizationsPage() {
     const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -20,6 +20,14 @@ export default function OrganizationsPage() {
     const [secondaryColor, setSecondaryColor] = useState('#8B5CF6');
     const [isSavingBranding, setIsSavingBranding] = useState(false);
     const [uploadingLogo, setUploadingLogo] = useState(false);
+
+    // SSO States
+    const [isSSOModalOpen, setIsSSOModalOpen] = useState(false);
+    const [issuerUrl, setIssuerUrl] = useState('');
+    const [clientId, setClientId] = useState('');
+    const [clientSecret, setClientSecret] = useState('');
+    const [ssoEnabled, setSsoEnabled] = useState(false);
+    const [isSavingSSO, setIsSavingSSO] = useState(false);
 
     const { user } = useAuth();
 
@@ -93,6 +101,50 @@ export default function OrganizationsPage() {
             alert('Failed to update branding. Please try again.');
         } finally {
             setIsSavingBranding(false);
+        }
+    };
+
+    const openSSOConfig = async (org: Organization) => {
+        setSelectedOrg(org);
+        setIsSSOModalOpen(true);
+        // Temporarily set org in localStorage for API calls
+        localStorage.setItem('studio_selected_org_id', org.id);
+        try {
+            const config = await cmsApi.getSSOConfig();
+            if (config) {
+                setIssuerUrl(config.issuer_url);
+                setClientId(config.client_id);
+                setClientSecret(config.client_secret);
+                setSsoEnabled(config.enabled);
+            } else {
+                setIssuerUrl('');
+                setClientId('');
+                setClientSecret('');
+                setSsoEnabled(false);
+            }
+        } catch (error) {
+            console.error('Failed to load SSO config', error);
+        }
+    };
+
+    const handleSSOSave = async () => {
+        if (!selectedOrg) return;
+
+        setIsSavingSSO(true);
+        try {
+            await cmsApi.updateSSOConfig({
+                issuer_url: issuerUrl,
+                client_id: clientId,
+                client_secret: clientSecret,
+                enabled: ssoEnabled
+            });
+            setIsSSOModalOpen(false);
+            alert('SSO configuration saved successfully!');
+        } catch (error) {
+            console.error('Failed to save SSO config', error);
+            alert('Failed to save SSO config. Please ensure all fields are correct.');
+        } finally {
+            setIsSavingSSO(false);
         }
     };
 
@@ -173,15 +225,21 @@ export default function OrganizationsPage() {
                                         {org.id.split('-')[0]}...
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-3 gap-2">
                                     <button
                                         onClick={() => openBranding(org)}
-                                        className="py-2 px-4 text-sm font-medium border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                        className="py-2 px-2 text-[10px] font-medium border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 rounded-lg transition-colors flex items-center justify-center gap-1"
                                     >
-                                        <Palette className="w-3 h-3" /> Branding
+                                        <Palette className="w-3 h-3" /> Brand
                                     </button>
-                                    <button className="py-2 px-4 text-sm font-medium border border-white/5 bg-white/5 hover:bg-white/10 rounded-lg transition-colors flex items-center justify-center gap-2">
-                                        Details <ExternalLink className="w-3 h-3" />
+                                    <button
+                                        onClick={() => openSSOConfig(org)}
+                                        className="py-2 px-2 text-[10px] font-medium border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 rounded-lg transition-colors flex items-center justify-center gap-1"
+                                    >
+                                        <Fingerprint className="w-3 h-3" /> SSO
+                                    </button>
+                                    <button className="py-2 px-2 text-[10px] font-medium border border-white/5 bg-white/5 hover:bg-white/10 rounded-lg transition-colors flex items-center justify-center gap-1 text-gray-400">
+                                        Docs <ExternalLink className="w-3 h-3" />
                                     </button>
                                 </div>
                             </div>
@@ -371,6 +429,114 @@ export default function OrganizationsPage() {
                             >
                                 {isSavingBranding ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
                                 Save Branding
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* SSO Configuration Modal */}
+            {isSSOModalOpen && selectedOrg && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="w-full max-w-xl glass border border-white/10 rounded-2xl p-8 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                                    <Fingerprint className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold">Single Sign-On (OIDC)</h2>
+                                    <p className="text-sm text-gray-400">{selectedOrg.name}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setIsSSOModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                                <div>
+                                    <h3 className="font-medium text-white">Enable OIDC SSO</h3>
+                                    <p className="text-xs text-gray-500">Allow users to log in via your identity provider.</p>
+                                </div>
+                                <button
+                                    onClick={() => setSsoEnabled(!ssoEnabled)}
+                                    className={`w-12 h-6 rounded-full transition-colors relative ${ssoEnabled ? 'bg-blue-600' : 'bg-gray-700'}`}
+                                >
+                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${ssoEnabled ? 'right-1' : 'left-1'}`} />
+                                </button>
+                            </div>
+
+                            <div className="space-y-4 pt-2">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1.5">Issuer URL</label>
+                                    <div className="relative">
+                                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                        <input
+                                            type="url"
+                                            value={issuerUrl}
+                                            onChange={(e) => setIssuerUrl(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-mono text-sm"
+                                            placeholder="https://accounts.google.com or https://okta.com/..."
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1.5">Client ID</label>
+                                    <div className="relative">
+                                        <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                        <input
+                                            type="text"
+                                            value={clientId}
+                                            onChange={(e) => setClientId(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-mono text-sm"
+                                            placeholder="Your OIDC Client ID"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1.5">Client Secret</label>
+                                    <div className="relative">
+                                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                        <input
+                                            type="password"
+                                            value={clientSecret}
+                                            onChange={(e) => setClientSecret(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-mono text-sm"
+                                            placeholder="••••••••••••••••"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 space-y-2">
+                                    <div className="flex items-center gap-2 text-blue-400 text-xs font-bold">
+                                        <Settings2 className="w-4 h-4" /> CONFIGURATION STEPS
+                                    </div>
+                                    <p className="text-[10px] text-blue-300 leading-relaxed">
+                                        1. Register OpenCCB as an application in your Identity Provider (Okta, Google, Azure AD).<br />
+                                        2. Set the Redirect URI to: <span className="font-mono bg-blue-500/20 px-1">http://localhost:3001/auth/sso/callback</span><br />
+                                        3. Copy the Issuer URL, Client ID, and Client Secret here.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 mt-8">
+                            <button
+                                onClick={() => setIsSSOModalOpen(false)}
+                                className="flex-1 px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSSOSave}
+                                disabled={isSavingSSO}
+                                className="flex-[2] px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all shadow-lg shadow-blue-500/20 font-bold flex items-center justify-center gap-2"
+                            >
+                                {isSavingSSO ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
+                                Save SSO Settings
                             </button>
                         </div>
                     </div>

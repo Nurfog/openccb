@@ -16,6 +16,8 @@ export default function StudioLoginPage() {
     const [fullName, setFullName] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [ssoMode, setSSOMode] = useState(false);
+    const [orgIdForSSO, setOrgIdForSSO] = useState("");
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -86,82 +88,106 @@ export default function StudioLoginPage() {
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        {!isLogin && (
+                        {!ssoMode ? (
                             <>
+                                {!isLogin && (
+                                    <>
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-300 mb-2">
+                                                Full Name
+                                            </label>
+                                            <div className="relative">
+                                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                                <input
+                                                    type="text"
+                                                    value={fullName}
+                                                    onChange={(e) => setFullName(e.target.value)}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    placeholder="John Doe"
+                                                    autoComplete="name"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-300 mb-2">
+                                                Organization Name (Optional)
+                                            </label>
+                                            <div className="relative">
+                                                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                                <input
+                                                    type="text"
+                                                    value={organizationName}
+                                                    onChange={(e) => setOrganizationName(e.target.value)}
+                                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    placeholder="Your School or Company"
+                                                    autoComplete="organization"
+                                                />
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-2 pl-1">
+                                                If left blank, an organization will be created based on your email domain.
+                                            </p>
+                                        </div>
+                                    </>
+                                )}
+
                                 <div>
                                     <label className="block text-sm font-bold text-gray-300 mb-2">
-                                        Full Name
+                                        Email
                                     </label>
                                     <div className="relative">
-                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                         <input
-                                            type="text"
-                                            value={fullName}
-                                            onChange={(e) => setFullName(e.target.value)}
+                                            type="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
                                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="John Doe"
-                                            autoComplete="name"
+                                            placeholder="instructor@example.com"
+                                            autoComplete="email"
                                             required
                                         />
                                     </div>
                                 </div>
+
                                 <div>
                                     <label className="block text-sm font-bold text-gray-300 mb-2">
-                                        Organization Name (Optional)
+                                        Password
                                     </label>
                                     <div className="relative">
-                                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                         <input
-                                            type="text"
-                                            value={organizationName}
-                                            onChange={(e) => setOrganizationName(e.target.value)}
+                                            type="password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
                                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="Your School or Company"
-                                            autoComplete="organization"
+                                            placeholder="••••••••"
+                                            autoComplete="current-password"
+                                            required
                                         />
                                     </div>
-                                    <p className="text-xs text-gray-500 mt-2 pl-1">
-                                        If left blank, an organization will be created based on your email domain.
-                                    </p>
                                 </div>
                             </>
+                        ) : (
+                            <div>
+                                <label className="block text-sm font-bold text-gray-300 mb-2">
+                                    Organization ID
+                                </label>
+                                <div className="relative">
+                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        value={orgIdForSSO}
+                                        onChange={(e) => setOrgIdForSSO(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="00000000-0000-0000-0000-000000000000"
+                                        required
+                                    />
+                                </div>
+                                <p className="text-xs text-gray-500 mt-2 pl-1">
+                                    Contact your administrator if you don't know your Organization ID.
+                                </p>
+                            </div>
                         )}
-
-                        <div>
-                            <label className="block text-sm font-bold text-gray-300 mb-2">
-                                Email
-                            </label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="instructor@example.com"
-                                    autoComplete="email"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-bold text-gray-300 mb-2">
-                                Password
-                            </label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="••••••••"
-                                    autoComplete="current-password"
-                                    required
-                                />
-                            </div>
-                        </div>
 
                         {error && (
                             <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-red-400 text-sm">
@@ -172,9 +198,39 @@ export default function StudioLoginPage() {
                         <button
                             type="submit"
                             disabled={loading}
+                            onClick={(e) => {
+                                if (ssoMode) {
+                                    e.preventDefault();
+                                    if (!orgIdForSSO) {
+                                        setError("Organization ID is required");
+                                        return;
+                                    }
+                                    cmsApi.initSSOLogin(orgIdForSSO);
+                                }
+                            }}
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {loading ? "Processing..." : isLogin ? "Sign In" : "Create Account"}
+                            {loading ? "Processing..." : ssoMode ? "Continue with SSO" : isLogin ? "Sign In" : "Create Account"}
+                        </button>
+
+                        <div className="relative my-6">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t border-white/10"></span>
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-[#020617] px-2 text-gray-500">Or</span>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSSOMode(!ssoMode);
+                                setError("");
+                            }}
+                            className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl border border-white/10 transition-colors"
+                        >
+                            {ssoMode ? "Use Email & Password" : "Login with Enterprise SSO"}
                         </button>
                     </form>
 

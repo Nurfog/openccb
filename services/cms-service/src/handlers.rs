@@ -19,6 +19,19 @@ use sqlx::PgPool;
 use std::env;
 use uuid::Uuid;
 
+use openidconnect::core::{CoreClient, CoreProviderMetadata, CoreResponseType};
+use openidconnect::reqwest::async_http_client;
+use openidconnect::{
+    AuthenticationFlow, AuthorizationCode, ClientId, ClientSecret, CsrfToken, IssuerUrl, Nonce,
+    RedirectUrl, Scope, TokenResponse,
+};
+
+#[derive(Deserialize)]
+pub struct SSOCallbackParams {
+    pub code: String,
+    pub state: String,
+}
+
 #[derive(Deserialize)]
 pub struct PublishPayload {
     pub target_organization_id: Option<Uuid>,
@@ -31,7 +44,8 @@ pub async fn publish_course(
     Path(id): Path<Uuid>,
     Json(payload_params): Json<PublishPayload>,
 ) -> Result<StatusCode, StatusCode> {
-    let is_super_admin = claims.role == "admin" && claims.org == Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+    let is_super_admin = claims.role == "admin"
+        && claims.org == Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
 
     // 1. Fetch Course (Super admin can publish any course, others only their org's)
     let course = if is_super_admin {
@@ -108,7 +122,8 @@ pub async fn publish_course(
     };
 
     // 4. Send to LMS
-    let lms_url = env::var("LMS_INTERNAL_URL").unwrap_or_else(|_| "http://experience:3002".to_string());
+    let lms_url =
+        env::var("LMS_INTERNAL_URL").unwrap_or_else(|_| "http://experience:3002".to_string());
     let client = reqwest::Client::new();
     let res = client
         .post(format!("{}/ingest", lms_url))
@@ -125,7 +140,16 @@ pub async fn publish_course(
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
 
-    log_action(&pool, org_ctx.id, Uuid::new_v4(), "PUBLISH", "Course", id, json!({ "target_org": target_org_id })).await;
+    log_action(
+        &pool,
+        org_ctx.id,
+        Uuid::new_v4(),
+        "PUBLISH",
+        "Course",
+        id,
+        json!({ "target_org": target_org_id }),
+    )
+    .await;
 
     // 5. Trigger Webhook
     let webhook_service = WebhookService::new(pool.clone());
@@ -213,9 +237,11 @@ pub async fn create_course(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    let is_super_admin = claims.role == "admin" && claims.org == Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+    let is_super_admin = claims.role == "admin"
+        && claims.org == Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
     let target_org_id = if is_super_admin {
-        payload.get("organization_id")
+        payload
+            .get("organization_id")
             .and_then(|v| v.as_str())
             .and_then(|s| Uuid::parse_str(s).ok())
             .unwrap_or(org_ctx.id)
@@ -247,7 +273,8 @@ pub async fn get_courses(
     claims: Claims,
     State(pool): State<PgPool>,
 ) -> Result<Json<Vec<Course>>, StatusCode> {
-    let is_super_admin = claims.role == "admin" && claims.org == Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+    let is_super_admin = claims.role == "admin"
+        && claims.org == Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
 
     let courses = if is_super_admin {
         sqlx::query_as::<_, Course>("SELECT * FROM courses")
@@ -548,15 +575,16 @@ pub async fn process_transcription(
 ) -> Result<Json<Lesson>, StatusCode> {
     tracing::info!("Received transcription request for lesson: {}", id);
     // 1. Fetch lesson
-    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
-        .bind(id)
-        .bind(org_ctx.id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Lesson fetch failed: {}", e);
-            StatusCode::NOT_FOUND
-        })?;
+    let lesson =
+        sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
+            .bind(id)
+            .bind(org_ctx.id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|e| {
+                tracing::error!("Lesson fetch failed: {}", e);
+                StatusCode::NOT_FOUND
+            })?;
 
     if lesson.content_type != "video" && lesson.content_type != "audio" {
         return Err(StatusCode::BAD_REQUEST);
@@ -604,6 +632,77 @@ pub async fn process_transcription(
     });
 
     Ok(Json(updated_lesson))
+}
+
+async fn translate_text(text: &str, target_lang: &str) -> Result<String, String> {
+    let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+    let client = reqwest::Client::new();
+
+    let (url, auth_header, model) = if provider == "local" {
+        let base_url =
+            env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
+        let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3".to_string());
+        (
+            format!("{}/v1/chat/completions", base_url),
+            "".to_string(),
+            model,
+        )
+    } else {
+        let api_key = env::var("OPENAI_API_KEY").map_err(|_| "Missing OPENAI_API_KEY")?;
+        (
+            "https://api.openai.com/v1/chat/completions".to_string(),
+            format!("Bearer {}", api_key),
+            "gpt-4o".to_string(),
+        )
+    };
+
+    let prompt = format!(
+        "Translate the following transcription into {}. Maintain the same tone and context. Only return the translated text, nothing else.\n\nText: {}",
+        if target_lang == "es" {
+            "Spanish"
+        } else {
+            target_lang
+        },
+        text
+    );
+
+    let mut request = client.post(&url).json(&json!({
+        "model": model,
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "temperature": 0.3
+    }));
+
+    if !auth_header.is_empty() {
+        request = request.header("Authorization", auth_header);
+    }
+
+    let response = request
+        .send()
+        .await
+        .map_err(|e| format!("Translation request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        let err_body = response.text().await.unwrap_or_default();
+        return Err(format!("Translation API error: {}", err_body));
+    }
+
+    let gpt_data: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| format!("Translation JSON parse failed: {}", e))?;
+
+    let translated = gpt_data["choices"][0]["message"]["content"]
+        .as_str()
+        .unwrap_or("")
+        .trim()
+        .to_string();
+
+    Ok(translated)
 }
 
 pub async fn run_transcription_task(pool: PgPool, lesson_id: Uuid) -> Result<(), String> {
@@ -702,15 +801,105 @@ pub async fn run_transcription_task(pool: PgPool, lesson_id: Uuid) -> Result<(),
         "cues": cues
     });
 
-    // 5. Update lesson
-    sqlx::query("UPDATE lessons SET transcription = $1, transcription_status = 'completed' WHERE id = $2")
-        .bind(transcription)
-        .bind(lesson_id)
-        .execute(&pool)
-        .await
-        .map_err(|e| format!("Final database update failed: {}", e))?;
+    // 5. Update initial transcription
+    sqlx::query(
+        "UPDATE lessons SET transcription = $1, transcription_status = 'processing' WHERE id = $2",
+    )
+    .bind(&transcription)
+    .bind(lesson_id)
+    .execute(&pool)
+    .await
+    .map_err(|e| format!("Initial database update failed: {}", e))?;
+
+    // 6. Translation (Optional/Background within the task)
+    let es_text = match translate_text(text, "es").await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("Translation failed for lesson {}: {}", lesson_id, e);
+            "".to_string()
+        }
+    };
+
+    let final_transcription = json!({
+        "en": text,
+        "es": es_text,
+        "cues": cues
+    });
+
+    // 7. Final Update
+    sqlx::query(
+        "UPDATE lessons SET transcription = $1, transcription_status = 'completed' WHERE id = $2",
+    )
+    .bind(final_transcription)
+    .bind(lesson_id)
+    .execute(&pool)
+    .await
+    .map_err(|e| format!("Final database update failed: {}", e))?;
 
     Ok(())
+}
+
+pub async fn get_lesson_vtt(
+    Org(org_ctx): Org,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+    Query(params): Query<serde_json::Value>,
+) -> Result<(axum::http::HeaderMap, String), StatusCode> {
+    let lesson =
+        sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
+            .bind(id)
+            .bind(org_ctx.id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    let lang = params.get("lang").and_then(|v| v.as_str()).unwrap_or("en");
+
+    let transcription = lesson.transcription.ok_or(StatusCode::NOT_FOUND)?;
+    let cues = transcription["cues"]
+        .as_array()
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    let mut vtt = String::from("WEBVTT\n\n");
+
+    for (index, cue) in cues.iter().enumerate() {
+        let start = cue["start"].as_f64().unwrap_or(0.0);
+        let end = cue["end"].as_f64().unwrap_or(0.0);
+        let text = if lang == "es" && !transcription["es"].as_str().unwrap_or("").is_empty() {
+            // Simplified: in a real scenario we might want translated cues
+            // For now, if we have a full translation we could try to split it,
+            // but usually Whisper gives us segments.
+            // If we only have English segments, we'll use them.
+            cue["text"].as_str().unwrap_or("")
+        } else {
+            cue["text"].as_str().unwrap_or("")
+        };
+
+        vtt.push_str(&format!("{}\n", index + 1));
+        vtt.push_str(&format!(
+            "{} --> {}\n",
+            format_vtt_timestamp(start),
+            format_vtt_timestamp(end)
+        ));
+        vtt.push_str(&format!("{}\n\n", text.trim()));
+    }
+
+    let mut headers = axum::http::HeaderMap::new();
+    headers.insert(
+        axum::http::header::CONTENT_TYPE,
+        "text/vtt".parse().unwrap(),
+    );
+
+    Ok((headers, vtt))
+}
+
+fn format_vtt_timestamp(seconds: f64) -> String {
+    let hours = (seconds / 3600.0).floor() as u32;
+    let mins = ((seconds % 3600.0) / 60.0).floor() as u32;
+    let secs = (seconds % 60.0).floor() as u32;
+    let millis = ((seconds.fract() * 1000.0).round()) as u32;
+
+    format!("{:02}:{:02}:{:02}.{:03}", hours, mins, secs, millis)
 }
 
 pub async fn summarize_lesson(
@@ -721,12 +910,13 @@ pub async fn summarize_lesson(
 ) -> Result<Json<Lesson>, StatusCode> {
     tracing::info!("Received summarization request for lesson: {}", id);
     // 1. Fetch lesson
-    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
-        .bind(id)
-        .bind(org_ctx.id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| StatusCode::NOT_FOUND)?;
+    let lesson =
+        sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
+            .bind(id)
+            .bind(org_ctx.id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| StatusCode::NOT_FOUND)?;
 
     let transcription_text = lesson
         .transcription
@@ -833,12 +1023,13 @@ pub async fn generate_quiz(
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     tracing::info!("Received quiz generation request for lesson: {}", id);
     // 1. Fetch lesson
-    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
-        .bind(id)
-        .bind(org_ctx.id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| StatusCode::NOT_FOUND)?;
+    let lesson =
+        sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
+            .bind(id)
+            .bind(org_ctx.id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| StatusCode::NOT_FOUND)?;
 
     let transcription_text = lesson
         .transcription
@@ -1482,6 +1673,9 @@ pub async fn register(
             organization_id: user.organization_id,
             xp: user.xp,
             level: user.level,
+            avatar_url: user.avatar_url,
+            bio: user.bio,
+            language: user.language,
         },
         token,
     }))
@@ -1522,6 +1716,9 @@ pub async fn login(
             organization_id: user.organization_id,
             xp: user.xp,
             level: user.level,
+            avatar_url: user.avatar_url,
+            bio: user.bio,
+            language: user.language,
         },
         token,
     }))
@@ -1551,7 +1748,8 @@ pub async fn get_course_analytics(
 
     // 4. Fetch from LMS
     let client = reqwest::Client::new();
-    let lms_url = env::var("LMS_INTERNAL_URL").unwrap_or_else(|_| "http://experience:3002".to_string());
+    let lms_url =
+        env::var("LMS_INTERNAL_URL").unwrap_or_else(|_| "http://experience:3002".to_string());
     let res = client
         .get(format!("{}/courses/{}/analytics", lms_url, id))
         .send()
@@ -1598,12 +1796,10 @@ pub async fn get_advanced_analytics(
 
     // 4. Fetch from LMS
     let client = reqwest::Client::new();
-    let lms_url = env::var("LMS_INTERNAL_URL").unwrap_or_else(|_| "http://experience:3002".to_string());
+    let lms_url =
+        env::var("LMS_INTERNAL_URL").unwrap_or_else(|_| "http://experience:3002".to_string());
     let res = client
-        .get(format!(
-            "{}/courses/{}/analytics/advanced",
-            lms_url, id
-        ))
+        .get(format!("{}/courses/{}/analytics/advanced", lms_url, id))
         .send()
         .await
         .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
@@ -1678,6 +1874,331 @@ pub async fn get_organization(
         .map_err(|_| StatusCode::NOT_FOUND)?;
 
     Ok(Json(org))
+}
+
+pub async fn get_me(
+    claims: Claims,
+    State(pool): State<PgPool>,
+) -> Result<Json<UserResponse>, (StatusCode, String)> {
+    let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE id = $1")
+        .bind(claims.sub)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| (StatusCode::NOT_FOUND, "Usuario no encontrado".to_string()))?;
+
+    Ok(Json(UserResponse {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        organization_id: user.organization_id,
+        xp: user.xp,
+        level: user.level,
+        avatar_url: user.avatar_url,
+        bio: user.bio,
+        language: user.language,
+    }))
+}
+
+// SSO Configuration Management
+pub async fn get_sso_config(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+) -> Result<Json<Option<common::models::OrganizationSSOConfig>>, (StatusCode, String)> {
+    if claims.role != "admin" {
+        return Err((
+            StatusCode::FORBIDDEN,
+            "Solo los administradores pueden ver la configuración de SSO".to_string(),
+        ));
+    }
+
+    let config = sqlx::query_as::<_, common::models::OrganizationSSOConfig>(
+        "SELECT * FROM organization_sso_configs WHERE organization_id = $1",
+    )
+    .bind(org_ctx.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(config))
+}
+
+pub async fn update_sso_config(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<Json<common::models::OrganizationSSOConfig>, (StatusCode, String)> {
+    if claims.role != "admin" {
+        return Err((
+            StatusCode::FORBIDDEN,
+            "Solo los administradores pueden configurar SSO".to_string(),
+        ));
+    }
+
+    let issuer_url = payload.get("issuer_url").and_then(|v| v.as_str()).ok_or((
+        StatusCode::BAD_REQUEST,
+        "issuer_url es requerido".to_string(),
+    ))?;
+    let client_id = payload.get("client_id").and_then(|v| v.as_str()).ok_or((
+        StatusCode::BAD_REQUEST,
+        "client_id es requerido".to_string(),
+    ))?;
+    let client_secret = payload
+        .get("client_secret")
+        .and_then(|v| v.as_str())
+        .ok_or((
+            StatusCode::BAD_REQUEST,
+            "client_secret es requerido".to_string(),
+        ))?;
+    let enabled = payload
+        .get("enabled")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    let config = sqlx::query_as::<_, common::models::OrganizationSSOConfig>(
+        "INSERT INTO organization_sso_configs (organization_id, issuer_url, client_id, client_secret, enabled, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())
+         ON CONFLICT (organization_id) DO UPDATE SET
+            issuer_url = EXCLUDED.issuer_url,
+            client_id = EXCLUDED.client_id,
+            client_secret = EXCLUDED.client_secret,
+            enabled = EXCLUDED.enabled,
+            updated_at = NOW()
+         RETURNING *"
+    )
+    .bind(org_ctx.id)
+    .bind(issuer_url)
+    .bind(client_id)
+    .bind(client_secret)
+    .bind(enabled)
+    .fetch_all(&pool)
+    .await;
+
+    // We use fetch_all + next for slightly better error handling in this complex query
+    let config = config
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .into_iter()
+        .next()
+        .ok_or((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to update SSO config".to_string(),
+        ))?;
+
+    Ok(Json(config))
+}
+
+pub async fn sso_login_init(
+    Path(org_id): Path<Uuid>,
+    State(pool): State<PgPool>,
+) -> Result<axum::response::Redirect, (StatusCode, String)> {
+    let config = sqlx::query_as::<_, common::models::OrganizationSSOConfig>(
+        "SELECT * FROM organization_sso_configs WHERE organization_id = $1 AND enabled = TRUE",
+    )
+    .bind(org_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((
+        StatusCode::NOT_FOUND,
+        "SSO no configurado o deshabilitado para esta organización".to_string(),
+    ))?;
+
+    let issuer_url = IssuerUrl::new(config.issuer_url.clone()).map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            format!("Invalid issuer URL: {}", e),
+        )
+    })?;
+
+    let provider_metadata = CoreProviderMetadata::discover_async(issuer_url, async_http_client)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to discover OIDC provider: {}", e),
+            )
+        })?;
+
+    let client = CoreClient::from_provider_metadata(
+        provider_metadata,
+        ClientId::new(config.client_id.clone()),
+        Some(ClientSecret::new(config.client_secret.clone())),
+    )
+    .set_redirect_uri(
+        RedirectUrl::new(format!(
+            "{}/auth/sso/callback",
+            env::var("CMS_API_URL").unwrap_or_else(|_| "http://localhost:3001".to_string())
+        ))
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?,
+    );
+
+    let (auth_url, csrf_token, nonce) = client
+        .authorize_url(
+            AuthenticationFlow::<CoreResponseType>::AuthorizationCode,
+            CsrfToken::new_random,
+            Nonce::new_random,
+        )
+        .add_scope(Scope::new("openid".to_string()))
+        .add_scope(Scope::new("email".to_string()))
+        .add_scope(Scope::new("profile".to_string()))
+        .url();
+
+    // Store state and nonce
+    sqlx::query("INSERT INTO sso_states (state_token, organization_id, nonce) VALUES ($1, $2, $3)")
+        .bind(csrf_token.secret())
+        .bind(org_id)
+        .bind(nonce.secret())
+        .execute(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(axum::response::Redirect::to(auth_url.as_str()))
+}
+
+pub async fn sso_callback(
+    Query(params): Query<SSOCallbackParams>,
+    State(pool): State<PgPool>,
+) -> Result<axum::response::Redirect, (StatusCode, String)> {
+    // 1. Verify state and get org_id/nonce
+    let row: (Uuid, String) = sqlx::query_as(
+        "DELETE FROM sso_states WHERE state_token = $1 RETURNING organization_id, nonce",
+    )
+    .bind(&params.state)
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| {
+        (
+            StatusCode::BAD_REQUEST,
+            "Invalid state or timeout".to_string(),
+        )
+    })?;
+
+    let org_id = row.0;
+    let nonce = Nonce::new(row.1);
+
+    // 2. Fetch config
+    let config = sqlx::query_as::<_, common::models::OrganizationSSOConfig>(
+        "SELECT * FROM organization_sso_configs WHERE organization_id = $1",
+    )
+    .bind(org_id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // 3. Exchange code for token
+    let issuer_url = IssuerUrl::new(config.issuer_url.clone())
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+
+    let provider_metadata = CoreProviderMetadata::discover_async(issuer_url, async_http_client)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let client = CoreClient::from_provider_metadata(
+        provider_metadata,
+        ClientId::new(config.client_id),
+        Some(ClientSecret::new(config.client_secret)),
+    )
+    .set_redirect_uri(
+        RedirectUrl::new(format!(
+            "{}/auth/sso/callback",
+            env::var("CMS_API_URL").unwrap_or_else(|_| "http://localhost:3001".to_string())
+        ))
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?,
+    );
+
+    let token_response = client
+        .exchange_code(AuthorizationCode::new(params.code))
+        .request_async(async_http_client)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::UNAUTHORIZED,
+                format!("Token exchange failed: {}", e),
+            )
+        })?;
+
+    // 4. Extract user info from ID Token
+    let id_token = token_response
+        .id_token()
+        .ok_or((StatusCode::UNAUTHORIZED, "Missing ID token".to_string()))?;
+    let claims = id_token
+        .claims(&client.id_token_verifier(), &nonce)
+        .map_err(|e| (StatusCode::UNAUTHORIZED, format!("Invalid ID token: {}", e)))?;
+
+    let email = claims
+        .email()
+        .ok_or((
+            StatusCode::UNAUTHORIZED,
+            "Missing email in ID token".to_string(),
+        ))?
+        .to_string();
+    let name = claims
+        .name()
+        .and_then(|n| n.get(None))
+        .map(|n| n.to_string())
+        .unwrap_or_else(|| email.split('@').next().unwrap_or("User").to_string());
+
+    // 5. User Provisioning
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let user = sqlx::query_as::<_, User>(
+        "SELECT * FROM users WHERE organization_id = $1 AND lower(email) = lower($2)",
+    )
+    .bind(org_id)
+    .bind(&email)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let user = match user {
+        Some(u) => u,
+        None => {
+            // Create user
+            sqlx::query_as::<_, User>(
+                "INSERT INTO users (organization_id, email, password_hash, full_name, role)
+                 VALUES ($1, $2, $3, $4, $5)
+                 RETURNING *",
+            )
+            .bind(org_id)
+            .bind(&email)
+            .bind("SSO_MANAGED") // No password for SSO users
+            .bind(&name)
+            .bind("student") // Default role
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        }
+    };
+
+    tx.commit()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // 6. Generate JWT
+    let token =
+        common::auth::create_jwt(user.id, user.organization_id, &user.role).map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "JWT generation failed".to_string(),
+            )
+        })?;
+
+    // Determine where to redirect based on user role
+    let frontend_url = if user.role == "student" {
+        env::var("EXPERIENCE_URL").unwrap_or_else(|_| "http://localhost:3003".to_string())
+    } else {
+        env::var("STUDIO_URL").unwrap_or_else(|_| "http://localhost:3000".to_string())
+    };
+
+    Ok(axum::response::Redirect::to(&format!(
+        "{}/auth/callback?token={}",
+        frontend_url, token
+    )))
 }
 
 #[derive(Serialize)]
@@ -1939,33 +2460,59 @@ pub async fn update_user(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
     Json(payload): Json<serde_json::Value>,
-) -> Result<StatusCode, (StatusCode, String)> {
+) -> Result<Json<UserResponse>, (StatusCode, String)> {
     if claims.role != "admin" && claims.sub != id {
         return Err((StatusCode::FORBIDDEN, "Not authorized".into()));
     }
 
     let role = payload.get("role").and_then(|r| r.as_str());
     let full_name = payload.get("full_name").and_then(|f| f.as_str());
+    let avatar_url = payload.get("avatar_url").and_then(|v| v.as_str());
+    let bio = payload.get("bio").and_then(|v| v.as_str());
+    let language = payload.get("language").and_then(|v| v.as_str());
     let organization_id = payload
         .get("organization_id")
         .and_then(|o| o.as_str())
         .and_then(|o| Uuid::parse_str(o).ok());
 
-    sqlx::query(
-        "UPDATE users SET role = COALESCE($1, role), organization_id = COALESCE($2, organization_id), full_name = COALESCE($3, full_name) WHERE id = $4 AND organization_id = $5"
+    let user = sqlx::query_as::<_, User>(
+        "UPDATE users SET role = COALESCE($1, role), organization_id = COALESCE($2, organization_id), full_name = COALESCE($3, full_name), avatar_url = COALESCE($4, avatar_url), bio = COALESCE($5, bio), language = COALESCE($6, language) WHERE id = $7 AND organization_id = $8 RETURNING *"
     )
     .bind(role)
     .bind(organization_id)
     .bind(full_name)
+    .bind(avatar_url)
+    .bind(bio)
+    .bind(language)
     .bind(id)
     .bind(org_ctx.id)
-    .execute(&pool)
+    .fetch_one(&pool)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    log_action(&pool, org_ctx.id, claims.sub, "UPDATE_USER", "User", id, payload).await;
+    log_action(
+        &pool,
+        org_ctx.id,
+        claims.sub,
+        "UPDATE_USER",
+        "User",
+        id,
+        payload,
+    )
+    .await;
 
-    Ok(StatusCode::OK)
+    Ok(Json(UserResponse {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        organization_id: user.organization_id,
+        xp: user.xp,
+        level: user.level,
+        avatar_url: user.avatar_url,
+        bio: user.bio,
+        language: user.language,
+    }))
 }
 
 // Organizations Management (Plural/Admin)

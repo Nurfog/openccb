@@ -99,6 +99,9 @@ export interface User {
     organization_id: string;
     xp?: number;
     level?: number;
+    avatar_url?: string;
+    bio?: string;
+    language?: string;
 }
 
 export interface AuthResponse {
@@ -179,6 +182,14 @@ export const lmsApi = {
         });
     },
 
+    async getMe(): Promise<User> {
+        return apiFetch('/auth/me', {}, true); // isCMS = true
+    },
+
+    initSSOLogin(orgId: string): void {
+        window.location.href = `${CMS_API_URL}/auth/sso/login/${orgId}`;
+    },
+
     async enroll(courseId: string, userId: string): Promise<void> {
         return apiFetch('/enroll', {
             method: 'POST',
@@ -213,10 +224,23 @@ export const lmsApi = {
         return apiFetch(`/organizations/${orgId}/branding`, {}, true);
     },
 
-    async updateUser(userId: string, payload: { full_name?: string }): Promise<void> {
+    async updateUser(userId: string, payload: { full_name?: string, avatar_url?: string, bio?: string, language?: string }): Promise<void> {
         return apiFetch(`/users/${userId}`, {
             method: 'POST',
             body: JSON.stringify(payload)
         });
+    },
+
+    async uploadAsset(file: File): Promise<{ id: string, filename: string, url: string }> {
+        const formData = new FormData();
+        formData.append('file', file);
+        const token = getToken();
+        return fetch(`${CMS_API_URL}/assets/upload`, {
+            method: 'POST',
+            headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: formData
+        }).then(res => res.json());
     }
 };
