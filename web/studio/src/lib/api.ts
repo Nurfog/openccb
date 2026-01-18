@@ -270,7 +270,6 @@ export const cmsApi = {
     createLesson: (module_id: string, title: string, content_type: string, position: number): Promise<Lesson> => apiFetch('/lessons', { method: 'POST', body: JSON.stringify({ module_id, title, content_type, position }) }),
     getLesson: (id: string): Promise<Lesson> => apiFetch(`/lessons/${id}`),
     updateLesson: (id: string, payload: Partial<Lesson>): Promise<Lesson> => apiFetch(`/lessons/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
-    transcribeLesson: (id: string): Promise<Lesson> => apiFetch(`/lessons/${id}/transcribe`, { method: 'POST' }),
     summarizeLesson: (id: string): Promise<Lesson> => apiFetch(`/lessons/${id}/summarize`, { method: 'POST' }),
     generateQuiz: (id: string): Promise<Block[]> => apiFetch(`/lessons/${id}/generate-quiz`, { method: 'POST' }),
     deleteModule: (id: string): Promise<void> => apiFetch(`/modules/${id}`, { method: 'DELETE' }),
@@ -312,7 +311,7 @@ export const cmsApi = {
 
     // Assets
     getCourseAssets: (courseId: string): Promise<Asset[]> => apiFetch(`/courses/${courseId}/assets`),
-    deleteAsset: (id: string): Promise<void> => apiFetch(`/assets/${id}`, { method: 'DELETE' }),
+    deleteAsset: (id: string): Promise<void> => apiFetch(`/api/assets/${id}`, { method: 'DELETE' }),
     uploadAsset: (file: File, onProgress?: (pct: number) => void, courseId?: string): Promise<UploadResponse> => {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
@@ -320,7 +319,7 @@ export const cmsApi = {
             if (courseId) formData.append('course_id', courseId);
 
             const xhr = new XMLHttpRequest();
-            xhr.open('POST', `${API_BASE_URL}/assets/upload`);
+            xhr.open('POST', `${API_BASE_URL}/api/assets/upload`);
 
             const token = getToken();
             if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);

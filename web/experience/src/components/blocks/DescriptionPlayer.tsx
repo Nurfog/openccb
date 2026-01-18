@@ -1,5 +1,8 @@
 "use client";
 
+import ReactMarkdown from "react-markdown";
+import { getImageUrl } from "@/lib/api";
+
 interface DescriptionPlayerProps {
     id: string;
     title?: string;
@@ -15,11 +18,8 @@ export default function DescriptionPlayer({ id, title, content }: DescriptionPla
                 </h3>
             </div>
 
-            <div className="prose prose-invert prose-lg max-w-none">
-                {/* We can use a markdown parser here later if desired, for now simple multiline text */}
-                <div className="text-gray-300 leading-relaxed whitespace-pre-wrap font-medium">
-                    {content}
-                </div>
+            <div className="prose prose-invert prose-lg max-w-none prose-p:text-gray-300 prose-p:leading-relaxed prose-p:font-medium prose-headings:text-white prose-a:text-blue-400 prose-img:rounded-2xl prose-img:shadow-2xl">
+                <ReactMarkdown urlTransform={getImageUrl}>{content}</ReactMarkdown>
             </div>
         </div>
     );

@@ -22,7 +22,6 @@ services:
       JWT_SECRET: openccb_secret_key_2025_production
       NEXT_PUBLIC_CMS_API_URL: http://localhost:3001
       LMS_INTERNAL_URL: http://experience:3002
-      LOCAL_WHISPER_URL: http://whisper:8000
     volumes:
       - uploads_data:/app/uploads
     env_file: .env
@@ -47,23 +46,6 @@ services:
     depends_on:
       - db
       - ollama
-
-  whisper:
-    image: ${WHISPER_IMAGE:-fedirz/faster-whisper-server:latest-cpu}
-    ports:
-      - "8000:8000"
-    volumes:
-      - whisper_cache:/root/.cache/huggingface
-    environment:
-      - DEVICE=${WHISPER_DEVICE:-cpu}
-    # GPU support for RTX 2070 Super
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [ gpu ]
 
   ollama:
     image: ollama/ollama:latest
@@ -96,5 +78,4 @@ services:
 volumes:
   postgres_data:
   uploads_data:
-  whisper_cache:
   ollama_data:

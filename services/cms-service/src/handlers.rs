@@ -919,14 +919,16 @@ pub async fn summarize_lesson(
             .await
             .map_err(|_| StatusCode::NOT_FOUND)?;
 
-    let transcription_text = lesson
-        .transcription
+    // Use lesson summary as content source, fallback to title
+    let content_text = lesson
+        .summary
         .as_ref()
-        .and_then(|t| t["en"].as_str())
-        .unwrap_or("");
+        .filter(|s| !s.is_empty())
+        .cloned()
+        .unwrap_or_else(|| format!("Lesson: {}", lesson.title));
 
-    if transcription_text.is_empty() {
-        tracing::warn!("Cannot summarize lesson {}: No transcription found", id);
+    if content_text.is_empty() {
+        tracing::warn!("Cannot summarize lesson {}: No content available", id);
         return Err(StatusCode::BAD_REQUEST);
     }
 
@@ -963,7 +965,7 @@ pub async fn summarize_lesson(
                 },
                 {
                     "role": "user",
-                    "content": transcription_text
+                    "content": content_text
                 }
             ]
         }));
@@ -1032,15 +1034,17 @@ pub async fn generate_quiz(
             .await
             .map_err(|_| StatusCode::NOT_FOUND)?;
 
-    let transcription_text = lesson
-        .transcription
+    // Use lesson summary as content source, fallback to title
+    let content_text = lesson
+        .summary
         .as_ref()
-        .and_then(|t| t["en"].as_str())
-        .unwrap_or("");
+        .filter(|s| !s.is_empty())
+        .cloned()
+        .unwrap_or_else(|| format!("Lesson: {}", lesson.title));
 
-    if transcription_text.is_empty() {
+    if content_text.is_empty() {
         tracing::warn!(
-            "Cannot generate quiz for lesson {}: No transcription found",
+            "Cannot generate quiz for lesson {}: No content available",
             id
         );
         return Err(StatusCode::BAD_REQUEST);
@@ -1079,7 +1083,7 @@ pub async fn generate_quiz(
                 },
                 {
                     "role": "user",
-                    "content": transcription_text
+                    "content": content_text
                 }
             ],
             "response_format": { "type": "json_object" }

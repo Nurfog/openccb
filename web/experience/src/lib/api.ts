@@ -1,6 +1,14 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_LMS_API_URL || "http://localhost:3002";
 export const CMS_API_URL = process.env.NEXT_PUBLIC_CMS_API_URL || "http://localhost:3001";
 
+export const getImageUrl = (path?: string) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    const cleanPath = path.startsWith('/uploads') ? path.replace('/uploads', '/assets') : path;
+    const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+    return `${CMS_API_URL}${finalPath}`;
+};
+
 export interface Organization {
     id: string;
     name: string;

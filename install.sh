@@ -143,7 +143,6 @@ if ! grep -q "DATABASE_URL=" .env || [[ $(grep "DATABASE_URL=" .env | cut -d'=' 
     update_env "LMS_DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5432/openccb_lms?sslmode=disable"
     update_env "JWT_SECRET" "supersecretsecret"
     update_env "AI_PROVIDER" "local"
-    update_env "LOCAL_WHISPER_URL" "http://whisper:8000"
     update_env "LOCAL_OLLAMA_URL" "http://ollama:11434"
     update_env "NEXT_PUBLIC_CMS_API_URL" "http://localhost:3001"
     update_env "NEXT_PUBLIC_LMS_API_URL" "http://localhost:3002"
@@ -158,7 +157,7 @@ until docker exec openccb-ollama-1 ollama list &> /dev/null; do sleep 2; done
 
 echo "📥 Downloading models..."
 if [ "$HAS_NVIDIA" = true ]; then
-    docker exec openccb-ollama-1 ollama pull llama3.2:1b
+    docker exec openccb-ollama-1 ollama pull llama3:8b
 else
     docker exec openccb-ollama-1 ollama pull phi3:mini
 fi
