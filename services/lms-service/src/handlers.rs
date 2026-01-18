@@ -8,10 +8,11 @@ use common::auth::{Claims, create_jwt};
 use common::middleware::Org;
 use common::models::{
     AuthResponse, Course, CourseAnalytics, Enrollment, HeatmapPoint, Lesson, LessonAnalytics,
-    Module, Notification, Organization, User, UserResponse,
+    Module, Notification, Organization, RecommendationResponse, User, UserResponse,
 };
 use serde::Deserialize;
 use sqlx::{PgPool, Row};
+use std::env;
 use uuid::Uuid;
 
 pub async fn enroll_user(
@@ -1036,4 +1037,106 @@ pub async fn update_user(
         bio: user.bio,
         language: user.language,
     }))
+}
+
+pub async fn get_recommendations(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Path(course_id): Path<Uuid>,
+) -> Result<Json<RecommendationResponse>, (StatusCode, String)> {
+    let user_id = claims.sub;
+
+    // 1. Fetch performance data (recent grades)
+    let grades: Vec<common::models::UserGrade> = sqlx::query_as::<_, common::models::UserGrade>(
+        "SELECT * FROM user_grades WHERE user_id = $1 AND course_id = $2 ORDER BY created_at DESC LIMIT 10"
+    )
+    .bind(user_id)
+    .bind(course_id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // 2. Fetch lesson metadata (titles) for context
+    #[derive(sqlx::FromRow)]
+    struct LessonContext {
+        id: Uuid,
+        title: String,
+    }
+
+    let lessons =
+        sqlx::query_as::<_, LessonContext>("SELECT id, title FROM lessons WHERE course_id = $1")
+            .bind(course_id)
+            .fetch_all(&pool)
+            .await
+            .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // 3. Prepare AI context
+    let mut performance_summary = String::new();
+    for grade in &grades {
+        let lesson_title = lessons
+            .iter()
+            .find(|l| l.id == grade.lesson_id)
+            .map(|l| l.title.clone())
+            .unwrap_or_else(|| "Unknown Lesson".to_string());
+
+        performance_summary.push_str(&format!(
+            "- Lesson: {}, Score: {}%\n",
+            lesson_title,
+            (grade.score * 100.0) as i32
+        ));
+    }
+
+    if performance_summary.is_empty() {
+        performance_summary = "Student hasn't completed any assessments yet.".to_string();
+    }
+
+    // 4. Call Ollama
+    let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+    let client = reqwest::Client::new();
+
+    let (url, auth_header, model) = if provider == "local" {
+        let base_url =
+            env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://ollama:11434".to_string());
+        let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3:8b".to_string());
+        (
+            format!("{}/v1/chat/completions", base_url),
+            "".to_string(),
+            model,
+        )
+    } else {
+        (
+            "https://api.openai.com/v1/chat/completions".to_string(),
+            format!("Bearer {}", env::var("OPENAI_API_KEY").unwrap_or_default()),
+            "gpt-4-turbo".to_string(),
+        )
+    };
+
+    let response = client.post(&url)
+        .header("Content-Type", "application/json")
+        .header("Authorization", auth_header)
+        .json(&serde_json::json!({
+            "model": model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a helpful educational AI tutor. Based on the student's performance, suggest 3 highly personalized study recommendations. Focus on areas where they scored low. Return ONLY a valid JSON object starting with { \"recommendations\": [...] }. Each object MUST have: 'title', 'description', 'lesson_id' (a valid UUID or null), 'priority' ('high', 'medium', 'low'), and 'reason'. Respond in Spanish."
+                },
+                {
+                    "role": "user",
+                    "content": format!("Student performance in course:\n{}", performance_summary)
+                }
+            ],
+            "response_format": { "type": "json_object" }
+        }))
+        .send()
+        .await
+        .map_err(|e: reqwest::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let ai_response: RecommendationResponse = response
+        .json()
+        .await
+        .map_err(|e: reqwest::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(ai_response))
 }

@@ -62,6 +62,10 @@ async fn main() {
             get(handlers::get_advanced_analytics),
         )
         .route(
+            "/courses/{id}/recommendations",
+            get(handlers::get_recommendations),
+        )
+        .route(
             "/users/{id}/gamification",
             get(handlers::get_user_gamification),
         )

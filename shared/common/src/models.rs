@@ -275,6 +275,20 @@ pub struct AuditLog {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Recommendation {
+    pub title: String,
+    pub description: String,
+    pub lesson_id: Option<Uuid>,
+    pub priority: String, // "high", "medium", "low"
+    pub reason: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RecommendationResponse {
+    pub recommendations: Vec<Recommendation>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

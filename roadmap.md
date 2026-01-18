@@ -95,7 +95,7 @@
   - [x] Resúmenes de lecciones generados por IA (Implementado)
   - [x] Transcripción y traducción de video en tiempo real (IA Local) (Implementado)
   - [x] Generación automática de quices (Implementado)
-- [ ] **Rutas de Aprendizaje Personalizadas**: Recomendaciones impulsadas por IA
+- [x] **Rutas de Aprendizaje Personalizadas**: Recomendaciones impulsadas por IA
 - [x] **Gamificación Base**: (Implementada a nivel de sistema)
   - [x] Medallas y logros
   - [x] Tablas de clasificación (Leaderboards)

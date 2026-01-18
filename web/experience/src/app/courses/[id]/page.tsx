@@ -1,19 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { lmsApi, Course, Module } from "@/lib/api";
+import { lmsApi, Course, Module, Recommendation } from "@/lib/api";
+import { Sparkles, AlertTriangle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { BookOpen, ChevronRight, PlayCircle, Calendar, Clock, Info } from "lucide-react";
 
 export default function CourseOutlinePage({ params }: { params: { id: string } }) {
     const [courseData, setCourseData] = useState<(Course & { modules: Module[] }) | null>(null);
     const [loading, setLoading] = useState(true);
+    const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+    const [loadingAI, setLoadingAI] = useState(false);
 
     useEffect(() => {
         lmsApi.getCourseOutline(params.id)
             .then(setCourseData)
             .catch(console.error)
             .finally(() => setLoading(false));
+
+        setLoadingAI(true);
+        lmsApi.getRecommendations(params.id)
+            .then(res => setRecommendations(res.recommendations))
+            .catch(console.error)
+            .finally(() => setLoadingAI(false));
     }, [params.id]);
 
     if (loading) {
@@ -93,6 +102,61 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                     </div>
                 </div>
             </div>
+
+            {/* AI Recommendations Section */}
+            {(loadingAI || recommendations.length > 0) && (
+                <div className="mb-20">
+                    <div className="flex items-center gap-3 mb-8">
+                        <div className="w-10 h-10 rounded-xl glass border-purple-500/20 bg-purple-500/10 flex items-center justify-center">
+                            <Sparkles size={18} className="text-purple-400" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-white tracking-tight">Tu Ruta de Aprendizaje IA</h2>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Sugerencias personalizadas basadas en tu rendimiento</p>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-4">
+                        {loadingAI ? (
+                            <div className="glass-card border-white/5 bg-white/5 animate-pulse p-8">
+                                <div className="h-4 w-1/3 bg-white/10 rounded mb-4"></div>
+                                <div className="h-3 w-2/3 bg-white/10 rounded"></div>
+                            </div>
+                        ) : (
+                            recommendations.map((rec, i) => (
+                                <div key={i} className="glass-card border-white/5 hover:border-purple-500/30 transition-all p-6 group">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${rec.priority === 'high' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                                                        rec.priority === 'medium' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                                                            'bg-green-500/10 text-green-400 border border-green-500/20'
+                                                    }`}>
+                                                    Prioridad {rec.priority}
+                                                </div>
+                                                {rec.priority === 'high' && <AlertTriangle size={12} className="text-red-400" />}
+                                            </div>
+                                            <h3 className="text-lg font-bold text-white">{rec.title}</h3>
+                                            <p className="text-sm text-gray-400 leading-relaxed max-w-2xl">{rec.description}</p>
+                                            <div className="bg-white/5 rounded-lg p-3 inline-block">
+                                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 italic">¿Por qué?</p>
+                                                <p className="text-xs text-gray-300 font-medium">{rec.reason}</p>
+                                            </div>
+                                        </div>
+                                        {rec.lesson_id && (
+                                            <Link href={`/courses/${params.id}/lessons/${rec.lesson_id}`}>
+                                                <button className="whitespace-nowrap px-6 py-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 group-hover:gap-4 transition-all">
+                                                    Ir a la Lección <ArrowRight size={14} />
+                                                </button>
+                                            </Link>
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
 
             <div className="space-y-12">
                 {courseData.modules.map((module, idx) => (

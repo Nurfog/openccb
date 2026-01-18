@@ -16,6 +16,17 @@ export interface Organization {
     primary_color?: string;
     secondary_color?: string;
 }
+export interface Recommendation {
+    title: string;
+    description: string;
+    lesson_id: string | null;
+    priority: "high" | "medium" | "low";
+    reason: string;
+}
+
+export interface RecommendationResponse {
+    recommendations: Recommendation[];
+}
 
 export interface Course {
     id: string;
@@ -284,5 +295,8 @@ export const lmsApi = {
         return apiFetch(`/notifications/${id}/read`, {
             method: 'POST'
         });
+    },
+    async getRecommendations(courseId: string): Promise<RecommendationResponse> {
+        return apiFetch(`/courses/${courseId}/recommendations`, {}, true);
     }
 };
