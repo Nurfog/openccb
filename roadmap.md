@@ -130,7 +130,7 @@
 - [x] **Quices de Código**: Desafíos interactivos con reproductor tipo IDE (Completado)
 - [x] **Identificación Visual**: Quices de "Puntos Calientes" (Hotspots) en imágenes (Completado)
 - [ ] **Tutor de IA Integrado**: Asistente basado en RAG dentro del reproductor de lecciones
-- [ ] **Evaluaciones por Audio**: Preguntas con respuesta oral para idiomas
+- [x] **Evaluaciones por Audio**: Preguntas con respuesta oral para idiomas (Completado)
 - [x] **Marcadores de Video**: Preguntas que pausan el video en timestamps específicos (Completado)
 
 ## Fase 12: Generador de Cursos "Mágico" con IA ✅
