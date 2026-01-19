@@ -92,10 +92,10 @@
   - [x] Métricas de retención (Implementado)
   - [x] Mapas de calor de participación (Heatmaps) (Implementado)
 - [x] **Integración de IA**:
-  - [x] Resúmenes de lecciones generados por IA (Implementado)
-  - [x] Transcripción y traducción de video en tiempo real (IA Local) (Implementado)
-  - [x] Generación automática de quices (Implementado)
-- [x] **Rutas de Aprendizaje Personalizadas**: Recomendaciones impulsadas por IA
+  - [x] Resúmenes de lecciones generados por IA (Llama 3)
+  - [x] Generación automática de quices (Llama 3)
+  - [ ] Transcripción y traducción de video en tiempo real (Postpuesto - Reemplazado por Llama 3 para otras funciones)
+- [x] **Rutas de Aprendizaje Personalizadas**: Recomendaciones impulsadas por Llama 3 (Implementado)
 - [x] **Gamificación Base**: (Implementada a nivel de sistema)
   - [x] Medallas y logros
   - [x] Tablas de clasificación (Leaderboards)

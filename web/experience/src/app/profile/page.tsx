@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/context/I18nContext";
@@ -124,10 +125,12 @@ export default function ProfilePage() {
                         <div className="relative mb-6">
                             <div className="w-32 h-32 rounded-full bg-blue-600/20 border-4 border-white/5 flex items-center justify-center overflow-hidden shadow-2xl relative">
                                 {avatarUrl ? (
-                                    <img
+                                    <Image
                                         src={getImageUrl(avatarUrl)}
                                         alt={fullName}
-                                        className="w-full h-full object-cover"
+                                        fill
+                                        className="object-cover"
+                                        sizes="(max-width: 768px) 100vw, 128px"
                                     />
                                 ) : (
                                     <span className="text-5xl font-black text-blue-400">
@@ -196,7 +199,7 @@ export default function ProfilePage() {
                                     <div key={badge.id} className="group relative">
                                         <div className="w-full aspect-square rounded-xl bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
                                             {badge.icon_url ? (
-                                                <img src={badge.icon_url} alt={badge.name} className="w-8 h-8 opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
+                                                <Image src={badge.icon_url} alt={badge.name} width={32} height={32} className="opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
                                             ) : (
                                                 <Award size={24} className="text-gray-600 group-hover:text-yellow-500 transition-colors" />
                                             )}

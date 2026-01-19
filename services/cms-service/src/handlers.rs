@@ -730,114 +730,18 @@ pub async fn run_transcription_task(pool: PgPool, lesson_id: Uuid) -> Result<(),
         .await
         .map_err(|e| format!("File read failed ({}): {}", file_path, e))?;
 
-    // 4. Configuration
-    let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
-    let client = reqwest::Client::new();
-
-    let (url, auth_header, model) = if provider == "local" {
-        let base_url =
-            env::var("LOCAL_WHISPER_URL").unwrap_or_else(|_| "http://localhost:8000".to_string());
-        (
-            format!("{}/v1/audio/transcriptions", base_url),
-            "".to_string(),
-            "medium".to_string(),
-        )
-    } else {
-        let api_key = env::var("OPENAI_API_KEY").map_err(|_| "Missing OPENAI_API_KEY")?;
-        (
-            "https://api.openai.com/v1/audio/transcriptions".to_string(),
-            format!("Bearer {}", api_key),
-            "whisper-1".to_string(),
-        )
-    };
-
-    let part = reqwest::multipart::Part::bytes(file_data)
-        .file_name(filename.to_string())
-        .mime_str("application/octet-stream")
-        .map_err(|e| format!("Multipart part creation failed: {}", e))?;
-
-    let form = reqwest::multipart::Form::new()
-        .part("file", part)
-        .text("model", model)
-        .text("response_format", "verbose_json");
-
-    let mut request = client.post(&url).multipart(form);
-    if !auth_header.is_empty() {
-        request = request.header("Authorization", auth_header);
-    }
-
-    let response = request
-        .send()
-        .await
-        .map_err(|e| format!("Transcription request failed: {}", e))?;
-
-    if !response.status().is_success() {
-        let err_body = response.text().await.unwrap_or_default();
-        return Err(format!("Transcription API error: {}", err_body));
-    }
-
-    let whisper_data: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| format!("Whisper JSON parse failed: {}", e))?;
-
-    // Extract text and segments (cues)
-    let text = whisper_data["text"].as_str().unwrap_or_default();
-    let segments = whisper_data["segments"].as_array();
-
-    let mut cues = Vec::new();
-    if let Some(segments) = segments {
-        for s in segments {
-            cues.push(json!({
-                "start": s["start"],
-                "end": s["end"],
-                "text": s["text"]
-            }));
-        }
-    }
-
-    let transcription = json!({
-        "en": text,
-        "es": "",
-        "cues": cues
-    });
-
-    // 5. Update initial transcription
+    // 4. Transcription service is currently disabled in favor of Llama 3
+    tracing::warn!("Transcription service is disabled for lesson {}. Using Whisper removal policy.", lesson_id);
+    
     sqlx::query(
-        "UPDATE lessons SET transcription = $1, transcription_status = 'processing' WHERE id = $2",
+        "UPDATE lessons SET transcription_status = 'failed' WHERE id = $1",
     )
-    .bind(&transcription)
     .bind(lesson_id)
     .execute(&pool)
     .await
-    .map_err(|e| format!("Initial database update failed: {}", e))?;
+    .map_err(|e| format!("Failed to update status to failed: {}", e))?;
 
-    // 6. Translation (Optional/Background within the task)
-    let es_text = match translate_text(text, "es").await {
-        Ok(t) => t,
-        Err(e) => {
-            tracing::error!("Translation failed for lesson {}: {}", lesson_id, e);
-            "".to_string()
-        }
-    };
-
-    let final_transcription = json!({
-        "en": text,
-        "es": es_text,
-        "cues": cues
-    });
-
-    // 7. Final Update
-    sqlx::query(
-        "UPDATE lessons SET transcription = $1, transcription_status = 'completed' WHERE id = $2",
-    )
-    .bind(final_transcription)
-    .bind(lesson_id)
-    .execute(&pool)
-    .await
-    .map_err(|e| format!("Final database update failed: {}", e))?;
-
-    Ok(())
+    return Err("Transcription service is currently disabled. All AI features now use Llama 3 directly.".to_string());
 }
 
 pub async fn get_lesson_vtt(

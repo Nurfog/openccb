@@ -1,6 +1,7 @@
 'use client';
 
 import Link from "next/link";
+import Image from "next/image";
 import { useBranding } from "@/context/BrandingContext";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/context/I18nContext";
@@ -17,7 +18,7 @@ export default function AppHeader() {
             <Link href="/" className="flex items-center gap-3 group">
                 <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-all overflow-hidden relative">
                     {branding?.logo_url ? (
-                        <img src={branding.logo_url} alt={branding.name} className="w-full h-full object-contain" />
+                        <Image src={branding.logo_url} alt={branding.name} fill className="object-contain" sizes="40px" />
                     ) : (
                         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700">L</div>
                     )}

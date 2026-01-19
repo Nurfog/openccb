@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import Image from "next/image";
 import { Search, CheckCircle, XCircle, MousePointer2 } from "lucide-react";
 
 interface Hotspot {
@@ -88,10 +89,12 @@ export default function HotspotPlayer({
                 onClick={handleClick}
                 className="relative aspect-video rounded-3xl overflow-hidden border-4 border-white/10 bg-black cursor-crosshair group select-none shadow-2xl"
             >
-                <img
+                <Image
                     src={imageUrl}
                     alt={title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+                    fill
+                    className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
 
                 {/* Overlay found hotspots */}
@@ -144,8 +147,8 @@ export default function HotspotPlayer({
                     <div
                         key={h.id}
                         className={`px-4 py-2 rounded-xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-2 ${found.includes(h.id)
-                                ? "bg-green-500 text-white translate-y-[-2px] shadow-lg shadow-green-500/20"
-                                : "bg-white/5 text-gray-500 border border-white/5"
+                            ? "bg-green-500 text-white translate-y-[-2px] shadow-lg shadow-green-500/20"
+                            : "bg-white/5 text-gray-500 border border-white/5"
                             }`}
                     >
                         {found.includes(h.id) ? <CheckCircle size={14} /> : <div className="w-1 h-1 rounded-full bg-current" />}

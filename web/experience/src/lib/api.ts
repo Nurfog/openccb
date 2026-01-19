@@ -297,6 +297,6 @@ export const lmsApi = {
         });
     },
     async getRecommendations(courseId: string): Promise<RecommendationResponse> {
-        return apiFetch(`/courses/${courseId}/recommendations`, {}, true);
+        return apiFetch(`/courses/${courseId}/recommendations`);
     }
 };

@@ -109,8 +109,6 @@ update_env() {
 
 # Auto-configure AI variables based on hardware
 if [ "$HAS_NVIDIA" = true ]; then
-    update_env "WHISPER_IMAGE" "fedirz/faster-whisper-server:latest-cuda"
-    update_env "WHISPER_DEVICE" "cuda"
     update_env "LOCAL_LLM_MODEL" "llama3.2:1b"
     # Uncomment GPU deploy section in docker-compose.yml while preserving indentation
     sed -i 's/^    #deploy:/    deploy:/' docker-compose.yml
@@ -121,8 +119,6 @@ if [ "$HAS_NVIDIA" = true ]; then
     sed -i 's/^    #          count: 1/              count: 1/' docker-compose.yml
     sed -i 's/^    #          capabilities: \[ gpu \]/              capabilities: [ gpu ]/' docker-compose.yml
 else
-    update_env "WHISPER_IMAGE" "fedirz/faster-whisper-server:latest-cpu"
-    update_env "WHISPER_DEVICE" "cpu"
     update_env "LOCAL_LLM_MODEL" "phi3:mini"
     # Comment GPU deploy section in docker-compose.yml
     sed -i 's/^    deploy:/    #deploy:/' docker-compose.yml
@@ -157,9 +153,9 @@ until docker exec openccb-ollama-1 ollama list &> /dev/null; do sleep 2; done
 
 echo "📥 Downloading models..."
 if [ "$HAS_NVIDIA" = true ]; then
-    docker exec openccb-ollama-1 ollama pull llama3:8b
+    docker exec openccb-ollama-1 ollama pull llama3
 else
-    docker exec openccb-ollama-1 ollama pull phi3:mini
+    docker exec openccb-ollama-1 ollama pull llama3:8b
 fi
 
 # 6. Database Initialization (Integrated db-mgmt.sh)
