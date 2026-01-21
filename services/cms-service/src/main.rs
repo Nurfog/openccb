@@ -3,6 +3,7 @@ pub mod exporter;
 mod handlers;
 mod handlers_branding;
 mod webhooks;
+mod external_handlers;
 
 use axum::{
     Router,
@@ -172,8 +173,14 @@ async fn main() {
             common::middleware::org_extractor_middleware,
         ));
 
+    let api_routes = Router::new()
+        .route("/v1/courses", post(external_handlers::create_course_external))
+        .route("/v1/courses/{id}", get(external_handlers::get_course_external))
+        .route("/v1/lessons/{id}/transcribe", post(external_handlers::trigger_transcription_external));
+
     // Rutas públicas que no requieren autenticación
     let public_routes = Router::new()
+        .nest("/api/external", api_routes)
         .route("/auth/register", post(handlers::register))
         .route("/auth/login", post(handlers::login))
         .route("/auth/sso/login/{org_id}", get(handlers::sso_login_init))

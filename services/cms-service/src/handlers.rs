@@ -730,18 +730,91 @@ pub async fn run_transcription_task(pool: PgPool, lesson_id: Uuid) -> Result<(),
         .await
         .map_err(|e| format!("File read failed ({}): {}", file_path, e))?;
 
-    // 4. Transcription service is currently disabled in favor of Llama 3
-    tracing::warn!("Transcription service is disabled for lesson {}. Using Whisper removal policy.", lesson_id);
+    // 4. Send to Whisper
+    let whisper_url = env::var("LOCAL_WHISPER_URL").unwrap_or_else(|_| "http://localhost:8000".to_string());
+    let client = reqwest::Client::new();
     
-    sqlx::query(
-        "UPDATE lessons SET transcription_status = 'failed' WHERE id = $1",
-    )
-    .bind(lesson_id)
-    .execute(&pool)
-    .await
-    .map_err(|e| format!("Failed to update status to failed: {}", e))?;
+    // We assume a standard Whisper API (like faster-whisper-server or openai-compatible)
+    let form = reqwest::multipart::Form::new()
+        .part("file", reqwest::multipart::Part::bytes(file_data).file_name(filename.to_string()))
+        .text("model", "whisper-1")
+        .text("response_format", "json");
 
-    return Err("Transcription service is currently disabled. All AI features now use Llama 3 directly.".to_string());
+    let response = client.post(format!("{}/v1/audio/transcriptions", whisper_url))
+        .multipart(form)
+        .send()
+        .await
+        .map_err(|e| format!("Whisper request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let err_body = response.text().await.unwrap_or_default();
+        return Err(format!("Whisper API error: {} - {}", status, err_body));
+    }
+
+    let transcription_result: serde_json::Value = response.json().await
+        .map_err(|e| format!("Failed to parse Whisper response: {}", e))?;
+
+    // 5. Update lesson with transcription
+    sqlx::query("UPDATE lessons SET transcription = $1, transcription_status = 'completed' WHERE id = $2")
+        .bind(&transcription_result)
+        .bind(lesson_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to update lesson with transcription: {}", e))?;
+
+    // 6. Optional: Trigger Summarization using Ollama
+    let full_text = transcription_result["text"].as_str().unwrap_or("");
+    if !full_text.is_empty() {
+        if let Ok(summary) = generate_summary_with_ollama(full_text).await {
+            let _ = sqlx::query("UPDATE lessons SET summary = $1 WHERE id = $2")
+                .bind(summary)
+                .bind(lesson_id)
+                .execute(&pool)
+                .await;
+        }
+    }
+
+    Ok(())
+}
+
+async fn generate_summary_with_ollama(text: &str) -> Result<String, String> {
+    let base_url = env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
+    let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3.2:3b".to_string());
+    let client = reqwest::Client::new();
+
+    let prompt = format!(
+        "Resume el siguiente texto de forma concisa y estructurada en español:\n\n{}",
+        text
+    );
+
+    let response = client.post(format!("{}/v1/chat/completions", base_url))
+        .json(&serde_json::json!({
+            "model": model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "temperature": 0.5
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("Ollama summary request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err("Ollama summary API error".into());
+    }
+
+    let result: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
+    let summary = result["choices"][0]["message"]["content"]
+        .as_str()
+        .unwrap_or("")
+        .trim()
+        .to_string();
+
+    Ok(summary)
 }
 
 pub async fn get_lesson_vtt(

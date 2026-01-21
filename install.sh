@@ -73,20 +73,6 @@ if ! command -v sqlx &> /dev/null; then
     cargo install sqlx-cli --no-default-features --features postgres
 fi
 
-# 3. Hardware Detection
-echo ""
-echo "🔍 Detecting hardware..."
-HAS_NVIDIA=false
-if command -v nvidia-smi &> /dev/null && nvidia-smi -L &> /dev/null; then
-    echo "🚀 NVIDIA GPU Detected!"
-    HAS_NVIDIA=true
-elif command -v lspci &> /dev/null && lspci | grep -i nvidia &> /dev/null; then
-    echo "🚀 NVIDIA GPU Detected (lspci)!"
-    HAS_NVIDIA=true
-else
-    echo "💻 No NVIDIA GPU found. Using CPU mode."
-fi
-
 # 4. Environment Configuration
 echo ""
 if [ ! -f ".env" ]; then
@@ -107,28 +93,22 @@ update_env() {
     fi
 }
 
-# Auto-configure AI variables based on hardware
-if [ "$HAS_NVIDIA" = true ]; then
-    update_env "LOCAL_LLM_MODEL" "llama3.2:1b"
-    # Uncomment GPU deploy section in docker-compose.yml while preserving indentation
-    sed -i 's/^    #deploy:/    deploy:/' docker-compose.yml
-    sed -i 's/^    #  resources:/      resources:/' docker-compose.yml
-    sed -i 's/^    #    reservations:/        reservations:/' docker-compose.yml
-    sed -i 's/^    #      devices:/          devices:/' docker-compose.yml
-    sed -i 's/^    #        - driver: nvidia/            - driver: nvidia/' docker-compose.yml
-    sed -i 's/^    #          count: 1/              count: 1/' docker-compose.yml
-    sed -i 's/^    #          capabilities: \[ gpu \]/              capabilities: [ gpu ]/' docker-compose.yml
-else
-    update_env "LOCAL_LLM_MODEL" "phi3:mini"
-    # Comment GPU deploy section in docker-compose.yml
-    sed -i 's/^    deploy:/    #deploy:/' docker-compose.yml
-    sed -i 's/^      resources:/    #  resources:/' docker-compose.yml
-    sed -i 's/^        reservations:/    #    reservations:/' docker-compose.yml
-    sed -i 's/^          devices:/    #      devices:/' docker-compose.yml
-    sed -i 's/^            - driver: nvidia/    #        - driver: nvidia/' docker-compose.yml
-    sed -i 's/^              count: 1/    #          count: 1/' docker-compose.yml
-    sed -i 's/^              capabilities: \[ gpu \]/    #          capabilities: [ gpu ]/' docker-compose.yml
-fi
+# 5. Remote AI Configuration
+echo ""
+echo "🔍 Configuring Remote AI Services..."
+read -p "Enter Remote Ollama URL [http://t-800:11434]: " REMOTE_OLLAMA_URL
+REMOTE_OLLAMA_URL=${REMOTE_OLLAMA_URL:-http://t-800:11434}
+read -p "Enter Remote Whisper URL [http://t-800:9000]: " REMOTE_WHISPER_URL
+REMOTE_WHISPER_URL=${REMOTE_WHISPER_URL:-http://t-800:9000}
+read -p "Enter Model name (on remote server) [llama3.2:3b]: " LLM_MODEL
+LLM_MODEL=${LLM_MODEL:-llama3.2:3b}
+
+update_env "AI_PROVIDER" "local"
+update_env "LOCAL_OLLAMA_URL" "$REMOTE_OLLAMA_URL"
+update_env "LOCAL_WHISPER_URL" "$REMOTE_WHISPER_URL"
+update_env "LOCAL_LLM_MODEL" "$LLM_MODEL"
+
+# AI setup is now purely remote. Skipping local container configuration.
 
 # Ask for DB credentials if not set
 if ! grep -q "DATABASE_URL=" .env || [[ $(grep "DATABASE_URL=" .env | cut -d'=' -f2) == "" ]]; then
@@ -138,49 +118,36 @@ if ! grep -q "DATABASE_URL=" .env || [[ $(grep "DATABASE_URL=" .env | cut -d'=' 
     update_env "CMS_DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5432/openccb_cms?sslmode=disable"
     update_env "LMS_DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5432/openccb_lms?sslmode=disable"
     update_env "JWT_SECRET" "supersecretsecret"
-    update_env "AI_PROVIDER" "local"
-    update_env "LOCAL_OLLAMA_URL" "http://ollama:11434"
     update_env "NEXT_PUBLIC_CMS_API_URL" "http://localhost:3001"
     update_env "NEXT_PUBLIC_LMS_API_URL" "http://localhost:3002"
 fi
 
-# 5. AI Stack Setup (Containerized)
-echo "⏳ Starting Ollama container..."
-docker compose up -d ollama
-
-echo "⏳ Waiting for Ollama to be ready..."
-until docker exec openccb-ollama-1 ollama list &> /dev/null; do sleep 2; done
-
-echo "📥 Downloading models..."
-if [ "$HAS_NVIDIA" = true ]; then
-    docker exec openccb-ollama-1 ollama pull llama3
-else
-    docker exec openccb-ollama-1 ollama pull llama3:8b
-fi
+# 5. AI Stack Setup (Skipped - using remote)
+echo "🌐 Using remote AI services at $REMOTE_OLLAMA_URL and $REMOTE_WHISPER_URL"
 
 # 6. Database Initialization (Integrated db-mgmt.sh)
 echo ""
 read -p "Do you want a CLEAN installation? (This will DELETE all existing data) [y/N]: " CLEAN_INSTALL
 if [[ "$CLEAN_INSTALL" =~ ^[Yy]$ ]]; then
     echo "🐘 Resetting database for a clean installation..."
-    docker compose down -v || true
+    sudo docker compose down -v || true
 fi
 
 echo "🐘 Starting database with Docker..."
-docker compose up -d db
+sudo docker compose up -d db
 
-echo "⏳ Waiting for database to be ready..."
+echo "⏳ Waiting for database to be ready (container)..."
 RETRIES=30
-until docker exec openccb-db-1 pg_isready -U user &> /dev/null || [ $RETRIES -eq 0 ]; do
+until sudo docker exec openccb-db-1 pg_isready -U user &> /dev/null || [ $RETRIES -eq 0 ]; do
   echo -n "."
   sleep 1
   RETRIES=$((RETRIES-1))
 done
 echo ""
 
-# Reset retries for the second check and ensure we can actually execute queries
-RETRIES=30
-until docker exec openccb-db-1 psql -U user -d openccb -c "SELECT 1" &> /dev/null || [ $RETRIES -eq 0 ]; do
+echo "⏳ Waiting for database port (host)..."
+RETRIES=10
+until curl -s localhost:5432 &> /dev/null || [ $RETRIES -eq 0 ]; do
   echo -n "+"
   sleep 1
   RETRIES=$((RETRIES-1))
@@ -188,9 +155,11 @@ done
 echo ""
 
 if [ $RETRIES -eq 0 ]; then
-    echo "❌ Database failed to start in time."
-    exit 1
+    echo "⚠️  Wait for host port timed out, but continuing..."
 fi
+
+# Extra buffer for PostgreSQL initialization
+sleep 2
 
 CMS_URL=$(grep "CMS_DATABASE_URL=" .env | cut -d'=' -f2-)
 LMS_URL=$(grep "LMS_DATABASE_URL=" .env | cut -d'=' -f2-)
@@ -204,7 +173,7 @@ DATABASE_URL=$LMS_URL sqlx migrate run --source services/lms-service/migrations
 # 7. System Initialization (Integrated init-system.sh)
 echo ""
 echo "🔍 Checking for existing administrator..."
-ADMIN_EXISTS=$(docker exec openccb-db-1 psql -U user -d openccb_cms -t -c "SELECT EXISTS (SELECT 1 FROM users WHERE role = 'admin');" | xargs 2>/dev/null || echo "f")
+ADMIN_EXISTS=$(sudo docker exec openccb-db-1 psql -U user -d openccb_cms -t -c "SELECT EXISTS (SELECT 1 FROM users WHERE role = 'admin');" | xargs 2>/dev/null || echo "f")
 
 if [ "$ADMIN_EXISTS" != "t" ]; then
     echo "👤 Configure Initial Administrator"
@@ -220,26 +189,30 @@ fi
 
 echo ""
 echo "🚀 Starting all services..."
-docker compose up -d --build
+sudo docker compose up -d --build
 
 if [ "$ADMIN_EXISTS" != "t" ]; then
     echo "⏳ Waiting for CMS API to be ready..."
     API_URL="http://localhost:3001"
     START_WAIT=$SECONDS
-    until curl -s "$API_URL/auth/login" &> /dev/null || [ $((SECONDS - START_WAIT)) -gt 60 ]; do sleep 2; done
-
-    PAYLOAD=$(jq -n \
-      --arg email "$ADMIN_EMAIL" \
-      --arg password "$ADMIN_PASS" \
-      --arg full_name "$ADMIN_NAME" \
-      --arg org_name "$ORG_NAME" \
-      --arg role "admin" \
-      '{email: $email, password: $password, full_name: $full_name, organization_name: $org_name, role: $role}')
+    PAYLOAD=$(cat <<EOF
+{
+  "email": "$ADMIN_EMAIL",
+  "password": "$ADMIN_PASS",
+  "full_name": "$ADMIN_NAME",
+  "organization_name": "$ORG_NAME",
+  "role": "admin"
+}
+EOF
+)
 
     RESPONSE=$(curl -s -X POST "$API_URL/auth/register" -H "Content-Type: application/json" -d "$PAYLOAD")
 
     if echo "$RESPONSE" | grep -q "token"; then
         echo "✅ Success! Administrator created."
+        # Generate and show initial API Key
+        API_KEY=$(sudo docker exec openccb-db-1 psql -U user -d openccb_cms -t -c "SELECT api_key FROM organizations WHERE name = 'Default Organization' LIMIT 1;" | xargs)
+        echo "🔑 Initial API Key: $API_KEY"
     else
         echo "⚠️  Failed to create administrator."
     fi
