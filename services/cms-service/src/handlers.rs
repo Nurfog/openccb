@@ -938,7 +938,7 @@ pub async fn summarize_lesson(
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a professional educational assistant. Summarize the following lesson transcription into a high-quality summary suited for a course platform. Keep it concise but informative (max 150 words). Focus on the key learning objectives."
+                    "content": "You are an expert English Teacher. Summarize the following lesson content. Focus on grammar, vocabulary, and key expressions. Provide the summary in English, but if the content is bilingual, ensure the summary reflects both languages. Keep it under 150 words."
                 },
                 {
                     "role": "user",
@@ -1056,7 +1056,7 @@ pub async fn generate_quiz(
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are an educational content designer. Generate 3 multiple-choice questions based on the lesson transcription. Return ONLY a JSON object with a field 'blocks' which is an array. Each block in the array must follow this exact structure: { \"id\": \"string-uuid\", \"type\": \"quiz\", \"title\": \"Quiz: Concept Check\", \"quiz_data\": { \"questions\": [ { \"id\": \"q-string\", \"type\": \"multiple-choice\", \"question\": \"String\", \"options\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"correctAnswer\": 0, \"explanation\": \"Explain why the answer is correct.\" } ] } }"
+                    "content": "You are an expert English Teacher. Generate 3 multiple-choice questions based on the lesson content to test the student's understanding of English grammar, vocabulary, or comprehension. Instructions can be in Spanish or English. Return ONLY a JSON object with a field 'blocks' which is an array of content blocks. Each block in the array must follow this exact structure: { \"id\": \"string-uuid\", \"type\": \"quiz\", \"title\": \"Quiz: Concept Check\", \"quiz_data\": { \"questions\": [ { \"id\": \"q-string\", \"type\": \"multiple-choice\", \"question\": \"String\", \"options\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"correct\": [0], \"explanation\": \"Explain why the answer is correct.\" } ] } }. Important: 'correct' MUST be an array of integers."
                 },
                 {
                     "role": "user",
@@ -1092,9 +1092,37 @@ pub async fn generate_quiz(
     let mut quiz_data_parsed: serde_json::Value =
         serde_json::from_str(quiz_json_str).unwrap_or(json!({}));
 
+    // Post-processing: Normalize questions to ensure frontend doesn't crash
+    if let Some(blocks) = quiz_data_parsed.get_mut("blocks").and_then(|b| b.as_array_mut()) {
+        for block in blocks {
+            if block.get("type").and_then(|t| t.as_str()) == Some("quiz") {
+                if let Some(questions) = block.get_mut("quiz_data").and_then(|qd| qd.get_mut("questions")).and_then(|q| q.as_array_mut()) {
+                    for q in questions {
+                        // Ensure options exists
+                        if q.get("options").is_none() {
+                            q["options"] = json!([]);
+                        }
+                        // Ensure correct exists and is an array (handle LLM returning correctAnswer as a number)
+                        if q.get("correct").is_none() {
+                            if let Some(ca) = q.get("correctAnswer").and_then(|ca| ca.as_i64()) {
+                                q["correct"] = json!([ca]);
+                            } else {
+                                q["correct"] = json!([0]);
+                            }
+                        } else if q["correct"].is_number() {
+                            // Convert single number to array
+                            let num = q["correct"].as_i64().unwrap_or(0);
+                            q["correct"] = json!([num]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Ensure we return just the blocks array as the frontend expects
     let quiz_blocks = quiz_data_parsed
-        .get_mut("blocks")
+        .get("blocks")
         .cloned()
         .unwrap_or(json!([]));
 
@@ -3073,12 +3101,12 @@ pub async fn generate_course(
         )
     };
 
-    let system_prompt = r#"You are a curriculum expert. 
-Generate a course in JSON.
+    let system_prompt = r#"You are an expert English Teacher and curriculum designer. 
+Generate an English language course in JSON. You can receive instructions in Spanish or English.
 Structure:
 {
   "title": "Course Title",
-  "description": "Description",
+  "description": "Description (Include language level like A1, B2, etc.)",
   "modules": [
     {
       "title": "Module Title",
@@ -3090,7 +3118,7 @@ Structure:
 }
 RULES:
 1. content_type MUST be one of: text, video, quiz.
-2. NO nested lessons.
+2. The tone should be that of a helpful English Teacher.
 3. Return ONLY the JSON object."#;
 
     let mut request = client.post(&url).json(&json!({

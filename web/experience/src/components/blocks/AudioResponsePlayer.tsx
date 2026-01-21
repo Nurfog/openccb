@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Mic, Square, Play, RotateCcw, Check, X, Clock } from "lucide-react";
+import { lmsApi } from "@/lib/api";
+import { Mic, Square, Play, RotateCcw, Check, X, Clock, BrainCircuit } from "lucide-react";
 
 interface AudioResponsePlayerProps {
     id: string;
@@ -26,7 +27,7 @@ export default function AudioResponsePlayer({
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [submitted, setSubmitted] = useState(false);
-    const [evaluation, setEvaluation] = useState<{ score: number; foundKeywords: string[] } | null>(null);
+    const [evaluation, setEvaluation] = useState<{ score: number; foundKeywords: string[]; feedback: string } | null>(null);
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
@@ -133,26 +134,30 @@ export default function AudioResponsePlayer({
         }
     };
 
-    const evaluateResponse = () => {
+    const evaluateResponse = async () => {
         if (!transcript.trim()) {
             alert("No speech detected. Please try recording again.");
             return;
         }
 
-        const transcriptLower = transcript.toLowerCase();
-        const foundKeywords = keywords.filter(kw =>
-            transcriptLower.includes(kw.toLowerCase())
-        );
+        setIsTranscribing(true);
+        try {
+            const result = await lmsApi.evaluateAudio(transcript, prompt, keywords);
+            setEvaluation({
+                score: result.score,
+                foundKeywords: result.found_keywords,
+                feedback: result.feedback
+            });
+            setSubmitted(true);
 
-        const score = keywords.length > 0
-            ? Math.round((foundKeywords.length / keywords.length) * 100)
-            : 100; // If no keywords specified, give full credit for any response
-
-        setEvaluation({ score, foundKeywords });
-        setSubmitted(true);
-
-        if (onComplete) {
-            onComplete(score, transcript);
+            if (onComplete) {
+                onComplete(result.score, transcript);
+            }
+        } catch (err) {
+            console.error("Evaluation failed", err);
+            alert("Evaluation failed. Please try again.");
+        } finally {
+            setIsTranscribing(false);
         }
     };
 
@@ -269,10 +274,10 @@ export default function AudioResponsePlayer({
                 {submitted && evaluation && (
                     <div className="space-y-4">
                         <div className={`p-6 rounded-2xl border-2 ${evaluation.score >= 70
-                                ? 'bg-green-500/10 border-green-500'
-                                : evaluation.score >= 40
-                                    ? 'bg-yellow-500/10 border-yellow-500'
-                                    : 'bg-red-500/10 border-red-500'
+                            ? 'bg-green-500/10 border-green-500'
+                            : evaluation.score >= 40
+                                ? 'bg-yellow-500/10 border-yellow-500'
+                                : 'bg-red-500/10 border-red-500'
                             }`}>
                             <div className="flex items-center justify-between mb-4">
                                 <span className="text-sm font-bold uppercase tracking-wider text-gray-400">Your Score</span>
@@ -289,8 +294,8 @@ export default function AudioResponsePlayer({
                                                 <span
                                                     key={i}
                                                     className={`px-3 py-1 rounded-lg text-sm font-medium flex items-center gap-1 ${found
-                                                            ? 'bg-green-500/20 border border-green-500/50 text-green-300'
-                                                            : 'bg-gray-500/20 border border-gray-500/50 text-gray-400'
+                                                        ? 'bg-green-500/20 border border-green-500/50 text-green-300'
+                                                        : 'bg-gray-500/20 border border-gray-500/50 text-gray-400'
                                                         }`}
                                                 >
                                                     {found ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
@@ -302,6 +307,21 @@ export default function AudioResponsePlayer({
                                 </div>
                             )}
                         </div>
+
+                        {evaluation.feedback && (
+                            <div className="p-6 bg-blue-500/10 border-2 border-blue-500/20 rounded-2xl space-y-3 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                    <BrainCircuit className="w-20 h-20 text-blue-400" />
+                                </div>
+                                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-400">
+                                    <BrainCircuit className="w-4 h-4" />
+                                    AI Teacher Feedback
+                                </div>
+                                <p className="text-gray-200 leading-relaxed italic text-lg relative z-10">
+                                    &quot;{evaluation.feedback}&quot;
+                                </p>
+                            </div>
+                        )}
 
                         <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
                             <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Your Transcript:</p>

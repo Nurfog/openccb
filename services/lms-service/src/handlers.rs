@@ -10,7 +10,7 @@ use common::models::{
     AuthResponse, Course, CourseAnalytics, Enrollment, HeatmapPoint, Lesson, LessonAnalytics,
     Module, Notification, Organization, RecommendationResponse, User, UserResponse,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 use std::env;
 use uuid::Uuid;
@@ -103,6 +103,20 @@ pub struct GradeSubmissionPayload {
     pub lesson_id: Uuid,
     pub score: f32,
     pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Deserialize)]
+pub struct AudioGradingPayload {
+    pub transcript: String,
+    pub prompt: String,
+    pub keywords: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AudioGradingResponse {
+    pub score: i32,
+    pub found_keywords: Vec<String>,
+    pub feedback: String,
 }
 
 #[derive(Deserialize)]
@@ -1120,7 +1134,7 @@ pub async fn get_recommendations(
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a helpful educational AI tutor. Based on the student's performance, suggest 3 highly personalized study recommendations. Focus on areas where they scored low. Return ONLY a valid JSON object starting with { \"recommendations\": [...] }. Each object MUST have: 'title', 'description', 'lesson_id' (a valid UUID or null), 'priority' ('high', 'medium', 'low'), and 'reason'. Respond in Spanish."
+                    "content": "You are a supportive and professional English Tutor. Based on the student's performance, suggest 3 highly personalized study recommendations to improve their English skills (grammar, vocabulary, speaking). Focus on areas where they scored low. Return ONLY a valid JSON object starting with { \"recommendations\": [...] }. Each object MUST have: 'title', 'description', 'lesson_id' (a valid UUID or null), 'priority' ('high', 'medium', 'low'), and 'reason'. Respond in Spanish in a motivating and encouraging tone."
                 },
                 {
                     "role": "user",
@@ -1139,4 +1153,71 @@ pub async fn get_recommendations(
         .map_err(|e: reqwest::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(ai_response))
+}
+
+pub async fn evaluate_audio_response(
+    Org(_org_ctx): Org,
+    _claims: Claims,
+    Json(payload): Json<AudioGradingPayload>,
+) -> Result<Json<AudioGradingResponse>, (StatusCode, String)> {
+    let client = reqwest::Client::new();
+    
+    let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+    let (url, auth_header, model) = if provider == "local" {
+        let base_url = env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://ollama:11434".to_string());
+        let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3:8b".to_string());
+        (format!("{}/v1/chat/completions", base_url), "".to_string(), model)
+    } else {
+        (
+            "https://api.openai.com/v1/chat/completions".to_string(),
+            format!("Bearer {}", env::var("OPENAI_API_KEY").unwrap_or_default()),
+            "gpt-4-turbo".to_string(),
+        )
+    };
+
+    let system_prompt = "You are an expert English Teacher. Evaluate the student's spoken response transcript. \
+        Compare it against the prompt and expected keywords. \
+        Provide a score from 0 to 100. \
+        Identify which keywords were used. \
+        Give constructive feedback in Spanish about their pronunciation (based on the transcript quality) and content. \
+        Return ONLY a JSON object: { \"score\": number, \"found_keywords\": [string], \"feedback\": string }.";
+
+    let user_content = format!(
+        "Prompt: {}\nExpected Keywords: {:?}\nStudent Transcript: {}",
+        payload.prompt, payload.keywords, payload.transcript
+    );
+
+    let response = client.post(&url)
+        .header("Content-Type", "application/json")
+        .header("Authorization", auth_header)
+        .json(&serde_json::json!({
+            "model": model,
+            "messages": [
+                { "role": "system", "content": system_prompt },
+                { "role": "user", "content": user_content }
+            ],
+            "response_format": { "type": "json_object" }
+        }))
+        .send()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let ai_data: serde_json::Value = response.json().await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("AI response parse failed: {}", e)))?;
+
+    let grading: AudioGradingResponse = serde_json::from_value(
+        ai_data["choices"][0]["message"]["content"]
+            .as_str()
+            .and_then(|c| serde_json::from_str(c).ok())
+            .unwrap_or_else(|| {
+                // Fallback in case AI doesn't return clean JSON
+                serde_json::json!({
+                    "score": 50,
+                    "found_keywords": vec![] as Vec<String>,
+                    "feedback": "Lo siento, tuve un problema analizando tu respuesta. ¡Sigue practicando!"
+                })
+            })
+    ).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Mapping failed: {}", e)))?;
+
+    Ok(Json(grading))
 }

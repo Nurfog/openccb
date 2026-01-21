@@ -28,6 +28,12 @@ export interface RecommendationResponse {
     recommendations: Recommendation[];
 }
 
+export interface AudioGradingResponse {
+    score: number;
+    found_keywords: string[];
+    feedback: string;
+}
+
 export interface Course {
     id: string;
     title: string;
@@ -51,7 +57,7 @@ export interface QuizQuestion {
 
 export interface Block {
     id: string;
-    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'code' | 'hotspot' | 'memory-match' | 'document';
+    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'code' | 'hotspot' | 'memory-match' | 'document' | 'audio-response' | 'video_marker';
     title: string;
     content?: string;
     url?: string;
@@ -66,6 +72,8 @@ export interface Block {
     correctAnswers?: string[];
     instructions?: string;
     initialCode?: string;
+    keywords?: string[];
+    timeLimit?: number;
     metadata?: any;
 }
 
@@ -298,5 +306,11 @@ export const lmsApi = {
     },
     async getRecommendations(courseId: string): Promise<RecommendationResponse> {
         return apiFetch(`/courses/${courseId}/recommendations`);
+    },
+    async evaluateAudio(transcript: string, prompt: string, keywords: string[]): Promise<AudioGradingResponse> {
+        return apiFetch('/audio/evaluate', {
+            method: 'POST',
+            body: JSON.stringify({ transcript, prompt, keywords })
+        });
     }
 };

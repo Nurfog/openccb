@@ -44,7 +44,7 @@ export interface QuizQuestion {
 
 export interface Block {
     id: string;
-    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'document' | 'video_marker';
+    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'document' | 'video_marker' | 'audio-response' | 'memory-match';
     title?: string;
     content?: string;
     url?: string;
@@ -57,6 +57,8 @@ export interface Block {
     items?: string[];
     prompt?: string;
     correctAnswers?: string[];
+    keywords?: string[];
+    timeLimit?: number;
     markers?: {
         timestamp: number;
         question: string;

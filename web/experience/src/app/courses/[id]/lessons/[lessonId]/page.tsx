@@ -16,7 +16,8 @@ import ShortAnswerPlayer from "@/components/blocks/ShortAnswerPlayer";
 import CodeExercisePlayer from "@/components/blocks/CodeExercisePlayer";
 import HotspotPlayer from "@/components/blocks/HotspotPlayer";
 import MemoryPlayer from "@/components/blocks/MemoryPlayer";
-import DocumentPlayer from "@/components/blocks/DocumentPlayer"; // Added import
+import DocumentPlayer from "@/components/blocks/DocumentPlayer";
+import AudioResponsePlayer from "@/components/blocks/AudioResponsePlayer";
 import InteractiveTranscript from "@/components/InteractiveTranscript";
 import { ListMusic } from "lucide-react";
 
@@ -274,6 +275,17 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                                             prompt={block.prompt || ""}
                                                             correctAnswers={block.correctAnswers || []}
                                                             allowRetry={lesson.allow_retry}
+                                                        />
+                                                    );
+                                                case 'audio-response':
+                                                    return (
+                                                        <AudioResponsePlayer
+                                                            id={block.id}
+                                                            prompt={block.prompt || ""}
+                                                            keywords={block.keywords}
+                                                            timeLimit={block.timeLimit}
+                                                            isGraded={lesson.is_graded}
+                                                            onComplete={(score) => handleBlockComplete(block.id, score)}
                                                         />
                                                     );
                                                 case 'code':

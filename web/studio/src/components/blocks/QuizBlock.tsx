@@ -149,7 +149,7 @@ export default function QuizBlock({ id, title, quizData, editMode, onChange }: Q
                                         ))}
                                     </div>
                                 ) : (
-                                    q.options.map((opt, oIdx) => (
+                                    q.options?.map((opt, oIdx) => (
                                         <div key={oIdx} className="flex gap-3 items-center group/opt">
                                             <input
                                                 type={q.type === 'multiple-select' ? "checkbox" : "radio"}
@@ -207,38 +207,44 @@ export default function QuizBlock({ id, title, quizData, editMode, onChange }: Q
                         <div key={q.id} className="space-y-4 p-6 glass border-white/5 rounded-2xl">
                             <h4 className="font-bold text-xl text-gray-100 leading-tight">{q.question}</h4>
                             <div className="grid gap-3">
-                                {q.options.map((opt, oIdx) => {
-                                    const isSelected = userAnswers[q.id]?.includes(oIdx);
-                                    const isCorrect = q.correct?.includes(oIdx);
-                                    const isActuallyCorrect = isCorrect && isSelected;
-                                    const isWrongSelection = !isCorrect && isSelected;
-                                    const missedCorrect = isCorrect && !isSelected;
+                                {q.options && q.options.length > 0 ? (
+                                    q.options.map((opt, oIdx) => {
+                                        const isSelected = userAnswers[q.id]?.includes(oIdx);
+                                        const isCorrect = q.correct?.includes(oIdx);
+                                        const isActuallyCorrect = isCorrect && isSelected;
+                                        const isWrongSelection = !isCorrect && isSelected;
+                                        const missedCorrect = isCorrect && !isSelected;
 
-                                    let style = "glass border-white/10 hover:bg-white/5";
-                                    if (submitted) {
-                                        if (isActuallyCorrect) style = "bg-green-500/20 border-green-500 text-green-400";
-                                        else if (isWrongSelection) style = "bg-red-500/20 border-red-500 text-red-100";
-                                        else if (missedCorrect) style = "border-orange-500/50 text-orange-400 animate-pulse";
-                                        else style = "opacity-50 grayscale border-white/5";
-                                    } else if (isSelected) {
-                                        style = "bg-blue-500/20 border-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.2)]";
-                                    }
+                                        let style = "glass border-white/10 hover:bg-white/5";
+                                        if (submitted) {
+                                            if (isActuallyCorrect) style = "bg-green-500/20 border-green-500 text-green-400";
+                                            else if (isWrongSelection) style = "bg-red-500/20 border-red-500 text-red-100";
+                                            else if (missedCorrect) style = "border-orange-500/50 text-orange-400 animate-pulse";
+                                            else style = "opacity-50 grayscale border-white/5";
+                                        } else if (isSelected) {
+                                            style = "bg-blue-500/20 border-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.2)]";
+                                        }
 
-                                    return (
-                                        <button
-                                            key={oIdx}
-                                            onClick={() => handleAnswer(q.id, oIdx, q.type === 'multiple-select')}
-                                            className={`p-5 rounded-xl border transition-all text-left text-sm font-bold ${style}`}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span>{opt}</span>
-                                                {submitted && isActuallyCorrect && <span>✅</span>}
-                                                {submitted && isWrongSelection && <span>❌</span>}
-                                                {submitted && missedCorrect && <span className="text-[10px] uppercase font-black tracking-tighter">Correct Answer</span>}
-                                            </div>
-                                        </button>
-                                    );
-                                })}
+                                        return (
+                                            <button
+                                                key={oIdx}
+                                                onClick={() => handleAnswer(q.id, oIdx, q.type === 'multiple-select')}
+                                                className={`p-5 rounded-xl border transition-all text-left text-sm font-bold ${style}`}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <span>{opt}</span>
+                                                    {submitted && isActuallyCorrect && <span>✅</span>}
+                                                    {submitted && isWrongSelection && <span>❌</span>}
+                                                    {submitted && missedCorrect && <span className="text-[10px] uppercase font-black tracking-tighter">Correct Answer</span>}
+                                                </div>
+                                            </button>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="text-xs text-orange-400/50 font-medium italic p-4 border border-dashed border-orange-500/20 rounded-xl">
+                                        No options generated for this question.
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}

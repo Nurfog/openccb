@@ -75,7 +75,11 @@ async fn main() {
             "/lessons/{id}/interactions",
             post(handlers::record_interaction),
         )
-        .route("/lessons/{id}/heatmap", get(handlers::get_lesson_heatmap))
+        .route(
+            "/lessons/{id}/heatmap",
+            get(handlers::get_lesson_heatmap),
+        )
+        .route("/audio/evaluate", post(handlers::evaluate_audio_response))
         .route("/notifications", get(handlers::get_notifications))
         .route(
             "/notifications/{id}/read",
