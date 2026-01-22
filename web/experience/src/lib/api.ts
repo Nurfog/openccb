@@ -74,6 +74,15 @@ export interface Block {
     initialCode?: string;
     keywords?: string[];
     timeLimit?: number;
+    description?: string;
+    imageUrl?: string;
+    hotspots?: {
+        id: string;
+        x: number;
+        y: number;
+        radius: number;
+        label: string;
+    }[];
     metadata?: any;
 }
 

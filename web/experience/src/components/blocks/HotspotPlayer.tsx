@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import Image from "next/image";
 import { Search, CheckCircle, XCircle, MousePointer2 } from "lucide-react";
+import { getImageUrl } from "@/lib/api";
 
 interface Hotspot {
     id: string;
@@ -90,7 +91,7 @@ export default function HotspotPlayer({
                 className="relative aspect-video rounded-3xl overflow-hidden border-4 border-white/10 bg-black cursor-crosshair group select-none shadow-2xl"
             >
                 <Image
-                    src={imageUrl}
+                    src={getImageUrl(imageUrl)}
                     alt={title}
                     fill
                     className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"

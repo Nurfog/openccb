@@ -13,7 +13,7 @@ interface MemoryCard {
 
 interface MemoryPlayerProps {
     title: string;
-    pairs: { id: string, content: string }[];
+    pairs: { left: string, right: string, id?: string }[];
     onComplete: (score: number) => void;
 }
 
@@ -30,9 +30,10 @@ export default function MemoryPlayer({
     const initializeGame = useCallback(() => {
         const gameCards: MemoryCard[] = [];
         initialPairs.forEach((pair, idx) => {
-            // Add two of each
-            gameCards.push({ id: idx * 2, content: pair.content, pairId: pair.id, isFlipped: false, isMatched: false });
-            gameCards.push({ id: idx * 2 + 1, content: pair.content, pairId: pair.id, isFlipped: false, isMatched: false });
+            const pairId = pair.id || idx.toString();
+            // Add two of each (Left and Right)
+            gameCards.push({ id: idx * 2, content: pair.left, pairId: pairId, isFlipped: false, isMatched: false });
+            gameCards.push({ id: idx * 2 + 1, content: pair.right, pairId: pairId, isFlipped: false, isMatched: false });
         });
 
         // Shuffle

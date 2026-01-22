@@ -5,7 +5,7 @@ import { cmsApi, Course, Organization } from "@/lib/api";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/context/I18nContext";
-import { Plus, BookOpen, Download, Upload, Sparkles, Wand2 } from "lucide-react";
+import { Plus, BookOpen, Download, Upload, Sparkles, Wand2, Trash2 } from "lucide-react";
 import OrganizationSelector from "@/components/OrganizationSelector";
 import Modal from "@/components/Modal";
 
@@ -140,6 +140,23 @@ export default function StudioDashboard() {
     reader.readAsText(file);
   };
 
+  const handleDeleteCourse = async (e: React.MouseEvent, courseId: string, title: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!confirm(t('confirm_delete_course') || `Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await cmsApi.deleteCourse(courseId);
+      setCourses(prev => prev.filter(c => c.id !== courseId));
+    } catch (err) {
+      console.error("Delete failed", err);
+      alert("Failed to delete course");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0f1115] text-white p-8">
       <div className="max-w-7xl mx-auto">
@@ -200,6 +217,13 @@ export default function StudioDashboard() {
                         title="Export Course"
                       >
                         <Download size={18} />
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteCourse(e, course.id, course.title)}
+                        className="p-2 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-400 transition-all"
+                        title="Delete Course"
+                      >
+                        <Trash2 size={18} />
                       </button>
                     </div>
                     <h3 className="font-bold text-lg mb-2 group-hover:text-blue-400 transition-colors">{course.title}</h3>
@@ -321,6 +345,6 @@ export default function StudioDashboard() {
         actionLabel="Create Course"
         onConfirm={(orgId) => createCourse(orgId)}
       />
-    </div>
+    </div >
   );
 }

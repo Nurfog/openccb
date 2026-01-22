@@ -13,6 +13,9 @@ import ShortAnswerBlock from "@/components/blocks/ShortAnswerBlock";
 import DocumentBlock from "@/components/blocks/DocumentBlock";
 import VideoMarkerBlock from "@/components/blocks/VideoMarkerBlock";
 import AudioResponseBlock from "@/components/blocks/AudioResponseBlock";
+import HotspotBlock from "@/components/blocks/HotspotBlock";
+import MemoryBlock from "@/components/blocks/MemoryBlock";
+import Modal from "@/components/Modal";
 import {
     Save,
     X,
@@ -41,6 +44,10 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
     const [allowRetry, setAllowRetry] = useState(true);
     const [dueDate, setDueDate] = useState<string>("");
     const [importantDateType, setImportantDateType] = useState<string>("");
+
+    const [isAIQuizModalOpen, setIsAIQuizModalOpen] = useState(false);
+    const [aiQuizContext, setAiQuizContext] = useState("");
+    const [aiQuizType, setAiQuizType] = useState("multiple-choice");
 
     const [editValue, setEditValue] = useState("");
 
@@ -156,7 +163,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
         }
     };
 
-    const addBlock = (type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'document' | 'video_marker' | 'audio-response') => {
+    const addBlock = (type: Block['type']) => {
         const newBlock: Block = {
             id: Math.random().toString(36).substr(2, 9),
             type,
@@ -170,6 +177,8 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
             ...(type === 'document' && { url: "", title: "" }),
             ...(type === 'video_marker' && { url: "", title: "Video Interactivo", markers: [] }),
             ...(type === 'audio-response' && { prompt: "Ask a question for the student to record their answer...", keywords: [], timeLimit: 60 }),
+            ...(type === 'hotspot' && { imageUrl: "", description: "Find the following items...", hotspots: [] }),
+            ...(type === 'memory-match' && { pairs: [{ id: "1", left: "Term A", right: "Match A" }] }),
         };
         setBlocks([...blocks, newBlock]);
     };
@@ -206,11 +215,21 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
     };
 
     const handleGenerateQuiz = async () => {
+        setIsAIQuizModalOpen(true);
+    };
+
+    const handleConfirmGenerateQuiz = async (e: React.FormEvent) => {
+        e.preventDefault();
         if (!lesson) return;
+        setIsAIQuizModalOpen(false);
         setIsGeneratingQuiz(true);
         try {
-            const newBlocks = await cmsApi.generateQuiz(lesson.id);
+            const newBlocks = await cmsApi.generateQuiz(lesson.id, {
+                context: aiQuizContext,
+                quiz_type: aiQuizType
+            });
             setBlocks([...blocks, ...newBlocks]);
+            setAiQuizContext("");
         } catch {
             alert("Failed to generate quiz.");
         } finally {
@@ -598,6 +617,27 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                     onChange={(updates) => updateBlock(block.id, updates)}
                                 />
                             )}
+                            {block.type === 'hotspot' && (
+                                <HotspotBlock
+                                    id={block.id}
+                                    title={block.title}
+                                    description={block.description}
+                                    imageUrl={block.imageUrl}
+                                    hotspots={block.hotspots || []}
+                                    editMode={editMode}
+                                    courseId={params.id}
+                                    onChange={(updates) => updateBlock(block.id, updates)}
+                                />
+                            )}
+                            {block.type === 'memory-match' && (
+                                <MemoryBlock
+                                    id={block.id}
+                                    title={block.title}
+                                    pairs={block.pairs || []}
+                                    editMode={editMode}
+                                    onChange={(updates) => updateBlock(block.id, updates)}
+                                />
+                            )}
                         </div>
                     </div>
                 ))}
@@ -677,6 +717,20 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                     <span className="text-2xl group-hover:scale-110 transition-transform">🎤</span>
                                     <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Audio</span>
                                 </button>
+                                <button
+                                    onClick={() => addBlock('hotspot')}
+                                    className="flex flex-col items-center gap-2 p-6 glass hover:border-amber-500/50 transition-all group w-32"
+                                >
+                                    <span className="text-2xl group-hover:scale-110 transition-transform">🔍</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Hotspot</span>
+                                </button>
+                                <button
+                                    onClick={() => addBlock('memory-match')}
+                                    className="flex flex-col items-center gap-2 p-6 glass hover:border-purple-500/50 transition-all group w-32"
+                                >
+                                    <span className="text-2xl group-hover:scale-110 transition-transform">🧠</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Memory</span>
+                                </button>
 
                                 <div className="w-px h-12 bg-white/5"></div>
 
@@ -693,6 +747,76 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                     </div>
                 )}
             </div>
+
+            <Modal
+                isOpen={isAIQuizModalOpen}
+                onClose={() => !isGeneratingQuiz && setIsAIQuizModalOpen(false)}
+                title="AI Quiz Customization"
+            >
+                <form onSubmit={handleConfirmGenerateQuiz} className="space-y-6">
+                    <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/10">
+                        <p className="text-xs text-purple-300 leading-relaxed font-medium">
+                            Tell the AI what to focus on and what type of questions you prefer.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                            Focus / Context
+                        </label>
+                        <textarea
+                            autoFocus
+                            value={aiQuizContext}
+                            onChange={(e) => setAiQuizContext(e.target.value)}
+                            placeholder="e.g. Focus on past tense verbs, or use vocabulary related to travel..."
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 transition-all text-white h-24 resize-none"
+                            disabled={isGeneratingQuiz}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                            Question Type
+                        </label>
+                        <select
+                            value={aiQuizType}
+                            onChange={(e) => setAiQuizType(e.target.value)}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 transition-all text-white appearance-none font-bold"
+                            disabled={isGeneratingQuiz}
+                        >
+                            <option value="multiple-choice">Multiple Choice</option>
+                            <option value="true-false">True / False</option>
+                            <option value="vocabulary">Vocabulary Focus</option>
+                            <option value="grammar">Grammar Focus</option>
+                        </select>
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={() => setIsAIQuizModalOpen(false)}
+                            disabled={isGeneratingQuiz}
+                            className="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all text-sm font-medium"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isGeneratingQuiz}
+                            className="flex-[2] px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg transition-all shadow-lg shadow-purple-500/20 font-bold text-sm flex items-center justify-center gap-2"
+                        >
+                            {isGeneratingQuiz ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                    Generating...
+                                </>
+                            ) : (
+                                "Generate Quiz"
+                            )}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
         </div >
     );
 }

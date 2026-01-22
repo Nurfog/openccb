@@ -130,7 +130,10 @@
 - [x] **Quices de Código**: Desafíos interactivos con reproductor tipo IDE (Completado)
 - [x] **Identificación Visual**: Quices de "Puntos Calientes" (Hotspots) en imágenes (Completado)
 - [ ] **Tutor de IA Integrado**: Asistente basado en RAG dentro del reproductor de lecciones
-- [x] **Evaluaciones por Audio**: Preguntas con respuesta oral para idiomas (Completado)
+- [x] **Evaluaciones por Audio**: Preguntas con respuesta oral para idiomas con feedback de IA detallado (Completado)
+- [x] **Eliminación de Cursos**: Gestión completa del ciclo de vida del contenido (Completado)
+- [x] **Quices con Contexto IA**: Generación de evaluaciones con enfoque y tipo personalizable (Completado)
+- [x] **Actividades Gamificadas**: Nuevos bloques de Juego de Memoria e Identificación Visual (Hotspots) (Completado)
 - [x] **Marcadores de Video**: Preguntas que pausan el video en timestamps específicos (Completado)
 
 ## Fase 12: Generador de Cursos "Mágico" con IA ✅
@@ -151,11 +154,9 @@
 
 ---
 
-## Estado Actual y Próximas Prioridades
+**Estado Actual**: La plataforma cuenta con un motor de IA avanzado que permite la generación de contenidos con una "Persona" docente experta, evaluaciones de audio automatizadas y quices personalizables con contexto. Se ha completado el ciclo de vida de gestión de cursos con la integración de la funcionalidad de borrado.
 
-**Madurez de la Plataforma**: El núcleo multi-tenant es estable, escalable y está optimizado para alto rendimiento con IA Local.
-
-**Prioridades Inmediatas**:
-1. **Marcadores de Video & Audio**: Evaluaciones integradas en contenido multimedia.
+**Próximas Prioridades**:
+1. **QA y Estabilidad**: Verificación del flujo completo de evaluación en entornos de producción.
 2. **IA Teaching Assistant**: Tutor RAG personalizado por curso.
 3. **Rutas de Aprendizaje**: Recomendaciones basadas en el historial.

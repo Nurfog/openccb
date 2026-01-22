@@ -189,6 +189,17 @@ pub struct GradingPayload {
     pub drop_count: i32,
 }
 
+#[derive(Deserialize)]
+pub struct QuizAIRequest {
+    pub context: Option<String>,
+    pub quiz_type: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct ReviewTextRequest {
+    pub text: String,
+}
+
 pub async fn create_course(
     Org(org_ctx): Org,
     claims: common::auth::Claims,
@@ -1000,6 +1011,7 @@ pub async fn generate_quiz(
     claims: common::auth::Claims,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
+    Json(quiz_req): Json<QuizAIRequest>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     tracing::info!("Received quiz generation request for lesson: {}", id);
     // 1. Fetch lesson
@@ -1049,6 +1061,20 @@ pub async fn generate_quiz(
         )
     };
 
+    let mut system_prompt = "You are an expert English Teacher. Generate 3 questions based on the lesson content to test the student's understanding of English grammar, vocabulary, or comprehension. Instructions can be in Spanish or English. Return ONLY a JSON object with a field 'blocks' which is an array of content blocks. Each block in the array must follow this exact structure: { \"id\": \"string-uuid\", \"type\": \"quiz\", \"title\": \"Quiz: Concept Check\", \"quiz_data\": { \"questions\": [ { \"id\": \"q-string\", \"type\": \"multiple-choice\", \"question\": \"String\", \"options\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"correct\": [0], \"explanation\": \"Explain why the answer is correct.\" } ] } }. Important: 'correct' MUST be an array of integers.".to_string();
+
+    if let Some(ctx) = &quiz_req.context {
+        if !ctx.is_empty() {
+            system_prompt.push_str(&format!(" Additional Context: {}", ctx));
+        }
+    }
+
+    if let Some(qtype) = &quiz_req.quiz_type {
+        if !qtype.is_empty() {
+            system_prompt.push_str(&format!(" Question Type to use: {}. If the type is 'multiple-choice', follow the structure above. If it's something else, adapt the block 'type' (e.g., 'true-false') accordingly, but keep it within the 'blocks' array.", qtype));
+        }
+    }
+
     let mut request = client
         .post(&url)
         .json(&json!({
@@ -1056,7 +1082,7 @@ pub async fn generate_quiz(
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are an expert English Teacher. Generate 3 multiple-choice questions based on the lesson content to test the student's understanding of English grammar, vocabulary, or comprehension. Instructions can be in Spanish or English. Return ONLY a JSON object with a field 'blocks' which is an array of content blocks. Each block in the array must follow this exact structure: { \"id\": \"string-uuid\", \"type\": \"quiz\", \"title\": \"Quiz: Concept Check\", \"quiz_data\": { \"questions\": [ { \"id\": \"q-string\", \"type\": \"multiple-choice\", \"question\": \"String\", \"options\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"correct\": [0], \"explanation\": \"Explain why the answer is correct.\" } ] } }. Important: 'correct' MUST be an array of integers."
+                    "content": system_prompt
                 },
                 {
                     "role": "user",
@@ -3281,4 +3307,173 @@ RULES:
     .await;
 
     Ok(Json(course))
+}
+
+pub async fn delete_course(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    headers: axum::http::HeaderMap,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, StatusCode> {
+    let is_super_admin = claims.role == "admin"
+        && claims.org == Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+
+    // 1. Check if course exists and belongs to org (or if requester is super admin)
+    let course = if is_super_admin {
+        sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1")
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+    } else {
+        sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
+            .bind(id)
+            .bind(org_ctx.id)
+            .fetch_one(&pool)
+            .await
+    }
+    .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    // 2. Additional permission check for instructors
+    if !is_super_admin && claims.role == "instructor" && course.instructor_id != claims.sub {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    // 3. Delete course using DB function
+    let mut conn = pool
+        .acquire()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let ip = headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .or_else(|| headers.get("x-real-ip").and_then(|h| h.to_str().ok()))
+        .map(|s| s.to_string());
+
+    let ua = headers
+        .get("user-agent")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+
+    crate::db_util::set_session_context(
+        &mut conn,
+        Some(claims.sub),
+        Some(org_ctx.id),
+        ip,
+        ua,
+        Some("USER_EVENT".to_string()),
+    )
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let success = sqlx::query_scalar::<_, bool>("SELECT fn_delete_course($1, $2)")
+        .bind(id)
+        .bind(course.organization_id)
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(|e| {
+            tracing::error!("Delete course failed: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    if !success {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    log_action(
+        &pool,
+        org_ctx.id,
+        claims.sub,
+        "DELETE",
+        "Course",
+        id,
+        json!({ "title": course.title }),
+    )
+    .await;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn review_text(
+    _: Org,
+    _claims: Claims,
+    State(_pool): State<PgPool>,
+    Json(payload): Json<ReviewTextRequest>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    if payload.text.trim().is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // Configuration
+    let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+    let client = reqwest::Client::new();
+
+    let (url, auth_header, model) = if provider == "local" {
+        let base_url =
+            env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
+        let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3".to_string());
+        (
+            format!("{}/v1/chat/completions", base_url),
+            "".to_string(),
+            model,
+        )
+    } else {
+        let api_key = env::var("OPENAI_API_KEY").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        (
+            "https://api.openai.com/v1/chat/completions".to_string(),
+            format!("Bearer {}", api_key),
+            "gpt-4o".to_string(),
+        )
+    };
+
+    let system_prompt = "You are an expert English Teacher and Editor. Analyze the following text and provide suggestions for improvement. Focus on: 1. Grammar and spelling. 2. Tone (should be professional yet encouraging). 3. Clarity and conciseness. 4. Better vocabulary choices. Return ONLY a JSON object with a field 'suggestion' containing the improved version of the text, and a field 'comments' which is a brief list of what was improved.";
+
+    let mut request = client
+        .post(&url)
+        .json(&json!({
+            "model": model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": payload.text
+                }
+            ],
+            "response_format": { "type": "json_object" }
+        }));
+
+    if !auth_header.is_empty() {
+        request = request.header("Authorization", auth_header);
+    }
+
+    let response = request.send().await.map_err(|e| {
+        tracing::error!("Text review request failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    if !response.status().is_success() {
+        let err_body = response.text().await.unwrap_or_default();
+        tracing::error!("Text review API error: {}", err_body);
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    let review_data: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    let content_str = review_data["choices"][0]["message"]["content"]
+        .as_str()
+        .unwrap_or("{}");
+
+    let parsed_review: serde_json::Value = serde_json::from_str(content_str).unwrap_or(json!({
+        "suggestion": payload.text,
+        "comments": "No suggestions available at this time."
+    }));
+
+    Ok(Json(parsed_review))
 }

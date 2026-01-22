@@ -301,9 +301,9 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                                     return (
                                                         <HotspotPlayer
                                                             title={block.title}
-                                                            description={block.content || ""}
-                                                            imageUrl={block.url || ""}
-                                                            hotspots={block.metadata?.hotspots || []}
+                                                            description={block.description || ""}
+                                                            imageUrl={block.imageUrl || ""}
+                                                            hotspots={block.hotspots || []}
                                                             onComplete={(score) => handleBlockComplete(block.id, score)}
                                                         />
                                                     );
@@ -311,7 +311,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                                     return (
                                                         <MemoryPlayer
                                                             title={block.title}
-                                                            pairs={block.metadata?.pairs || []}
+                                                            pairs={block.pairs || []}
                                                             onComplete={(score) => handleBlockComplete(block.id, score)}
                                                         />
                                                     );

@@ -2,9 +2,9 @@
 
 import { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { Bold, Italic, Link as LinkIcon, Image as ImageIcon, FileText, Eye, PenLine } from "lucide-react";
+import { Bold, Italic, Link as LinkIcon, Image as ImageIcon, FileText, Eye, PenLine, Sparkles, Wand2, Check, X as CloseIcon } from "lucide-react";
 import AssetPickerModal from "../AssetPickerModal";
-import { Asset, getImageUrl } from "@/lib/api";
+import { Asset, getImageUrl, cmsApi } from "@/lib/api";
 
 interface DescriptionBlockProps {
     id: string;
@@ -19,7 +19,29 @@ export default function DescriptionBlock({ id, title, content, editMode, courseI
     const [showPreview, setShowPreview] = useState(false);
     const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
     const [pickerType, setPickerType] = useState<"image" | "file">("image");
+    const [isReviewing, setIsReviewing] = useState(false);
+    const [suggestion, setSuggestion] = useState<{ suggestion: string, comments: string } | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const handleReviewText = async () => {
+        if (!content.trim() || isReviewing) return;
+        setIsReviewing(true);
+        try {
+            const data = await cmsApi.reviewText(content);
+            setSuggestion(data);
+        } catch (err) {
+            console.error("Content review failed", err);
+            alert("Failed to review content");
+        } finally {
+            setIsReviewing(false);
+        }
+    };
+
+    const applySuggestion = () => {
+        if (!suggestion) return;
+        onChange({ content: suggestion.suggestion });
+        setSuggestion(null);
+    };
 
     const insertMarkdown = (prefix: string, suffix: string = "") => {
         const textarea = textareaRef.current;
@@ -99,6 +121,16 @@ export default function DescriptionBlock({ id, title, content, editMode, courseI
                                     >
                                         <FileText size={14} />
                                     </button>
+                                    <div className="w-px h-3 bg-white/10 mx-1" />
+                                    <button
+                                        onClick={handleReviewText}
+                                        disabled={isReviewing}
+                                        className={`p-1.5 rounded-md transition-all flex items-center gap-1.5 text-xs font-bold ${isReviewing ? 'bg-indigo-500/20 text-indigo-300 animate-pulse' : 'hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300'}`}
+                                        title="AI Suggest Improvements"
+                                    >
+                                        <Sparkles size={14} className={isReviewing ? 'animate-spin' : ''} />
+                                        {isReviewing ? 'Analyzing...' : 'AI Suggest'}
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -135,6 +167,54 @@ export default function DescriptionBlock({ id, title, content, editMode, courseI
                             />
                             <div className="absolute bottom-4 right-4 text-[10px] text-gray-600 font-bold uppercase tracking-widest pointer-events-none">
                                 Markdown Mode
+                            </div>
+                        </div>
+                    )}
+                    {suggestion && (
+                        <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-2xl p-6 space-y-4 animate-in fade-in slide-in-from-top-4 duration-500 shadow-xl shadow-indigo-500/5">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Wand2 size={16} className="text-indigo-400" />
+                                    <span className="text-xs font-black uppercase tracking-widest text-indigo-300">AI Teacher Suggestions</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setSuggestion(null)}
+                                        className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 transition-colors"
+                                    >
+                                        <CloseIcon size={14} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">Improved Version</span>
+                                    <div className="p-4 bg-black/40 rounded-xl border border-white/5 text-sm text-gray-300 leading-relaxed italic">
+                                        {suggestion.suggestion}
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">Key Changes</span>
+                                    <div className="text-xs text-gray-400 leading-relaxed pl-1 whitespace-pre-line">
+                                        {suggestion.comments}
+                                    </div>
+                                    <div className="pt-4 flex gap-3">
+                                        <button
+                                            onClick={applySuggestion}
+                                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2 group active:scale-95"
+                                        >
+                                            <Check size={14} className="group-hover:scale-110 transition-transform" />
+                                            Apply Changes
+                                        </button>
+                                        <button
+                                            onClick={() => setSuggestion(null)}
+                                            className="px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-xs font-bold rounded-lg border border-white/10 transition-all active:scale-95"
+                                        >
+                                            Dismiss
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

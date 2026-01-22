@@ -87,7 +87,9 @@ async fn main() {
         )
         .route(
             "/courses/{id}",
-            get(handlers::get_course).put(handlers::update_course),
+            get(handlers::get_course)
+                .put(handlers::update_course)
+                .delete(handlers::delete_course),
         )
         .route("/courses/{id}/publish", post(handlers::publish_course))
         .route("/courses/{id}/outline", get(handlers::get_course_outline))
@@ -140,6 +142,7 @@ async fn main() {
         .route("/users", get(handlers::get_all_users))
         .route("/users/{id}", axum::routing::put(handlers::update_user))
         .route("/audit-logs", get(handlers::get_audit_logs))
+        .route("/api/ai/review-text", post(handlers::review_text))
         .route("/api/assets/upload", post(handlers::upload_asset))
         .route("/api/assets/{id}", delete(handlers::delete_asset))
         .route("/courses/{id}/assets", get(handlers::get_course_assets))

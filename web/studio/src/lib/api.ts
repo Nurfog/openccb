@@ -44,16 +44,17 @@ export interface QuizQuestion {
 
 export interface Block {
     id: string;
-    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'document' | 'video_marker' | 'audio-response' | 'memory-match';
+    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'document' | 'video_marker' | 'audio-response' | 'memory-match' | 'hotspot';
     title?: string;
     content?: string;
     url?: string;
+    description?: string; // For hotspot or general info
     media_type?: 'video' | 'audio';
     config?: Record<string, unknown>;
     quiz_data?: {
         questions: QuizQuestion[];
     };
-    pairs?: { left: string; right: string }[];
+    pairs?: { left: string; right: string; id?: string }[];
     items?: string[];
     prompt?: string;
     correctAnswers?: string[];
@@ -65,6 +66,14 @@ export interface Block {
         options: string[];
         correctIndex: number;
     }[];
+    hotspots?: {
+        id: string;
+        x: number;
+        y: number;
+        radius: number;
+        label: string;
+    }[];
+    imageUrl?: string;
 }
 
 export interface Lesson {
@@ -279,7 +288,8 @@ export const cmsApi = {
     getLesson: (id: string): Promise<Lesson> => apiFetch(`/lessons/${id}`),
     updateLesson: (id: string, payload: Partial<Lesson>): Promise<Lesson> => apiFetch(`/lessons/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
     summarizeLesson: (id: string): Promise<Lesson> => apiFetch(`/lessons/${id}/summarize`, { method: 'POST' }),
-    generateQuiz: (id: string): Promise<Block[]> => apiFetch(`/lessons/${id}/generate-quiz`, { method: 'POST' }),
+    generateQuiz: (id: string, payload: { context?: string, quiz_type?: string }): Promise<Block[]> => apiFetch(`/lessons/${id}/generate-quiz`, { method: 'POST', body: JSON.stringify(payload) }),
+    reviewText: (text: string): Promise<{ suggestion: string, comments: string }> => apiFetch('/api/ai/review-text', { method: 'POST', body: JSON.stringify({ text }) }),
     deleteModule: (id: string): Promise<void> => apiFetch(`/modules/${id}`, { method: 'DELETE' }),
     deleteLesson: (id: string): Promise<void> => apiFetch(`/lessons/${id}`, { method: 'DELETE' }),
     reorderModules: (payload: { items: { id: string, position: number }[] }): Promise<void> => apiFetch('/modules/reorder', { method: 'POST', body: JSON.stringify(payload) }),
@@ -300,6 +310,8 @@ export const cmsApi = {
         method: 'POST',
         body: JSON.stringify(data)
     }),
+
+    deleteCourse: (id: string): Promise<void> => apiFetch(`/courses/${id}`, { method: 'DELETE' }),
 
     async generateCourse(prompt: string, targetOrgId?: string): Promise<Course> {
         return apiFetch(`/courses/generate`, {

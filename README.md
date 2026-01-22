@@ -22,6 +22,12 @@ El proyecto ha sido optimizado para reducir la complejidad de la infraestructura
     - **Smart Notifications**: Recordatorios de fechas límite y alertas in-app.
     - **Global i18n**: Interfaz multilingüe (EN, ES, PT) con persistencia por usuario.
     - **Document-Based Learning**: Soporte para actividades de lectura (PDF, DOCX, PPTX).
+    - **AI English Teacher**: Persona especializada para generación de contenidos y tutoría personalizada.
+    - **AI Audio Evaluation**: Evaluación inteligente de pronunciación y contenido con feedback en lenguaje natural.
+    - **Custom AI Quizzes**: Generación de quices con contexto pedagógico y tipo de pregunta personalizable (opción múltiple, V/F, etc.).
+    - **Course Deletion**: Funcionalidad de eliminación de cursos con verificación de permisos y limpieza en cascada.
+    - **Gamified Activities**: Nuevos tipos de bloques interactivos para niños y jóvenes, incluyendo Juegos de Memoria y Puntos Calientes (Hotspots).
+    - **Gamified Activities**: Nuevos tipos de bloques interactivos para niños y jóvenes, incluyendo Juegos de Memoria y Puntos Calientes (Hotspots).
 
 ##  Requisitos del Sistema
 
@@ -281,6 +287,22 @@ Funcionalidades inteligentes 100% locales y gratuitas.
 
 #### POST /lessons/{id}/transcribe
 Inicia el proceso de transcripción y traducción para una lección de video/audio.
+
+#### POST /audio/evaluate
+Evalúa una respuesta oral del estudiante utilizando IA.
+
+#### POST /lessons/{id}/generate-quiz
+Genera un quiz basado en el contenido de la lección.
+- **Cuerpo ( QuizAIRequest ):**
+  ```json
+  {
+    "context": "focused on irregular verbs",
+    "quiz_type": "true-false"
+  }
+  ```
+
+#### DELETE /courses/{id}
+Elimina un curso y todos sus contenidos relacionados (módulos, lecciones, assets).
 
 - **Procesamiento Asíncrono**: Despacha una tarea en segundo plano que utiliza Whisper para transcripción y Ollama para generar la traducción y el resumen inteligente.
 - **Cuerpo de la Petición**: Vacío.
