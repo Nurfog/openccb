@@ -34,12 +34,12 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
     useEffect(() => {
         const fetchAll = async () => {
             try {
-                const [lessonData, courseData] = await Promise.all([
+                const [lessonData, outlineData] = await Promise.all([
                     lmsApi.getLesson(params.lessonId),
                     lmsApi.getCourseOutline(params.id)
                 ]);
                 setLesson(lessonData);
-                setCourse(courseData);
+                setCourse({ ...outlineData.course, modules: outlineData.modules });
 
                 if (user) {
                     const grades = await lmsApi.getUserGrades(user.id, params.id);
@@ -84,11 +84,25 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                     [blockId]: score
                 };
 
+                // Calculate overall lesson score as average of block scores
+                const blocks = lesson.metadata?.blocks || [];
+                const interactiveBlocks = blocks.filter((b: any) =>
+                    !['description', 'media', 'document'].includes(b.type)
+                );
+
+                const scores = interactiveBlocks.map((b: any) =>
+                    b.id === blockId ? score : currentBlockScores[b.id] || 0
+                );
+
+                const newOverallScore = scores.length > 0
+                    ? (scores.reduce((a: number, b: number) => a + b, 0) / scores.length) * 100
+                    : 100;
+
                 const res = await lmsApi.submitScore(
                     user.id,
                     params.id,
                     params.lessonId,
-                    userGrade?.score || 0, // Keep overall score for now, or calculate average/sum
+                    newOverallScore,
                     { ...userGrade?.metadata, block_scores: newBlockScores }
                 );
                 setUserGrade(res);
@@ -220,6 +234,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                                                 }
                                                             }}
                                                             isGraded={lesson.is_graded}
+                                                            hasTranscription={!!lesson.transcription}
                                                         />
                                                     );
                                                 case 'document':

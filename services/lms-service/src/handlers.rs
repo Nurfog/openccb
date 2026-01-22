@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    extract::{Path, Query, State},
+    extract::{Path, Query, State, Multipart},
     http::StatusCode,
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
@@ -991,8 +991,9 @@ pub async fn check_deadlines_and_notify(pool: PgPool) {
             'deadline',
             '/courses/' || c.id || '/lessons/' || l.id
          FROM enrollments e
-         JOIN lessons l ON l.course_id = e.course_id
-         JOIN courses c ON c.id = l.course_id
+         JOIN courses c ON c.id = e.course_id
+         JOIN modules m ON m.course_id = c.id
+         JOIN lessons l ON l.module_id = m.id
          WHERE l.due_date BETWEEN NOW() AND NOW() + INTERVAL '24 hours'
          AND NOT EXISTS (
             SELECT 1 FROM notifications n 
@@ -1054,7 +1055,7 @@ pub async fn update_user(
 }
 
 pub async fn get_recommendations(
-    Org(org_ctx): Org,
+    Org(_org_ctx): Org,
     claims: Claims,
     State(pool): State<PgPool>,
     Path(course_id): Path<Uuid>,
@@ -1215,6 +1216,129 @@ pub async fn evaluate_audio_response(
                     "score": 50,
                     "found_keywords": vec![] as Vec<String>,
                     "feedback": "Lo siento, tuve un problema analizando tu respuesta. ¡Sigue practicando!"
+                })
+            })
+    ).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Mapping failed: {}", e)))?;
+
+    Ok(Json(grading))
+}
+
+pub async fn evaluate_audio_file(
+    Org(_org_ctx): Org,
+    _claims: Claims,
+    mut multipart: Multipart,
+) -> Result<Json<AudioGradingResponse>, (StatusCode, String)> {
+    let mut prompt = String::new();
+    let mut keywords_str = String::new();
+    let mut audio_data = Vec::new();
+    let mut filename = "audio.webm".to_string();
+
+    while let Some(field) = multipart.next_field().await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))? {
+        let name = field.name().unwrap_or_default().to_string();
+        match name.as_str() {
+            "prompt" => prompt = field.text().await.unwrap_or_default(),
+            "keywords" => keywords_str = field.text().await.unwrap_or_default(),
+            "file" => {
+                filename = field.file_name().unwrap_or("audio.webm").to_string();
+                audio_data = field.bytes().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?.to_vec();
+            },
+            _ => {}
+        }
+    }
+
+    if audio_data.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "No audio file provided".into()));
+    }
+
+    // 1. Send to Whisper
+    let whisper_url = env::var("LOCAL_WHISPER_URL").unwrap_or_else(|_| "http://localhost:8000".to_string());
+    let client = reqwest::Client::new();
+    
+    let form = reqwest::multipart::Form::new()
+        .part("file", reqwest::multipart::Part::bytes(audio_data).file_name(filename))
+        .text("model", "whisper-1")
+        .text("response_format", "json");
+
+    let response = client.post(format!("{}/v1/audio/transcriptions", whisper_url))
+        .multipart(form)
+        .send()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Whisper request failed: {}", e)))?;
+
+    if !response.status().is_success() {
+        let err_body = response.text().await.unwrap_or_default();
+        tracing::error!("Whisper error: {}", err_body);
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Whisper API error: {}", err_body)));
+    }
+
+    let transcription_result: serde_json::Value = response.json().await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to parse Whisper response: {}", e)))?;
+
+    let transcript = transcription_result["text"].as_str().unwrap_or("").to_string();
+    
+    if transcript.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "Whisper could not detect any speech. Please speak louder or check your mic.".into()));
+    }
+
+    let keywords: Vec<String> = if keywords_str.trim().starts_with('[') {
+        serde_json::from_str(&keywords_str).unwrap_or_default()
+    } else {
+        keywords_str.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect()
+    };
+
+    // 2. Perform AI Grading
+    let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+    let (url, auth_header, model) = if provider == "local" {
+        let base_url = env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://ollama:11434".to_string());
+        let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3:8b".to_string());
+        (format!("{}/v1/chat/completions", base_url), "".to_string(), model)
+    } else {
+        (
+            "https://api.openai.com/v1/chat/completions".to_string(),
+            format!("Bearer {}", env::var("OPENAI_API_KEY").unwrap_or_default()),
+            "gpt-4-turbo".to_string(),
+        )
+    };
+
+    let system_prompt = "You are an expert Teacher. Evaluate the student's spoken response transcript. \
+        Compare it against the prompt and expected keywords. \
+        Provide a score from 0 to 100. \
+        Identify which keywords were used. \
+        Give constructive feedback in Spanish about their pronunciation (based on the transcript quality) and content. \
+        Return ONLY a JSON object: { \"score\": number, \"found_keywords\": [string], \"feedback\": string }.";
+
+    let user_content = format!(
+        "Prompt: {}\nExpected Keywords: {:?}\nStudent Transcript: {}",
+        prompt, keywords, transcript
+    );
+
+    let response = client.post(&url)
+        .header("Content-Type", "application/json")
+        .header("Authorization", auth_header)
+        .json(&serde_json::json!({
+            "model": model,
+            "messages": [
+                { "role": "system", "content": system_prompt },
+                { "role": "user", "content": user_content }
+            ],
+            "response_format": { "type": "json_object" }
+        }))
+        .send()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let ai_data: serde_json::Value = response.json().await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("AI response parse failed: {}", e)))?;
+
+    let grading: AudioGradingResponse = serde_json::from_value(
+        ai_data["choices"][0]["message"]["content"]
+            .as_str()
+            .and_then(|c| serde_json::from_str(c).ok())
+            .unwrap_or_else(|| {
+                serde_json::json!({
+                    "score": 50,
+                    "found_keywords": vec![] as Vec<String>,
+                    "feedback": "Lo siento, tuve un problema analizando tu respuesta con Whisper. ¡Sigue practicando!"
                 })
             })
     ).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Mapping failed: {}", e)))?;

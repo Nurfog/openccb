@@ -12,6 +12,7 @@ interface MediaPlayerProps {
     media_type: 'video' | 'audio';
     config?: {
         maxPlays?: number;
+        show_transcript?: boolean;
         markers?: {
             timestamp: number;
             question: string;
@@ -176,10 +177,10 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
                             }
                         }}
                     >
-                        {hasTranscription && vttEn && (
+                        {hasTranscription && config?.show_transcript !== false && vttEn && (
                             <track kind="subtitles" src={vttEn} srcLang="en" label="English" />
                         )}
-                        {hasTranscription && vttEs && (
+                        {hasTranscription && config?.show_transcript !== false && vttEs && (
                             <track kind="subtitles" src={vttEs} srcLang="es" label="Español" />
                         )}
                     </video>

@@ -38,14 +38,14 @@ export default function MyLearningPage() {
                 const enrichedEnrollments: EnrollmentWithProgress[] = [];
                 for (const enrollment of enrollmentData) {
                     try {
-                        const outline = await lmsApi.getCourseOutline(enrollment.course_id);
+                        const { course, modules } = await lmsApi.getCourseOutline(enrollment.course_id);
 
                         // TODO: Implement actual progress tracking
                         // For now, show 0% progress for all courses
                         const progress = 0;
 
                         enrichedEnrollments.push({
-                            course: outline,
+                            course: { ...course, modules },
                             progress,
                             lastAccessed: enrollment.enroled_at
                         });

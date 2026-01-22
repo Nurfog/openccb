@@ -27,7 +27,7 @@ El proyecto ha sido optimizado para reducir la complejidad de la infraestructura
     - **Custom AI Quizzes**: Generación de quices con contexto pedagógico y tipo de pregunta personalizable (opción múltiple, V/F, etc.).
     - **Course Deletion**: Funcionalidad de eliminación de cursos con verificación de permisos y limpieza en cascada.
     - **Gamified Activities**: Nuevos tipos de bloques interactivos para niños y jóvenes, incluyendo Juegos de Memoria y Puntos Calientes (Hotspots).
-    - **Gamified Activities**: Nuevos tipos de bloques interactivos para niños y jóvenes, incluyendo Juegos de Memoria y Puntos Calientes (Hotspots).
+    - **Auto Transcription**: Integración con Whisper para generación automática de transcripciones y evaluación precisa de voz.
 
 ##  Requisitos del Sistema
 

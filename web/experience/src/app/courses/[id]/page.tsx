@@ -14,7 +14,7 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
 
     useEffect(() => {
         lmsApi.getCourseOutline(params.id)
-            .then(setCourseData)
+            .then(data => setCourseData({ ...data.course, modules: data.modules }))
             .catch(console.error)
             .finally(() => setLoading(false));
 
@@ -129,8 +129,8 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                                         <div className="space-y-3">
                                             <div className="flex items-center gap-3">
                                                 <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${rec.priority === 'high' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
-                                                        rec.priority === 'medium' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
-                                                            'bg-green-500/10 text-green-400 border border-green-500/20'
+                                                    rec.priority === 'medium' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                                                        'bg-green-500/10 text-green-400 border border-green-500/20'
                                                     }`}>
                                                     Prioridad {rec.priority}
                                                 </div>

@@ -576,7 +576,27 @@ pub async fn create_lesson(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    // Trigger auto-transcription if it's a video or audio lesson with a URL
+    if (content_type == "video" || content_type == "audio") && content_url.is_some() {
+        trigger_transcription(pool, lesson.id).await;
+    }
+
     Ok(Json(lesson))
+}
+
+async fn trigger_transcription(pool: PgPool, lesson_id: Uuid) {
+    // Set status to queued
+    let _ = sqlx::query("UPDATE lessons SET transcription_status = 'queued' WHERE id = $1")
+        .bind(lesson_id)
+        .execute(&pool)
+        .await;
+
+    // Spawn background task
+    tokio::spawn(async move {
+        if let Err(e) = run_transcription_task(pool, lesson_id).await {
+            tracing::error!("Auto-transcription task failed for lesson {}: {}", lesson_id, e);
+        }
+    });
 }
 
 pub async fn process_transcription(
@@ -646,7 +666,7 @@ pub async fn process_transcription(
     Ok(Json(updated_lesson))
 }
 
-async fn translate_text(text: &str, target_lang: &str) -> Result<String, String> {
+async fn _translate_text(text: &str, target_lang: &str) -> Result<String, String> {
     let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
     let client = reqwest::Client::new();
 
@@ -1285,6 +1305,16 @@ pub async fn update_lesson(
     tx.commit()
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Trigger auto-transcription if content URL was updated and it's a video/audio lesson
+    if let Some(url) = content_url {
+        if !url.is_empty() {
+            let c_type = content_type.unwrap_or(lesson.content_type.as_str());
+            if c_type == "video" || c_type == "audio" {
+                trigger_transcription(pool, lesson.id).await;
+            }
+        }
+    }
 
     Ok(Json(lesson))
 }

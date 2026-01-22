@@ -80,6 +80,7 @@ async fn main() {
             get(handlers::get_lesson_heatmap),
         )
         .route("/audio/evaluate", post(handlers::evaluate_audio_response))
+        .route("/audio/evaluate-file", post(handlers::evaluate_audio_file))
         .route("/notifications", get(handlers::get_notifications))
         .route(
             "/notifications/{id}/read",

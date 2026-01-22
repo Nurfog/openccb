@@ -32,8 +32,8 @@ export default function StudentProgressPage() {
 
     const loadData = React.useCallback(async () => {
         try {
-            const courseData = await lmsApi.getCourseOutline(id);
-            setCourse(courseData);
+            const { course, modules, grading_categories } = await lmsApi.getCourseOutline(id);
+            setCourse({ ...course, modules, grading_categories });
 
             if (user) {
                 const grades = await lmsApi.getUserGrades(user.id, id);

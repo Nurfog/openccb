@@ -209,7 +209,7 @@ export const lmsApi = {
         return apiFetch(`/catalog${query}`);
     },
 
-    async getCourseOutline(courseId: string): Promise<Course & { modules: Module[], grading_categories: GradingCategory[] }> {
+    async getCourseOutline(courseId: string): Promise<{ course: Course, modules: Module[], grading_categories: GradingCategory[], organization: Organization }> {
         return apiFetch(`/courses/${courseId}/outline`);
     },
 
@@ -320,6 +320,27 @@ export const lmsApi = {
         return apiFetch('/audio/evaluate', {
             method: 'POST',
             body: JSON.stringify({ transcript, prompt, keywords })
+        });
+    },
+    async evaluateAudioFile(file: Blob, prompt: string, keywords: string[]): Promise<AudioGradingResponse> {
+        const formData = new FormData();
+        formData.append('file', file, 'recorded_audio.webm');
+        formData.append('prompt', prompt);
+        formData.append('keywords', JSON.stringify(keywords));
+
+        const token = getToken();
+        return fetch(`${API_BASE_URL}/audio/evaluate-file`, {
+            method: 'POST',
+            headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: formData
+        }).then(async res => {
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ message: 'Audio evaluation failed' }));
+                throw new Error(err.message || 'Audio evaluation failed');
+            }
+            return res.json();
         });
     }
 };

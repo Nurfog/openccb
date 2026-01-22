@@ -87,7 +87,7 @@ export default function HotspotBlock({
                 </div>
                 <div className="relative aspect-video rounded-2xl overflow-hidden border border-white/5 bg-black/40">
                     {imageUrl ? (
-                        <Image src={getImageUrl(imageUrl)} alt={title || ""} fill className="object-cover opacity-50" />
+                        <Image src={getImageUrl(imageUrl)} alt={title || ""} fill unoptimized className="object-cover opacity-50" />
                     ) : (
                         <div className="absolute inset-0 flex items-center justify-center text-gray-600 italic text-sm">No image provided.</div>
                     )}
@@ -140,7 +140,7 @@ export default function HotspotBlock({
                             </button>
                         ) : (
                             <div className="relative aspect-video rounded-2xl overflow-hidden group">
-                                <Image src={getImageUrl(imageUrl)} alt="Hotspot base" fill className="object-cover" />
+                                <Image src={getImageUrl(imageUrl)} alt="Hotspot base" fill unoptimized className="object-cover" />
                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                                     <button onClick={() => setIsAssetPickerOpen(true)} className="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-all"><ImageIcon size={18} /></button>
                                     <button onClick={() => onChange({ imageUrl: undefined })} className="p-2 bg-red-500/20 hover:bg-red-500/40 rounded-lg text-red-400 transition-all"><Trash2 size={18} /></button>
@@ -164,8 +164,8 @@ export default function HotspotBlock({
                                     onClick={handleImageClick}
                                     className="relative aspect-video rounded-2xl overflow-hidden border-2 border-white/10 cursor-crosshair shadow-2xl"
                                 >
-                                    <Image src={getImageUrl(imageUrl)} alt="Define Hotspots" fill className="object-cover select-none" />
-                                    {hotspots.map((h, idx) => (
+                                    <Image src={getImageUrl(imageUrl)} alt="Define Hotspots" fill unoptimized className="object-cover select-none" />
+                                    {hotspots.map((h) => (
                                         <div
                                             key={h.id}
                                             className="absolute group/pin"
@@ -246,6 +246,6 @@ export default function HotspotBlock({
                 filterType="image"
                 onSelect={handleImageSelect}
             />
-        </div>
+        </div >
     );
 }

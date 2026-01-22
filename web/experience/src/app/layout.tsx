@@ -34,7 +34,7 @@ export default function RootLayout({
                 </main>
                 <footer className="py-12 px-6 border-t border-white/5 text-center bg-black/20">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">
-                    Desarrollado por OpenCCB © 2023. Codificación Agente Avanzada.
+                    Desarrollado Por el Departamento de Informática © 2026. OpenCCB.
                   </p>
                 </footer>
               </AuthGuard>

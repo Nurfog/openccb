@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Brain, Plus, Trash2, HelpCircle } from "lucide-react";
 
 interface MatchingPair {

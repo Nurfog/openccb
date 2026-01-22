@@ -22,12 +22,12 @@ export default function StudentCalendarPage({ params }: { params: { id: string }
     useEffect(() => {
         const loadData = async () => {
             try {
-                const courseData = await lmsApi.getCourseOutline(params.id);
-                setCourse(courseData);
+                const { course, modules } = await lmsApi.getCourseOutline(params.id);
+                setCourse({ ...course, modules });
 
                 // Flatten lessons from modules
                 const allLessons: Lesson[] = [];
-                courseData.modules?.forEach(mod => {
+                modules?.forEach(mod => {
                     mod.lessons.forEach(lesson => {
                         allLessons.push(lesson);
                     });
@@ -74,8 +74,8 @@ export default function StudentCalendarPage({ params }: { params: { id: string }
                             <Link key={lesson.id} href={`/courses/${params.id}/lessons/${lesson.id}`}>
                                 <div
                                     className={`text-[9px] p-1 rounded truncate flex items-center gap-1 mb-1 border transition-all hover:scale-[1.02] ${lesson.important_date_type === 'exam' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                            lesson.important_date_type === 'assignment' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                                                'bg-green-500/10 text-green-400 border-green-500/20'
+                                        lesson.important_date_type === 'assignment' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                            'bg-green-500/10 text-green-400 border-green-500/20'
                                         }`}
                                 >
                                     <span className="w-1 h-1 rounded-full bg-current"></span>

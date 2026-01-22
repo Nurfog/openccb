@@ -135,14 +135,14 @@ export default function AudioResponsePlayer({
     };
 
     const evaluateResponse = async () => {
-        if (!transcript.trim()) {
-            alert("No speech detected. Please try recording again.");
+        if (!audioBlob) {
+            alert("No recording found. Please try again.");
             return;
         }
 
         setIsTranscribing(true);
         try {
-            const result = await lmsApi.evaluateAudio(transcript, prompt, keywords);
+            const result = await lmsApi.evaluateAudioFile(audioBlob, prompt, keywords);
             setEvaluation({
                 score: result.score,
                 foundKeywords: result.found_keywords,
@@ -153,9 +153,9 @@ export default function AudioResponsePlayer({
             if (onComplete) {
                 onComplete(result.score, transcript);
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Evaluation failed", err);
-            alert("Evaluation failed. Please try again.");
+            alert(err.message || "Evaluation failed. Please try again.");
         } finally {
             setIsTranscribing(false);
         }

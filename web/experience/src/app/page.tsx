@@ -35,11 +35,11 @@ export default function CatalogPage() {
           const deadlines: { lesson: Lesson, courseTitle: string, courseId: string }[] = [];
           for (const enrollment of enrollmentData) {
             try {
-              const outline = await lmsApi.getCourseOutline(enrollment.course_id);
-              outline.modules.forEach(mod => {
+              const { course, modules } = await lmsApi.getCourseOutline(enrollment.course_id);
+              modules.forEach(mod => {
                 mod.lessons.forEach(l => {
                   if (l.due_date && new Date(l.due_date) >= new Date()) {
-                    deadlines.push({ lesson: l, courseTitle: outline.title, courseId: enrollment.course_id });
+                    deadlines.push({ lesson: l, courseTitle: course.title, courseId: enrollment.course_id });
                   }
                 });
               });
