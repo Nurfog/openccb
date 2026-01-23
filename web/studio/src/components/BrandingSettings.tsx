@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { cmsApi, Organization, BrandingPayload, getImageUrl } from "@/lib/api";
 import FileUpload from "./FileUpload";
 import { useRouter } from "next/navigation";
@@ -41,35 +42,15 @@ export default function BrandingSettings() {
         setSaving(true);
         try {
             await cmsApi.updateOrganizationBranding(org.id, formData);
-            // Refresh to update local state logic if needed
             fetchOrg();
             alert("Branding updated successfully!");
-            router.refresh(); // Refresh layouts to pick up new branding
+            router.refresh();
         } catch (error) {
             console.error("Failed to update branding:", error);
             alert("Failed to update branding settings.");
         } finally {
             setSaving(false);
         }
-    };
-
-    const handleLogoUpload = async (file: File, onProgress: (pct: number) => void) => {
-        if (!org) throw new Error("No organization loaded");
-        // Simulate progress for smoother UX if the API doesn't support it natively for direct fetch
-        // API wrapper uses fetch/xhr so branding API in api.ts needs to handle it.
-        // For now, we assume simple upload.
-        onProgress(50);
-        const res = await cmsApi.uploadOrganizationLogo(org.id, file);
-        onProgress(100);
-        return { url: res.logo_url }; // api returns { logo_url: ... }
-    };
-
-    const handleFaviconUpload = async (file: File, onProgress: (pct: number) => void) => {
-        if (!org) throw new Error("No organization loaded");
-        onProgress(50);
-        const res = await cmsApi.uploadOrganizationFavicon(org.id, file);
-        onProgress(100);
-        return { url: res.favicon_url };
     };
 
     if (loading) return <div className="p-8 text-center text-gray-400 animate-pulse">Loading settings...</div>;
@@ -99,9 +80,15 @@ export default function BrandingSettings() {
                     {/* Logo Section */}
                     <div className="space-y-4">
                         <label className="block text-sm font-medium text-gray-400">Logo</label>
-                        <div className="p-4 bg-black/20 rounded-xl border border-white/5 flex items-center justify-center min-h-[120px]">
+                        <div className="p-4 bg-black/20 rounded-xl border border-white/5 flex items-center justify-center min-h-[120px] relative">
                             {org.logo_url ? (
-                                <img src={getImageUrl(org.logo_url)} alt="Logo" className="max-h-16 object-contain" />
+                                <Image
+                                    src={getImageUrl(org.logo_url)}
+                                    alt="Logo"
+                                    fill
+                                    className="object-contain p-2"
+                                    sizes="100px"
+                                />
                             ) : (
                                 <span className="text-gray-600 text-sm">No logo uploaded</span>
                             )}
@@ -109,8 +96,7 @@ export default function BrandingSettings() {
                         <FileUpload
                             accept="image/png,image/jpeg,image/svg+xml"
                             currentUrl={org.logo_url}
-                            customUploadFn={async (file, onProgress) => {
-                                // Adapt the response format from logo upload API to what FileUpload expects
+                            customUploadFn={async (file) => {
                                 const res = await cmsApi.uploadOrganizationLogo(org.id, file);
                                 return { url: res.logo_url || "" };
                             }}
@@ -125,9 +111,17 @@ export default function BrandingSettings() {
                     {/* Favicon Section */}
                     <div className="space-y-4">
                         <label className="block text-sm font-medium text-gray-400">Favicon</label>
-                        <div className="p-4 bg-black/20 rounded-xl border border-white/5 flex items-center justify-center min-h-[120px]">
+                        <div className="p-4 bg-black/20 rounded-xl border border-white/5 flex items-center justify-center min-h-[120px] relative">
                             {org.favicon_url ? (
-                                <img src={getImageUrl(org.favicon_url)} alt="Favicon" className="w-8 h-8 object-contain" />
+                                <div className="w-8 h-8 relative">
+                                    <Image
+                                        src={getImageUrl(org.favicon_url)}
+                                        alt="Favicon"
+                                        fill
+                                        className="object-contain"
+                                        sizes="32px"
+                                    />
+                                </div>
                             ) : (
                                 <span className="text-gray-600 text-sm">No favicon</span>
                             )}
@@ -135,7 +129,7 @@ export default function BrandingSettings() {
                         <FileUpload
                             accept="image/png,image/x-icon,image/svg+xml,image/jpeg"
                             currentUrl={org.favicon_url}
-                            customUploadFn={async (file, onProgress) => {
+                            customUploadFn={async (file) => {
                                 const res = await cmsApi.uploadOrganizationFavicon(org.id, file);
                                 return { url: res.favicon_url || "" };
                             }}

@@ -1773,6 +1773,23 @@ pub struct AuthPayload {
     pub organization_name: Option<String>,
 }
 
+#[derive(serde::Deserialize)]
+pub struct ProvisionPayload {
+    pub org_name: String,
+    pub org_domain: Option<String>,
+    pub admin_email: String,
+    pub admin_password: String,
+    pub admin_full_name: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct AdminCreateUserPayload {
+    pub email: String,
+    pub password: String,
+    pub full_name: String,
+    pub role: String,
+}
+
 pub async fn register(
     State(pool): State<PgPool>,
     Json(payload): Json<AuthPayload>,
@@ -1839,6 +1856,52 @@ pub async fn register(
             language: user.language,
         },
         token,
+    }))
+}
+
+pub async fn admin_create_user(
+    Org(org_ctx): Org,
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+    Json(payload): Json<AdminCreateUserPayload>,
+) -> Result<Json<UserResponse>, (StatusCode, String)> {
+    if claims.role != "admin" {
+        return Err((StatusCode::FORBIDDEN, "Admin access required".into()));
+    }
+
+    if !["admin", "instructor", "student"].contains(&payload.role.as_str()) {
+        return Err((StatusCode::BAD_REQUEST, "Invalid role".into()));
+    }
+
+    let password_hash = hash(payload.password, DEFAULT_COST)
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Hashing failed".into()))?;
+
+    let user = sqlx::query_as::<_, User>(
+        "INSERT INTO users (email, password_hash, full_name, role, organization_id) VALUES ($1, $2, $3, $4, $5) RETURNING *"
+    )
+    .bind(&payload.email)
+    .bind(password_hash)
+    .bind(&payload.full_name)
+    .bind(&payload.role)
+    .bind(org_ctx.id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to create user: {}", e);
+        (StatusCode::CONFLICT, "User already exists or DB error".into())
+    })?;
+
+    Ok(Json(UserResponse {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        organization_id: user.organization_id,
+        xp: user.xp,
+        level: user.level,
+        avatar_url: user.avatar_url,
+        bio: user.bio,
+        language: user.language,
     }))
 }
 
@@ -2754,6 +2817,52 @@ pub async fn create_organization(
         tracing::error!("Failed to create organization: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
+
+    Ok(Json(org))
+}
+
+pub async fn provision_organization(
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+    Json(payload): Json<ProvisionPayload>,
+) -> Result<Json<Organization>, (StatusCode, String)> {
+    if claims.role != "admin" || claims.org != Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap() {
+        return Err((StatusCode::FORBIDDEN, "Super Admin access required".into()));
+    }
+
+    let mut tx = pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let org = sqlx::query_as::<_, Organization>(
+        "INSERT INTO organizations (name, domain) VALUES ($1, $2) RETURNING *"
+    )
+    .bind(&payload.org_name)
+    .bind(&payload.org_domain)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to create organization: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create organization".into())
+    })?;
+
+    let password_hash = hash(payload.admin_password, DEFAULT_COST)
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Hashing failed".into()))?;
+
+    sqlx::query(
+        "INSERT INTO users (email, password_hash, full_name, role, organization_id) VALUES ($1, $2, $3, $4, $5)"
+    )
+    .bind(&payload.admin_email)
+    .bind(password_hash)
+    .bind(&payload.admin_full_name)
+    .bind("admin")
+    .bind(org.id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to create admin user: {}", e);
+        (StatusCode::CONFLICT, "User already exists or DB error".into())
+    })?;
+
+    tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(org))
 }

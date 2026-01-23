@@ -13,6 +13,11 @@ export default function OrganizationsPage() {
     const [newName, setNewName] = useState('');
     const [newDomain, setNewDomain] = useState('');
 
+    // Admin User States
+    const [adminFullName, setAdminFullName] = useState('');
+    const [adminEmail, setAdminEmail] = useState('');
+    const [adminPassword, setAdminPassword] = useState('');
+
     // Branding States
     const [isBrandingModalOpen, setIsBrandingModalOpen] = useState(false);
     const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
@@ -49,13 +54,23 @@ export default function OrganizationsPage() {
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await cmsApi.createOrganization(newName, newDomain || undefined);
+            await cmsApi.provisionOrganization({
+                org_name: newName,
+                org_domain: newDomain || undefined,
+                admin_full_name: adminFullName,
+                admin_email: adminEmail,
+                admin_password: adminPassword
+            });
             setNewName('');
             setNewDomain('');
+            setAdminFullName('');
+            setAdminEmail('');
+            setAdminPassword('');
             setIsModalOpen(false);
             loadOrganizations();
         } catch (error) {
             console.error('Failed to create organization', error);
+            alert('Failed to provision organization. Please ensure the email is unique.');
         }
     };
 
@@ -271,9 +286,48 @@ export default function OrganizationsPage() {
                                     type="text"
                                     value={newDomain}
                                     onChange={(e) => setNewDomain(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-mono text-sm"
                                     placeholder="e.g. acme.com"
                                 />
+                            </div>
+
+                            <div className="pt-4 border-t border-white/5">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-blue-500 mb-4">Initial Administrator</h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-400 mb-1.5">Admin Full Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={adminFullName}
+                                            onChange={(e) => setAdminFullName(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                            placeholder="e.g. John Doe"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-400 mb-1.5">Admin Email</label>
+                                        <input
+                                            type="email"
+                                            required
+                                            value={adminEmail}
+                                            onChange={(e) => setAdminEmail(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                            placeholder="admin@acme.com"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-400 mb-1.5">Admin Password</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            value={adminPassword}
+                                            onChange={(e) => setAdminPassword(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                </div>
                             </div>
                             <div className="flex gap-3 mt-8">
                                 <button

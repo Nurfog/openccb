@@ -409,6 +409,7 @@ Obtiene una lista de todas las organizaciones registradas.
 - **Global Localization**: Native support for English, Spanish, and Portuguese.
 - **PDF Integrated Viewer**: Read academic documents without leaving the platform.
 - **Interactive Video Markers**: Pause-and-answer questions embedded in video lessons.
+- **White-Label Branding**: Fully custom platform name, logo, favicon, and color themes per organization.
 
 ## 📄 Licencia
 Este proyecto es código abierto y está disponible bajo los términos de la licencia especificada en el repositorio.

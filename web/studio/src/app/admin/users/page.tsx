@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { cmsApi, User, Organization } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { UserCog, Mail, Search, Filter, ShieldCheck } from 'lucide-react';
+import { UserCog, Mail, Search, Filter, ShieldCheck, Plus, X, UserPlus, Key, User as UserIcon } from 'lucide-react';
 
 export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
@@ -12,6 +12,15 @@ export default function UsersPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
     const { user: currentUser } = useAuth();
+
+    // Create User States
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [newUser, setNewUser] = useState({
+        email: '',
+        password: '',
+        full_name: '',
+        role: 'student'
+    });
 
     useEffect(() => {
         loadData();
@@ -41,6 +50,19 @@ export default function UsersPage() {
         }
     };
 
+    const handleCreateUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await cmsApi.createUser(newUser);
+            setNewUser({ email: '', password: '', full_name: '', role: 'student' });
+            setIsModalOpen(false);
+            loadData();
+        } catch (error) {
+            console.error('Failed to create user', error);
+            alert('Failed to create user. Ensure email is unique.');
+        }
+    };
+
     const filteredUsers = users.filter(u => {
         const matchesSearch = u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             u.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -62,9 +84,18 @@ export default function UsersPage() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
-                <p className="text-gray-400 mt-1">Manage global users, roles, and organization assignments.</p>
+            <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+                    <p className="text-gray-400 mt-1">Manage users, roles, and organization assignments.</p>
+                </div>
+                <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all shadow-lg shadow-blue-500/20"
+                >
+                    <Plus className="w-4 h-4" />
+                    Add User
+                </button>
             </div>
 
             <div className="flex flex-col md:flex-row gap-4">
@@ -167,6 +198,101 @@ export default function UsersPage() {
                     </div>
                 )}
             </div>
+
+            {/* Create User Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="w-full max-w-md glass border border-white/10 rounded-2xl p-8 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                                    <UserPlus className="w-5 h-5" />
+                                </div>
+                                <h2 className="text-xl font-bold">Add New User</h2>
+                            </div>
+                            <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors text-gray-500">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleCreateUser} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1.5">Full Name</label>
+                                <div className="relative">
+                                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                    <input
+                                        type="text"
+                                        required
+                                        value={newUser.full_name}
+                                        onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                        placeholder="e.g. John Doe"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1.5">Email Address</label>
+                                <div className="relative">
+                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                    <input
+                                        type="email"
+                                        required
+                                        value={newUser.email}
+                                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-mono text-sm"
+                                        placeholder="user@example.com"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1.5">Initial Password</label>
+                                <div className="relative">
+                                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                    <input
+                                        type="password"
+                                        required
+                                        value={newUser.password}
+                                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1.5">User Role</label>
+                                <select
+                                    value={newUser.role}
+                                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none cursor-pointer"
+                                >
+                                    <option value="student">Student</option>
+                                    <option value="instructor">Instructor</option>
+                                    <option value="admin">Administrator (Organization Admin)</option>
+                                </select>
+                            </div>
+
+                            <div className="flex gap-3 mt-8">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-[2] px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all shadow-lg shadow-blue-500/20 font-bold"
+                                >
+                                    Create User
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

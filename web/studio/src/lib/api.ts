@@ -142,6 +142,21 @@ export interface OrganizationSSOConfig {
     updated_at: string;
 }
 
+export interface ProvisionPayload {
+    org_name: string;
+    org_domain?: string;
+    admin_email: string;
+    admin_password: string;
+    admin_full_name: string;
+}
+
+export interface UserCreatePayload {
+    email: string;
+    password: string;
+    full_name: string;
+    role: string;
+}
+
 export interface AuthResponse {
     user: User;
     token: string;
@@ -272,6 +287,7 @@ export const cmsApi = {
     getOrganization: (): Promise<Organization> => apiFetch('/organization'),
     getOrganizations: (): Promise<Organization[]> => apiFetch('/organizations'),
     createOrganization: (name: string, domain?: string): Promise<Organization> => apiFetch('/organizations', { method: 'POST', body: JSON.stringify({ name, domain }) }),
+    provisionOrganization: (data: ProvisionPayload): Promise<Organization> => apiFetch('/admin/provision', { method: 'POST', body: JSON.stringify(data) }),
 
     // Auth
     register: (payload: AuthPayload): Promise<AuthResponse> => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
@@ -327,6 +343,7 @@ export const cmsApi = {
 
     // Users
     getAllUsers: (): Promise<User[]> => apiFetch('/users'),
+    createUser: (data: UserCreatePayload): Promise<User> => apiFetch('/users', { method: 'POST', body: JSON.stringify(data) }),
     updateUser: (id: string, payload: { role?: string, organization_id?: string, full_name?: string, avatar_url?: string, bio?: string, language?: string }): Promise<void> => apiFetch(`/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
 
     // Webhooks

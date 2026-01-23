@@ -16,6 +16,7 @@ import {
     LogOut,
     Trash2
 } from "lucide-react";
+import Image from "next/image";
 
 export default function ProfilePage() {
     const { t, setLanguage: setContextLanguage } = useTranslation();
@@ -102,10 +103,12 @@ export default function ProfilePage() {
                         <div className="relative mb-6">
                             <div className="w-32 h-32 rounded-full bg-blue-600/20 border-4 border-white/5 flex items-center justify-center overflow-hidden shadow-2xl relative">
                                 {avatarUrl ? (
-                                    <img
+                                    <Image
                                         src={getImageUrl(avatarUrl)}
                                         alt={fullName}
-                                        className="w-full h-full object-cover"
+                                        fill
+                                        className="object-cover"
+                                        sizes="128px"
                                     />
                                 ) : (
                                     <span className="text-5xl font-black text-blue-400">

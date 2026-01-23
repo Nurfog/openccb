@@ -139,7 +139,7 @@ async fn main() {
             get(handlers::get_grading_categories),
         )
         .route("/auth/me", get(handlers::get_me))
-        .route("/users", get(handlers::get_all_users))
+        .route("/users", get(handlers::get_all_users).post(handlers::admin_create_user))
         .route("/users/{id}", axum::routing::put(handlers::update_user))
         .route("/audit-logs", get(handlers::get_audit_logs))
         .route("/api/ai/review-text", post(handlers::review_text))
@@ -151,6 +151,7 @@ async fn main() {
             "/organizations",
             get(handlers::get_organizations).post(handlers::create_organization),
         )
+        .route("/admin/provision", post(handlers::provision_organization))
         .route(
             "/webhooks",
             get(handlers::get_webhooks).post(handlers::create_webhook),
