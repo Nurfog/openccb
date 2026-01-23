@@ -7,9 +7,10 @@ interface FileUploadProps {
     onUploadComplete: (url: string) => void;
     currentUrl?: string;
     accept?: string;
+    customUploadFn?: (file: File, onProgress: (pct: number) => void) => Promise<{ url: string }>;
 }
 
-export default function FileUpload({ onUploadComplete, currentUrl, accept = "video/*,audio/*" }: FileUploadProps) {
+export default function FileUpload({ onUploadComplete, currentUrl, accept = "video/*,audio/*", customUploadFn }: FileUploadProps) {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadingFileName, setUploadingFileName] = useState("");
@@ -21,9 +22,14 @@ export default function FileUpload({ onUploadComplete, currentUrl, accept = "vid
         setUploadProgress(0);
         setUploadingFileName(file.name);
         try {
-            const result = await cmsApi.uploadAsset(file, (pct) => {
-                setUploadProgress(pct);
-            });
+            let result;
+            if (customUploadFn) {
+                result = await customUploadFn(file, (pct) => setUploadProgress(pct));
+            } else {
+                result = await cmsApi.uploadAsset(file, (pct) => {
+                    setUploadProgress(pct);
+                });
+            }
             onUploadComplete(result.url);
         } catch (err) {
             alert("Upload failed. Please try again.");

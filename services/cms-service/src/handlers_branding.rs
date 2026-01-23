@@ -17,11 +17,14 @@ use super::handlers::log_action;
 pub struct BrandingPayload {
     pub primary_color: Option<String>,
     pub secondary_color: Option<String>,
+    pub platform_name: Option<String>,
 }
 
 #[derive(Serialize)]
 pub struct BrandingResponse {
     pub logo_url: Option<String>,
+    pub favicon_url: Option<String>,
+    pub platform_name: Option<String>,
     pub primary_color: String,
     pub secondary_color: String,
 }
@@ -138,6 +141,118 @@ pub async fn upload_organization_logo(
     Err((StatusCode::BAD_REQUEST, "No file provided".into()))
 }
 
+// Upload organization favicon
+pub async fn upload_organization_favicon(
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+    Path(org_id): Path<Uuid>,
+    mut multipart: axum::extract::Multipart,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    // Only admins can upload favicons
+    if claims.role != "admin" {
+        return Err((StatusCode::FORBIDDEN, "Admin access required".into()));
+    }
+
+    // Verify organization exists and user has access
+    let _ = sqlx::query_as::<_, Organization>("SELECT * FROM organizations WHERE id = $1")
+        .bind(org_id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| (StatusCode::NOT_FOUND, "Organization not found".into()))?;
+
+    // Process multipart form
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| (StatusCode::BAD_REQUEST, format!("Multipart error: {}", e)))?
+    {
+        let name = field.name().unwrap_or("").to_string();
+
+        if name == "file" {
+            let filename = field
+                .file_name()
+                .ok_or((StatusCode::BAD_REQUEST, "Missing filename".into()))?
+                .to_string();
+
+            // Validate file extension
+            let ext = filename.split('.').last().unwrap_or("");
+            if !["png", "jpg", "jpeg", "svg", "ico"].contains(&ext.to_lowercase().as_str()) {
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    "Invalid file type. Only PNG, JPG, SVG, and ICO allowed".into(),
+                ));
+            }
+
+            let data = field.bytes().await.map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to read file: {}", e),
+                )
+            })?;
+
+            // Validate file size (max 512KB for favicons seems reasonable, but sticking to 1MB to be safe)
+            if data.len() > 1024 * 1024 {
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    "File too large. Maximum 1MB allowed".into(),
+                ));
+            }
+
+            // Create uploads directory if it doesn't exist
+            std::fs::create_dir_all("uploads/org-favicons").map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to create directory: {}", e),
+                )
+            })?;
+
+            // Generate unique filename
+            let unique_filename = format!("{}_{}.{}", org_id, uuid::Uuid::new_v4(), ext);
+            let filepath = format!("uploads/org-favicons/{}", unique_filename);
+
+            // Save file
+            std::fs::write(&filepath, &data).map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to save file: {}", e),
+                )
+            })?;
+
+            // Update organization in database
+            let favicon_url = format!("/{}", filepath);
+            sqlx::query("UPDATE organizations SET favicon_url = $1 WHERE id = $2")
+                .bind(&favicon_url)
+                .bind(org_id)
+                .execute(&pool)
+                .await
+                .map_err(|e| {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("Database error: {}", e),
+                    )
+                })?;
+
+            log_action(
+                &pool,
+                claims.org,
+                claims.sub,
+                "UPDATE_FAVICON",
+                "Organization",
+                org_id,
+                json!({"favicon_url": &favicon_url}),
+            )
+            .await;
+
+            return Ok(Json(json!({
+                "favicon_url": favicon_url,
+                "message": "Favicon uploaded successfully"
+            })));
+        }
+    }
+
+    Err((StatusCode::BAD_REQUEST, "No file provided".into()))
+}
+
 // Update organization branding colors
 pub async fn update_organization_branding(
     claims: common::auth::Claims,
@@ -180,12 +295,14 @@ pub async fn update_organization_branding(
         "UPDATE organizations 
          SET primary_color = COALESCE($1, primary_color),
              secondary_color = COALESCE($2, secondary_color),
+             platform_name = COALESCE($3, platform_name),
              updated_at = NOW()
-         WHERE id = $3
+         WHERE id = $4
          RETURNING *",
     )
     .bind(&payload.primary_color)
     .bind(&payload.secondary_color)
+    .bind(&payload.platform_name)
     .bind(org_id)
     .fetch_one(&pool)
     .await
@@ -223,6 +340,8 @@ pub async fn get_organization_branding(
 
     Ok(Json(BrandingResponse {
         logo_url: org.logo_url,
+        favicon_url: org.favicon_url,
+        platform_name: org.platform_name,
         primary_color: org.primary_color.unwrap_or_else(|| "#3B82F6".to_string()),
         secondary_color: org.secondary_color.unwrap_or_else(|| "#8B5CF6".to_string()),
     }))

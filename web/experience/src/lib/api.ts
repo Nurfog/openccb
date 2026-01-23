@@ -13,6 +13,8 @@ export interface Organization {
     id: string;
     name: string;
     logo_url?: string;
+    favicon_url?: string;
+    platform_name?: string;
     primary_color?: string;
     secondary_color?: string;
 }

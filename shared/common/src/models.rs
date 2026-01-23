@@ -178,6 +178,8 @@ pub struct Organization {
     pub primary_color: Option<String>,
     pub secondary_color: Option<String>,
     pub certificate_template: Option<String>,
+    pub platform_name: Option<String>,
+    pub favicon_url: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

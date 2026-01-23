@@ -78,7 +78,8 @@
   - [x] **Super Admin y Org por Defecto**: Gestión global de todos los inquilinos
   - [x] **Visibilidad Global de Cursos**: Cursos de sistema disponibles para todas las organizaciones
 - [x] **Personalización de Marca (Branding)**: Identidad propia por organización (Completado)
-  - [x] Carga y optimización de logotipos
+  - [x] Carga y optimización de logotipos y favicons customizados
+  - [x] Nombre de plataforma personalizado (White-label)
   - [x] Esquemas de colores personalizados (Primario/Secundario)
   - [x] Adaptación dinámica del portal de Experience
   - [x] Previsualización en vivo del branding en Studio

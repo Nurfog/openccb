@@ -169,6 +169,10 @@ async fn main() {
             post(handlers_branding::upload_organization_logo),
         )
         .route(
+            "/organizations/{id}/favicon",
+            post(handlers_branding::upload_organization_favicon),
+        )
+        .route(
             "/organizations/{id}/branding",
             axum::routing::put(handlers_branding::update_organization_branding),
         )

@@ -56,7 +56,6 @@ export function Navbar() {
                             </>
                         )}
 
-                        {/* 
                         <Link
                             href="/settings"
                             className="text-sm font-medium text-gray-400 hover:text-blue-400 transition-colors flex items-center gap-2"
@@ -64,7 +63,6 @@ export function Navbar() {
                             <Settings className="w-4 h-4" />
                             Settings
                         </Link>
-                        */}
                     </div>
 
                     <div className="h-6 w-px bg-white/10 mx-2" />

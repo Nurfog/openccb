@@ -106,6 +106,8 @@ export interface Organization {
     name: string;
     domain?: string;
     logo_url?: string;
+    favicon_url?: string;
+    platform_name?: string;
     primary_color?: string;
     secondary_color?: string;
     certificate_template?: string;
@@ -116,6 +118,7 @@ export interface Organization {
 export interface BrandingPayload {
     primary_color?: string;
     secondary_color?: string;
+    platform_name?: string;
 }
 
 export interface User {
@@ -156,6 +159,8 @@ export interface UploadResponse {
     id: string;
     filename: string;
     url: string;
+    logo_url?: string;
+    favicon_url?: string;
 }
 
 export interface GradingCategory {
@@ -387,6 +392,24 @@ export const cmsApi = {
             body: formData,
         }).then(res => {
             if (!res.ok) return res.json().then(err => Promise.reject(new Error(err.message || 'Logo upload failed')));
+            return res.json();
+        });
+    },
+    uploadOrganizationFavicon: (id: string, file: File): Promise<UploadResponse> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const token = getToken();
+        const selectedOrgId = getSelectedOrgId();
+        const headers: Record<string, string> = {
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            ...(selectedOrgId ? { 'X-Organization-Id': selectedOrgId } : {})
+        };
+        return fetch(`${API_BASE_URL}/organizations/${id}/favicon`, {
+            method: 'POST',
+            headers,
+            body: formData,
+        }).then(res => {
+            if (!res.ok) return res.json().then(err => Promise.reject(new Error(err.message || 'Favicon upload failed')));
             return res.json();
         });
     },
