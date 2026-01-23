@@ -410,7 +410,7 @@ pub async fn ingest_course(
     }
 
     // 4. Insert Modules and Lessons
-    for pub_module in payload.modules {
+    for pub_module in &payload.modules {
         sqlx::query(
             "INSERT INTO modules (id, course_id, title, position, created_at, organization_id)
              VALUES ($1, $2, $3, $4, $5, $6)",
@@ -425,7 +425,7 @@ pub async fn ingest_course(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        for lesson in pub_module.lessons {
+        for lesson in &pub_module.lessons {
             sqlx::query(
                 "INSERT INTO lessons (id, module_id, title, content_type, content_url, transcription, metadata, position, created_at, is_graded, grading_category_id, max_attempts, allow_retry, organization_id, summary, due_date, important_date_type, transcription_status)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"
@@ -460,6 +460,21 @@ pub async fn ingest_course(
     tx.commit()
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // 5. Background Ingestion of Knowledge Base
+    // We do this after commit to ensure lesson IDs are persistent
+    for pub_module in &payload.modules {
+        for lesson in &pub_module.lessons {
+            let block_content = extract_block_content(&lesson.metadata);
+            if !block_content.trim().is_empty() {
+                let _ = ingest_lesson_knowledge(&pool, org_id, lesson.id, &block_content).await;
+            }
+            // Also ingest summary as a high-relevance chunk
+            if let Some(summary) = &lesson.summary {
+                 let _ = ingest_lesson_knowledge(&pool, org_id, lesson.id, summary).await;
+            }
+        }
+    }
 
     Ok(StatusCode::OK)
 }
@@ -1372,16 +1387,18 @@ pub async fn evaluate_audio_file(
 #[derive(Deserialize)]
 pub struct ChatPayload {
     pub message: String,
+    pub session_id: Option<Uuid>,
 }
 
 #[derive(Serialize)]
 pub struct ChatResponse {
     pub response: String,
+    pub session_id: Uuid,
 }
 
 pub async fn chat_with_tutor(
     Org(org_ctx): Org,
-    _claims: Claims,
+    claims: Claims,
     State(pool): State<PgPool>,
     Path(lesson_id): Path<Uuid>,
     Json(payload): Json<ChatPayload>,
@@ -1401,7 +1418,7 @@ pub async fn chat_with_tutor(
         .await
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch module context".into()))?;
 
-    let previous_lessons = sqlx::query!(
+    let previous_lessons = sqlx::query(
         r#"
         SELECT l.title, l.summary
         FROM lessons l
@@ -1410,10 +1427,10 @@ pub async fn chat_with_tutor(
           AND (m.position < $2 OR (m.position = $2 AND l.position < $3))
         ORDER BY m.position, l.position
         "#,
-        module.course_id,
-        module.position,
-        lesson.position
     )
+    .bind(module.course_id)
+    .bind(module.position)
+    .bind(lesson.position)
     .fetch_all(&pool)
     .await
     .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch previous lessons".into()))?;
@@ -1422,10 +1439,13 @@ pub async fn chat_with_tutor(
     if !previous_lessons.is_empty() {
         history_context.push_str("\n--- PAST LESSONS HISTORY (FOR CONTEXT) ---\n");
         for prev in previous_lessons {
+            use sqlx::Row;
+            let title: String = prev.get("title");
+            let summary: Option<String> = prev.get("summary");
             history_context.push_str(&format!(
                 "Past Lesson: {}\nSummary: {}\n\n",
-                prev.title,
-                prev.summary.as_deref().unwrap_or("No summary available.")
+                title,
+                summary.as_deref().unwrap_or("No summary available.")
             ));
         }
     }
@@ -1445,6 +1465,85 @@ pub async fn chat_with_tutor(
     let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
     let client = reqwest::Client::new();
 
+    // 2.1 Handle Session and Memory
+    let session_id = if let Some(sid) = payload.session_id {
+        sid
+    } else {
+        let row = sqlx::query(
+            "INSERT INTO chat_sessions (organization_id, user_id, lesson_id, title) VALUES ($1, $2, $3, $4) RETURNING id"
+        )
+        .bind(org_ctx.id)
+        .bind(claims.sub)
+        .bind(Some(lesson_id))
+        .bind(format!("Chat about {}", lesson.title))
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to create chat session: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create chat session".into())
+        })?;
+    
+        use sqlx::Row;
+        let sid: Uuid = row.get(0);
+        sid
+    };
+
+    // Save user message
+    sqlx::query(
+        "INSERT INTO chat_messages (session_id, role, content) VALUES ($1, $2, $3)"
+    )
+    .bind(session_id)
+    .bind("user")
+    .bind(&payload.message)
+    .execute(&pool)
+    .await
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to save user message".into()))?;
+
+    // Fetch last 6 messages for context
+    let history_rows = sqlx::query(
+        "SELECT role, content FROM chat_messages WHERE session_id = $1 ORDER BY created_at DESC LIMIT 6"
+    )
+    .bind(session_id)
+    .fetch_all(&pool)
+    .await
+    .unwrap_or_default();
+
+    let mut memory_context = String::new();
+    if !history_rows.is_empty() {
+        memory_context.push_str("\n--- CONVERSATION HISTORY (RECENT) ---\n");
+        // Reverse to get chronological order
+        for row in history_rows.into_iter().rev() {
+            let role: String = row.get("role");
+            let content: String = row.get("content");
+            memory_context.push_str(&format!("{}: {}\n", role.to_uppercase(), content));
+        }
+    }
+
+    // 2.2 Knowledge Base Retrieval (RAG)
+    let search_results = sqlx::query(
+        r#"
+        SELECT content_chunk
+        FROM knowledge_base
+        WHERE organization_id = $1
+          AND search_vector @@ plainto_tsquery('english', $2)
+        LIMIT 3
+        "#,
+    )
+    .bind(org_ctx.id)
+    .bind(&payload.message)
+    .fetch_all(&pool)
+    .await
+    .unwrap_or_default();
+
+    let mut kb_context = String::new();
+    if !search_results.is_empty() {
+        kb_context.push_str("\n--- ADDITIONAL KNOWLEDGE BASE CONTEXT ---\n");
+        for row in search_results {
+            let chunk: String = row.get("content_chunk");
+            kb_context.push_str(&format!("Relevant Snippet: {}\n\n", chunk));
+        }
+    }
+
     let (url, auth_header, model) = if provider == "local" {
         let base_url = env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://ollama:11434".to_string());
         let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3:8b".to_string());
@@ -1462,16 +1561,19 @@ pub async fn chat_with_tutor(
         Your purpose is to help the student understand the content of this lesson and how it relates to previous lessons in the course. \
         \
         STRICT RULES: \
-        1. You can ONLY answer questions related to the CURRENT lesson or the PAST lessons provided in the context. \
-        2. If a student asks about topics NOT covered in the current or past lessons (e.g., general knowledge, future topics, or off-topic conversation), \
+        1. You can ONLY answer questions related to the CURRENT lesson, the PAST lessons, or the provided KNOWLEDGE BASE CONTEXT. \
+        2. If a student asks about topics NOT covered in the provided contexts (e.g., general knowledge, future topics, or off-topic conversation), \
            you MUST politely decline and remind them that you are here only to help with the course content up to this point. \
         3. CRITICAL: Do NOT provide direct answers for the CURRENT lesson's activities, quizzes, or code exercises. \
-           Even if the answer could be inferred from past lessons, you must only provide hints, explain underlying concepts, or guide the student to find the answer themselves. \
-        4. Maintain a supportive, encouraging, and educational tone. \
-        5. Answer in the same language as the student's question. \
+           Even if the answer is in the memory or knowledge base, you must only provide hints or explain concepts. \
+        4. Use the CONVERSATION HISTORY to maintain continuity and provide personalized help based on previous questions. \
+        5. Maintain a supportive, encouraging, and educational tone. \
+        6. Answer in the same language as the student's question. \
         \
-        LESSON CONTEXT:\n{}",
-        context
+        LESSON & HISTORY CONTEXT:\n{}\n{}\n{}",
+        context,
+        memory_context,
+        kb_context
     );
 
     let response = client.post(&url)
@@ -1502,7 +1604,20 @@ pub async fn chat_with_tutor(
         .unwrap_or("Lo siento, tuve un problema procesando tu pregunta.")
         .to_string();
 
-    Ok(Json(ChatResponse { response: tutor_response }))
+    // Save assistant response
+    let _ = sqlx::query(
+        "INSERT INTO chat_messages (session_id, role, content) VALUES ($1, $2, $3)"
+    )
+    .bind(session_id)
+    .bind("assistant")
+    .bind(&tutor_response)
+    .execute(&pool)
+    .await;
+
+    Ok(Json(ChatResponse { 
+        response: tutor_response,
+        session_id,
+    }))
 }
 
 pub async fn get_lesson_feedback(
@@ -1607,10 +1722,42 @@ pub async fn get_lesson_feedback(
         .unwrap_or("Buen trabajo completando la lección. Revisa tus resultados arriba.")
         .to_string();
 
-    Ok(Json(ChatResponse { response: tutor_response }))
+    Ok(Json(ChatResponse { 
+        response: tutor_response,
+        session_id: Uuid::nil(),
+    }))
 }
 
 
+
+pub async fn ingest_lesson_knowledge(
+    pool: &PgPool,
+    org_id: Uuid,
+    lesson_id: Uuid,
+    content: &str,
+) -> Result<(), sqlx::Error> {
+    // Split content into chunks of ~1000 characters for better RAG granularity
+    let chunks: Vec<&str> = content.as_bytes()
+        .chunks(1000)
+        .map(|c| std::str::from_utf8(c).unwrap_or(""))
+        .collect();
+
+    for chunk in chunks {
+        if chunk.trim().is_empty() { continue; }
+        
+        sqlx::query(
+            "INSERT INTO knowledge_base (organization_id, source_type, source_id, content_chunk) 
+             VALUES ($1, $2, $3, $4)"
+        )
+        .bind(org_id)
+        .bind("lesson_content")
+        .bind(Some(lesson_id))
+        .bind(chunk)
+        .execute(pool)
+        .await?;
+    }
+    Ok(())
+}
 
 fn extract_block_content(metadata: &Option<serde_json::Value>) -> String {
     let mut block_content = String::new();
@@ -1663,9 +1810,14 @@ fn extract_block_content(metadata: &Option<serde_json::Value>) -> String {
                             block_content.push_str(&format!("Instructions: {}\n", instructions));
                         }
                     }
+                    "document" => {
+                        if let Some(desc) = block.get("description").and_then(|d| d.as_str()) {
+                            block_content.push_str(&format!("Document Description: {}\n", desc));
+                        }
+                    }
                     "hotspot" => {
                         if let Some(description) = block.get("description").and_then(|d| d.as_str()) {
-                             block_content.push_str(&format!("Description: {}\n", description));
+                             block_content.push_str(&format!("Hotspot Activity Description: {}\n", description));
                         }
                     }
                     _ => {}

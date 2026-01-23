@@ -31,6 +31,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
     const [transcriptOpen, setTranscriptOpen] = useState(true);
     const [currentTime, setCurrentTime] = useState(0);
     const [userGrade, setUserGrade] = useState<UserGrade | null>(null);
+    const [allGrades, setAllGrades] = useState<UserGrade[]>([]);
     const { user } = useAuth();
 
     useEffect(() => {
@@ -45,6 +46,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
 
                 if (user) {
                     const grades = await lmsApi.getUserGrades(user.id, params.id);
+                    setAllGrades(grades);
                     const currentGrade = grades.find((g: UserGrade) => g.lesson_id === params.lessonId);
                     setUserGrade(currentGrade || null);
                 }
@@ -108,10 +110,60 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                     { ...userGrade?.metadata, block_scores: newBlockScores }
                 );
                 setUserGrade(res);
+                setAllGrades(prev => {
+                    const idx = prev.findIndex(g => g.lesson_id === params.lessonId);
+                    if (idx >= 0) {
+                        const newGrades = [...prev];
+                        newGrades[idx] = res;
+                        return newGrades;
+                    }
+                    return [...prev, res];
+                });
                 console.log(`Score for block ${blockId} submitted: ${score}`);
             } catch (err) {
                 console.error(`Failed to submit score for block ${blockId}`, err);
             }
+        }
+    };
+
+    const getLessonStatus = (l: Lesson) => {
+        const grade = allGrades.find(g => g.lesson_id === l.id);
+        const isCurrent = l.id === params.lessonId;
+
+        // Condition for Completed (Green)
+        // 1. Quizzes/Tests answered completely (score exists)
+        // 2. Non-repeatable lessons finished
+        if (grade && grade.attempts_count > 0) {
+            if (l.content_type === 'quiz' || l.content_type === 'activity' || !l.allow_retry) {
+                return 'completed'; // Green
+            }
+            if (l.allow_retry) {
+                return 'repeatable'; // Red
+            }
+        }
+
+        if (isCurrent || (grade && grade.attempts_count > 0)) {
+            return 'in-progress'; // Yellow
+        }
+
+        return 'not-started';
+    };
+
+    const getModuleStatus = (m: Module) => {
+        const statuses = m.lessons.map(l => getLessonStatus(l));
+
+        if (statuses.every(s => s === 'completed')) return 'completed';
+        if (statuses.some(s => s === 'in-progress' || s === 'completed' || s === 'repeatable')) return 'in-progress';
+
+        return 'not-started';
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'completed': return 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]';
+            case 'in-progress': return 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]';
+            case 'repeatable': return 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]';
+            default: return 'bg-white/10';
         }
     };
 
@@ -129,7 +181,10 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                 <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
                     {course.modules.map((module) => (
                         <div key={module.id} className="space-y-2">
-                            <h4 className="px-3 text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">{module.title}</h4>
+                            <div className="flex items-center justify-between px-3 mb-2">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500">{module.title}</h4>
+                                <div className={`w-1.5 h-1.5 rounded-full ${getStatusColor(getModuleStatus(module))}`} />
+                            </div>
                             <div className="space-y-1">
                                 {module.lessons.map((l) => (
                                     <Link
@@ -138,8 +193,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                         className={`sidebar-link ${l.id === params.lessonId ? 'sidebar-link-active' : 'sidebar-link-inactive'}`}
                                     >
                                         <div className="flex-1 truncate">{l.title}</div>
-                                        {/* Placeholder for progress checkmark */}
-                                        <div className="w-4 h-4 rounded-full border border-white/10" />
+                                        <div className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${getStatusColor(getLessonStatus(l))}`} />
                                     </Link>
                                 ))}
                             </div>
@@ -173,8 +227,16 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                     <div className="flex-1 overflow-y-auto px-6 py-12">
                         <div className="max-w-4xl mx-auto space-y-20 pb-40">
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-400">
-                                    <span>{lesson.content_type === 'activity' ? 'Actividad Interactiva' : 'Lección en Video'}</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-400">
+                                        <span>{lesson.content_type === 'activity' ? 'Actividad Interactiva' : 'Lección en Video'}</span>
+                                    </div>
+                                    <div className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest text-white ${getStatusColor(getLessonStatus(lesson))}`}>
+                                        {getLessonStatus(lesson) === 'completed' && "Completada"}
+                                        {getLessonStatus(lesson) === 'in-progress' && "En Curso"}
+                                        {getLessonStatus(lesson) === 'repeatable' && "Repetible"}
+                                        {getLessonStatus(lesson) === 'not-started' && "No Iniciada"}
+                                    </div>
                                 </div>
                                 <h1 className="text-4xl font-black tracking-tighter text-white">{lesson.title}</h1>
                             </div>

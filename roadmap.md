@@ -163,6 +163,7 @@
 - [x] **Locked Lesson AI Feedback**: Generación de retroalimentación motivacional para lecciones bloqueadas (Completado)
 - [x] **Context Enrichment**: Ingesta de bloques interactivos en el motor de RAG (Completado)
 - [x] **Course History Context**: Capacidad del tutor para recordar lecciones previas (Completado)
+- [x] **Color-Coded Progress Status**: Seguimiento visual por colores (Verde/Amarillo/Rojo) en sidebar y cabeceras (Completado)
 
 ## Fase 16: Estabilidad y UX Avanzada (En Progreso)
 - [/] **QA y Estabilidad**: Verificación del flujo completo de evaluación en entornos de producción.

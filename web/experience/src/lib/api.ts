@@ -354,13 +354,13 @@ export const lmsApi = {
             return res.json();
         });
     },
-    async chatWithTutor(lessonId: string, message: string): Promise<{ response: string }> {
+    async chatWithTutor(lessonId: string, message: string, sessionId?: string): Promise<{ response: string, session_id: string }> {
         return apiFetch(`/lessons/${lessonId}/chat`, {
             method: 'POST',
-            body: JSON.stringify({ message })
+            body: JSON.stringify({ message, session_id: sessionId })
         });
     },
-    async getLessonFeedback(lessonId: string): Promise<{ response: string }> {
+    async getLessonFeedback(lessonId: string): Promise<{ response: string, session_id: string }> {
         return apiFetch(`/lessons/${lessonId}/feedback`);
     }
 };

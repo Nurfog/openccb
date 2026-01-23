@@ -32,6 +32,7 @@ El proyecto ha sido optimizado para reducir la complejidad de la infraestructura
 - **Responsive UI/UX**: Interfaces optimizadas para dispositivos móviles con menús adaptativos y escalado fluido de componentes.
 - **AI Teaching Assistant (RAG)**: Tutor inteligente dentro de cada lección que ayuda a los estudiantes utilizando el contexto de la lección actual y el historial del curso.
 - **Persistent Grade Locking**: Bloqueo persistente de lecciones calificadas tras agotar los intentos, con retroalimentación personalizada generada por IA.
+- **Color-Coded Progress Navigation**: Sistema visual de seguimiento de progreso mediante colores (Verde: Completado, Amarillo: En Proceso, Rojo: Repetible) tanto a nivel de lección como de módulo.
 
 ##  Requisitos del Sistema
 
@@ -438,6 +439,7 @@ Obtiene una lista de todas las organizaciones registradas.
 - **Mobile-First Navigation**: Responsive sliding menus and adaptive layouts for all screen sizes.
 - **Context-Aware AI Tutor**: Smart assistant with RAG that remembers past lessons and protects activity answers.
 - **Personalized AI Feedback**: Motivational and instructional feedback generated uniquely for each student's results.
+- **Color-Coded Navigation**: Real-time visual progress indicators for lessons and modules (Green/Yellow/Red).
 
 ## 📄 Licencia
 Este proyecto es código abierto y está disponible bajo los términos de la licencia especificada en el repositorio.

@@ -16,7 +16,16 @@ export default function AITutor({ lessonId }: { lessonId: string }) {
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
+    const [sessionId, setSessionId] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        // Load session from localStorage on mount
+        const savedSession = localStorage.getItem(`tutor_session_${lessonId}`);
+        if (savedSession) {
+            setSessionId(savedSession);
+        }
+    }, [lessonId]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -33,8 +42,13 @@ export default function AITutor({ lessonId }: { lessonId: string }) {
         setIsLoading(true);
 
         try {
-            const { response } = await lmsApi.chatWithTutor(lessonId, userMessage);
+            const { response, session_id: newSessionId } = await lmsApi.chatWithTutor(lessonId, userMessage, sessionId || undefined);
             setMessages(prev => [...prev, { role: 'tutor', content: response }]);
+
+            if (newSessionId && newSessionId !== sessionId) {
+                setSessionId(newSessionId);
+                localStorage.setItem(`tutor_session_${lessonId}`, newSessionId);
+            }
         } catch (error) {
             console.error("Chat error:", error);
             setMessages(prev => [...prev, { role: 'tutor', content: "Lo siento, hubo un error conectando con el tutor. Por favor intenta de nuevo." }]);
@@ -95,8 +109,8 @@ export default function AITutor({ lessonId }: { lessonId: string }) {
                                 {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
                             </div>
                             <div className={`p-3 rounded-2xl text-xs font-medium leading-relaxed ${msg.role === 'user'
-                                    ? 'bg-blue-600 text-white rounded-tr-none'
-                                    : 'bg-white/5 text-gray-200 border border-white/5 rounded-tl-none'
+                                ? 'bg-blue-600 text-white rounded-tr-none'
+                                : 'bg-white/5 text-gray-200 border border-white/5 rounded-tl-none'
                                 }`}>
                                 {msg.content}
                             </div>
