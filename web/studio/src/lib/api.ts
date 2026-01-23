@@ -1,4 +1,14 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_CMS_API_URL || "http://localhost:3001";
+const getApiBaseUrl = (defaultPort: string, envVar?: string) => {
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        // Detect if we are on a custom domain or IP
+        const protocol = window.location.protocol;
+        return `${protocol}//${hostname}:${defaultPort}`;
+    }
+    return envVar || `http://localhost:${defaultPort}`;
+};
+
+export const API_BASE_URL = getApiBaseUrl("3001", process.env.NEXT_PUBLIC_CMS_API_URL);
 
 export const getImageUrl = (path?: string) => {
     if (!path) return '';

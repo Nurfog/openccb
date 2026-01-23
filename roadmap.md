@@ -39,7 +39,7 @@
 - [x] **Portal del Estudiante (Experience)**:
   - [x] Catálogo de cursos e inscripciones
   - [x] Reproductor interactivo de lecciones
-  - [x] Diseño responsivo (móviles/tablets)
+  - [x] Diseño responsivo (móviles/tablets) - **Optimizado y validado en Fase 15**
 - [x] **Sistema de Calificación Holístico**:
   - [x] Categorías de calificación con pesos (porcentajes)
   - [x] Opción de eliminar las N puntuaciones más bajas por categoría
@@ -130,7 +130,7 @@
 ## Fase 11: Evaluaciones y Quizzes Extendidos (En Progreso)
 - [x] **Quices de Código**: Desafíos interactivos con reproductor tipo IDE (Completado)
 - [x] **Identificación Visual**: Quices de "Puntos Calientes" (Hotspots) en imágenes (Completado)
-- [ ] **Tutor de IA Integrado**: Asistente basado en RAG dentro del reproductor de lecciones
+- [x] **Tutor de IA Integrado**: Asistente basado en RAG con acceso a bloques interactivos e historial del curso (Completado)
 - [x] **Evaluaciones por Audio**: Preguntas con respuesta oral para idiomas con feedback de IA detallado (Completado)
 - [x] **Eliminación de Cursos**: Gestión completa del ciclo de vida del contenido (Completado)
 - [x] **Quices con Contexto IA**: Generación de evaluaciones con enfoque y tipo personalizable (Completado)
@@ -155,9 +155,24 @@
 
 ---
 
-**Estado Actual**: La plataforma cuenta con un motor de IA avanzado que permite la generación de contenidos con una "Persona" docente experta, evaluaciones de audio automatizadas y quices personalizables con contexto. Se ha completado el ciclo de vida de gestión de cursos con la integración de la funcionalidad de borrado.
+## Fase 15: Conectividad y UI Adaptativa ✅
+- [x] **Dynamic API Resolution**: Detección automática de IP del servidor para acceso multi-dispositivo y LAN (Completado)
+- [x] **Menú Móvil (Experience)**: Implementación de navegación lateral (hamburger) para celulares (Completado)
+- [x] **Optimización de Studio**: Interfaz de administración compacta y escalable para pantallas pequeñas (Completado)
+- [x] **Tipografía Fluida**: Escalado de fuentes y márgenes adaptativos en todo el portal (Completado)
+- [x] **Locked Lesson AI Feedback**: Generación de retroalimentación motivacional para lecciones bloqueadas (Completado)
+- [x] **Context Enrichment**: Ingesta de bloques interactivos en el motor de RAG (Completado)
+- [x] **Course History Context**: Capacidad del tutor para recordar lecciones previas (Completado)
+
+## Fase 16: Estabilidad y UX Avanzada (En Progreso)
+- [/] **QA y Estabilidad**: Verificación del flujo completo de evaluación en entornos de producción.
+- [ ] **Rutas de Aprendizaje**: Recomendaciones basadas en el historial personalizadas.
+- [ ] **Optimización de Contenedores**: Limpieza automatizada y reducción de huella de infraestructura.
+
+---
+
+**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica y una **interfaz 100% responsiva**.
 
 **Próximas Prioridades**:
-1. **QA y Estabilidad**: Verificación del flujo completo de evaluación en entornos de producción.
-2. **IA Teaching Assistant**: Tutor RAG personalizado por curso.
-3. **Rutas de Aprendizaje**: Recomendaciones basadas en el historial.
+1. **QA Exhaustivo**: Pruebas de carga en servicios de IA.
+2. **Rutas de Aprendizaje**: Motor de recomendaciones dinámicas.

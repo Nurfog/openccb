@@ -1,12 +1,21 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_LMS_API_URL || "http://localhost:3002";
-export const CMS_API_URL = process.env.NEXT_PUBLIC_CMS_API_URL || "http://localhost:3001";
+const getApiBaseUrl = (defaultPort: string, envVar?: string) => {
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        const protocol = window.location.protocol;
+        return `${protocol}//${hostname}:${defaultPort}`;
+    }
+    return envVar || `http://localhost:${defaultPort}`;
+};
+
+export const getLmsApiUrl = () => getApiBaseUrl("3002", process.env.NEXT_PUBLIC_LMS_API_URL);
+export const getCmsApiUrl = () => getApiBaseUrl("3001", process.env.NEXT_PUBLIC_CMS_API_URL);
 
 export const getImageUrl = (path?: string) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
     const cleanPath = path.startsWith('/uploads') ? path.replace('/uploads', '/assets') : path;
     const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
-    return `${CMS_API_URL}${finalPath}`;
+    return `${getCmsApiUrl()}${finalPath}`;
 };
 
 export interface Organization {
@@ -171,7 +180,7 @@ export interface Enrollment {
     id: string;
     user_id: string;
     course_id: string;
-    enroled_at: string;
+    enrolled_at: string;
 }
 
 export interface Module {
@@ -186,7 +195,7 @@ const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('exp
 
 const apiFetch = async (url: string, options: RequestInit = {}, isCMS: boolean = false) => {
     const token = getToken();
-    const baseUrl = isCMS ? CMS_API_URL : API_BASE_URL;
+    const baseUrl = isCMS ? getCmsApiUrl() : getLmsApiUrl();
     const headers = {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -238,7 +247,7 @@ export const lmsApi = {
     },
 
     initSSOLogin(orgId: string): void {
-        window.location.href = `${CMS_API_URL}/auth/sso/login/${orgId}`;
+        window.location.href = `${getCmsApiUrl()}/auth/sso/login/${orgId}`;
     },
 
     async enroll(courseId: string, userId: string): Promise<void> {
@@ -286,7 +295,7 @@ export const lmsApi = {
         const formData = new FormData();
         formData.append('file', file);
         const token = getToken();
-        return fetch(`${CMS_API_URL}/assets/upload`, {
+        return fetch(`${getCmsApiUrl()}/assets/upload`, {
             method: 'POST',
             headers: {
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -331,7 +340,7 @@ export const lmsApi = {
         formData.append('keywords', JSON.stringify(keywords));
 
         const token = getToken();
-        return fetch(`${API_BASE_URL}/audio/evaluate-file`, {
+        return fetch(`${getLmsApiUrl()}/audio/evaluate-file`, {
             method: 'POST',
             headers: {
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {})
@@ -344,5 +353,14 @@ export const lmsApi = {
             }
             return res.json();
         });
+    },
+    async chatWithTutor(lessonId: string, message: string): Promise<{ response: string }> {
+        return apiFetch(`/lessons/${lessonId}/chat`, {
+            method: 'POST',
+            body: JSON.stringify({ message })
+        });
+    },
+    async getLessonFeedback(lessonId: string): Promise<{ response: string }> {
+        return apiFetch(`/lessons/${lessonId}/feedback`);
     }
 };

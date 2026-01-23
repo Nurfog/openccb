@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Play, Lock, AlertCircle } from "lucide-react";
-import { lmsApi } from "@/lib/api";
+import { lmsApi, getCmsApiUrl } from "@/lib/api";
 
 interface MediaPlayerProps {
     id: string;
@@ -46,14 +46,14 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
 
     const maxPlays = config?.maxPlays || 0;
 
-    const CMS_API_URL = process.env.NEXT_PUBLIC_CMS_API_URL || "http://localhost:3001";
+
 
     const getFullUrl = (path: string) => {
         if (path.startsWith('http')) return path;
         // Map /uploads to /assets for the backend
         const cleanPath = path.startsWith('/uploads') ? path.replace('/uploads', '/assets') : path;
         const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
-        return `${CMS_API_URL}${finalPath}`;
+        return `${getCmsApiUrl()}${finalPath}`;
     };
 
     const isLocalFile = url.startsWith('/uploads') || url.startsWith('http://localhost:3001/assets') || url.includes('/assets/');
@@ -129,8 +129,8 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
     // Since browser <track> doesn't support custom headers easily, 
     // we might need to handle this via a proxy or temporary signed URLs.
     // For now, we'll assume the backend allows VTT access if requested with the correct lesson ID.
-    const vttEn = lessonId ? `${CMS_API_URL}/lessons/${lessonId}/vtt?lang=en` : null;
-    const vttEs = lessonId ? `${CMS_API_URL}/lessons/${lessonId}/vtt?lang=es` : null;
+    const vttEn = lessonId ? `${getCmsApiUrl()}/lessons/${lessonId}/vtt?lang=en` : null;
+    const vttEs = lessonId ? `${getCmsApiUrl()}/lessons/${lessonId}/vtt?lang=es` : null;
 
     return (
         <div className="space-y-6" id={id}>

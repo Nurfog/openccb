@@ -85,22 +85,22 @@ export default function CatalogPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-20">
-      <div className="mb-20 flex flex-col md:flex-row md:items-end justify-between gap-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 md:py-20">
+      <div className="mb-12 md:mb-20 flex flex-col md:flex-row md:items-end justify-between gap-8 text-center md:text-left">
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-blue-500">
+          <div className="flex items-center justify-center md:justify-start gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-blue-500">
             <Star size={14} className="fill-blue-500" />
             <span>Currículo Premier</span>
           </div>
-          <h1 className="text-6xl font-black tracking-tighter leading-none">
-            Explorar <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600">Cursos</span>
+          <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-tight md:leading-none">
+            Explorar <span className="block sm:inline text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600">Cursos</span>
           </h1>
-          <p className="text-gray-500 font-medium max-w-xl text-lg">
+          <p className="text-gray-500 font-medium max-w-xl text-base md:text-lg mx-auto md:mx-0">
             Domina las habilidades del futuro con nuestro contenido educativo de alta fidelidad.
           </p>
         </div>
         {!user && (
-          <Link href="/auth/register" className="btn-premium !bg-white !text-black shadow-none !px-8">
+          <Link href="/auth/register" className="btn-premium !bg-white !text-black shadow-none !px-8 w-full sm:w-auto">
             Comienza Gratis
           </Link>
         )}

@@ -47,7 +47,7 @@ export default function MyLearningPage() {
                         enrichedEnrollments.push({
                             course: { ...course, modules },
                             progress,
-                            lastAccessed: enrollment.enroled_at
+                            lastAccessed: enrollment.enrolled_at
                         });
                     } catch (err) {
                         console.error(`Error loading course ${enrollment.course_id}`, err);

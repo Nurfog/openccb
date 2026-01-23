@@ -81,6 +81,8 @@ async fn main() {
         )
         .route("/audio/evaluate", post(handlers::evaluate_audio_response))
         .route("/audio/evaluate-file", post(handlers::evaluate_audio_file))
+        .route("/lessons/{id}/chat", post(handlers::chat_with_tutor))
+        .route("/lessons/{id}/feedback", get(handlers::get_lesson_feedback))
         .route("/notifications", get(handlers::get_notifications))
         .route(
             "/notifications/{id}/read",

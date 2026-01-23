@@ -29,7 +29,7 @@ export default function RootLayout({
           <I18nProvider>
             <AuthGuard>
               <BrandingManager />
-              <header className="h-20 glass sticky top-0 z-50 px-8 flex items-center justify-between border-b border-white/5 backdrop-blur-xl bg-black/40">
+              <header className="h-16 md:h-20 glass sticky top-0 z-50 px-4 md:px-8 flex items-center justify-between border-b border-white/5 backdrop-blur-xl bg-black/40">
                 <Link href="/" className="flex items-center gap-3 group">
                   <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
                     <BookOpen size={20} />

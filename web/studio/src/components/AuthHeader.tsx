@@ -10,17 +10,17 @@ export default function AuthHeader() {
         <div className="flex items-center gap-4">
             {user?.role === 'admin' && (
                 <>
-                    <Link href="/admin/organizations" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors flex items-center gap-2">
-                        <Building2 size={16} /> Org
+                    <Link href="/admin/organizations" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors flex items-center gap-2" title="Organizations">
+                        <Building2 size={16} /> <span className="hidden md:inline">Org</span>
                     </Link>
-                    <Link href="/admin/audit" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors flex items-center gap-2">
-                        <ShieldAlert size={16} /> Audit
+                    <Link href="/admin/audit" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors flex items-center gap-2" title="Audit Logs">
+                        <ShieldAlert size={16} /> <span className="hidden md:inline">Audit</span>
                     </Link>
-                    <Link href="/admin/tasks" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors flex items-center gap-2">
-                        <Activity size={16} /> Tasks
+                    <Link href="/admin/tasks" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors flex items-center gap-2" title="Tasks">
+                        <Activity size={16} /> <span className="hidden md:inline">Tasks</span>
                     </Link>
-                    <Link href="/settings" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors flex items-center gap-2">
-                        <Settings size={16} /> Settings
+                    <Link href="/settings" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors flex items-center gap-2" title="Settings">
+                        <Settings size={16} /> <span className="hidden md:inline">Settings</span>
                     </Link>
                 </>
             )}

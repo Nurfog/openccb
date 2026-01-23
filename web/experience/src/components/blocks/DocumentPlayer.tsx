@@ -1,7 +1,7 @@
 "use client";
 
 import { FileText, Download, Eye, ExternalLink } from "lucide-react";
-import { CMS_API_URL } from "@/lib/api";
+import { getCmsApiUrl } from "@/lib/api";
 
 interface DocumentPlayerProps {
     id: string;
@@ -18,7 +18,7 @@ export default function DocumentPlayer({ id, title, url }: DocumentPlayerProps) 
         if (path.startsWith('http')) return path;
         const cleanPath = path.startsWith('/uploads') ? path.replace('/uploads', '/assets') : path;
         const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
-        return `${CMS_API_URL}${finalPath}`;
+        return `${getCmsApiUrl()}${finalPath}`;
     };
 
     const displayUrl = getFullUrl(url);

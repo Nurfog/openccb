@@ -236,7 +236,7 @@ export default function ExperienceLoginPage() {
                     <div className="mt-6 pt-6 border-t border-white/10 text-center">
                         <p className="text-sm text-gray-400">
                             ¿Eres un instructor?{" "}
-                            <a href="http://localhost:3000/auth/login" className="text-indigo-400 hover:text-indigo-300 font-bold">
+                            <a href="http://192.168.0.254:3000/auth/login" className="text-indigo-400 hover:text-indigo-300 font-bold">
                                 Ir al Portal de Instructores
                             </a>
                         </p>

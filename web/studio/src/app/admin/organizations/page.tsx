@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { cmsApi, Organization, getImageUrl } from '@/lib/api';
+import { cmsApi, Organization, getImageUrl, API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 import { Plus, Building2, Globe, Calendar, ExternalLink, ShieldCheck, Palette, Upload, Save, X, Fingerprint, Key, Settings2 } from 'lucide-react';
@@ -176,18 +176,18 @@ export default function OrganizationsPage() {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center">
+        <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 p-4 md:p-0">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Organizations</h1>
-                    <p className="text-gray-400 mt-1">Manage tenants and isolated environments.</p>
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Organizations</h1>
+                    <p className="text-gray-400 mt-1 text-sm">Manage tenants and isolated environments.</p>
                 </div>
                 <button
                     onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all shadow-lg shadow-blue-500/20 shadow-glow"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all shadow-lg shadow-blue-500/20 shadow-glow"
                 >
                     <Plus className="w-4 h-4" />
-                    New Organization
+                    <span className="inline">New Organization</span>
                 </button>
             </div>
 
@@ -570,7 +570,7 @@ export default function OrganizationsPage() {
                                     </div>
                                     <p className="text-[10px] text-blue-300 leading-relaxed">
                                         1. Register OpenCCB as an application in your Identity Provider (Okta, Google, Azure AD).<br />
-                                        2. Set the Redirect URI to: <span className="font-mono bg-blue-500/20 px-1">http://localhost:3001/auth/sso/callback</span><br />
+                                        2. Set the Redirect URI to: <span className="font-mono bg-blue-500/20 px-1">{API_BASE_URL}/auth/sso/callback</span><br />
                                         3. Copy the Issuer URL, Client ID, and Client Secret here.
                                     </p>
                                 </div>

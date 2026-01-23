@@ -28,6 +28,10 @@ El proyecto ha sido optimizado para reducir la complejidad de la infraestructura
     - **Course Deletion**: Funcionalidad de eliminación de cursos con verificación de permisos y limpieza en cascada.
     - **Gamified Activities**: Nuevos tipos de bloques interactivos para niños y jóvenes, incluyendo Juegos de Memoria y Puntos Calientes (Hotspots).
     - **Auto Transcription**: Integración con Whisper para generación automática de transcripciones y evaluación precisa de voz.
+- **Dynamic API Resolution**: Resolución inteligente de endpoints que permite el acceso desde cualquier dispositivo en la red local (WiFi) sin configuración manual.
+- **Responsive UI/UX**: Interfaces optimizadas para dispositivos móviles con menús adaptativos y escalado fluido de componentes.
+- **AI Teaching Assistant (RAG)**: Tutor inteligente dentro de cada lección que ayuda a los estudiantes utilizando el contexto de la lección actual y el historial del curso.
+- **Persistent Grade Locking**: Bloqueo persistente de lecciones calificadas tras agotar los intentos, con retroalimentación personalizada generada por IA.
 
 ##  Requisitos del Sistema
 
@@ -70,6 +74,9 @@ docker-compose up --build
 Esto iniciará todos los servicios:
 - **Studio**: [http://localhost:3000](http://localhost:3000)
 - **Experience**: [http://localhost:3003](http://localhost:3003)
+
+> [!TIP]
+> **Acceso desde Móviles**: Gracias a la *Dynamic API Resolution*, puedes acceder desde tu celular conectado al mismo WiFi usando la IP de tu computadora (ej: `http://192.168.1.15:3000`). La interfaz se adaptará automáticamente.
 
 ### Desarrollo Local
 
@@ -307,6 +314,23 @@ Elimina un curso y todos sus contenidos relacionados (módulos, lecciones, asset
 - **Procesamiento Asíncrono**: Despacha una tarea en segundo plano que utiliza Whisper para transcripción y Ollama para generar la traducción y el resumen inteligente.
 - **Cuerpo de la Petición**: Vacío.
 
+#### GET /lessons/{id}/feedback
+Obtiene retroalimentación personalizada de IA basada en el desempeño del estudiante y el contexto de la lección.
+
+- **Uso Crítico**: Se llama automáticamente cuando una lección calificada es bloqueada por intentos agotados.
+- **Respuesta**: Un objeto JSON con la respuesta motivacional del tutor.
+
+#### POST /lessons/{id}/chat
+Interactúa con el tutor de IA específico para la lección.
+
+- **Contexto Inteligente**: La IA tiene acceso a la transcripción del video, el contenido de los bloques interactivos y el historial de lecciones pasadas del curso.
+- **Cuerpo ( ChatPayload ):**
+  ```json
+  {
+    "message": "string"
+  }
+  ```
+
 #### GET /lessons/{id}/vtt?lang=en|es
 Devuelve los subtítulos en formato WebVTT para integración nativa.
 
@@ -410,6 +434,10 @@ Obtiene una lista de todas las organizaciones registradas.
 - **PDF Integrated Viewer**: Read academic documents without leaving the platform.
 - **Interactive Video Markers**: Pause-and-answer questions embedded in video lessons.
 - **White-Label Branding**: Fully custom platform name, logo, favicon, and color themes per organization.
+- **Dynamic LAN Connectivity**: Automatic server IP detection for seamless multi-device access.
+- **Mobile-First Navigation**: Responsive sliding menus and adaptive layouts for all screen sizes.
+- **Context-Aware AI Tutor**: Smart assistant with RAG that remembers past lessons and protects activity answers.
+- **Personalized AI Feedback**: Motivational and instructional feedback generated uniquely for each student's results.
 
 ## 📄 Licencia
 Este proyecto es código abierto y está disponible bajo los términos de la licencia especificada en el repositorio.

@@ -237,7 +237,7 @@ export default function StudioLoginPage() {
                     <div className="mt-6 pt-6 border-t border-white/10 text-center">
                         <p className="text-sm text-gray-400">
                             Are you a student?{" "}
-                            <a href="http://localhost:3003/auth/login" className="text-blue-400 hover:text-blue-300 font-bold">
+                            <a href="http://192.168.0.254:3003/auth/login" className="text-blue-400 hover:text-blue-300 font-bold">
                                 Go to Student Portal
                             </a>
                         </p>

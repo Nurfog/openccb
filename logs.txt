@@ -1,0 +1,76 @@
+[2m2026-01-23T16:11:08.024085Z[0m [32m INFO[0m [2msqlx::postgres::notice[0m[2m:[0m relation "_sqlx_migrations" already exists, skipping
+[2m2026-01-23T16:11:08.027458Z[0m [32m INFO[0m [2mlms_service[0m[2m:[0m LMS Service listening on 0.0.0.0:3002
+  ▲ Next.js 14.2.21
+  - Local:        http://006ab367474a:3003
+  - Network:      http://172.18.0.3:3003
+
+ ✓ Starting...
+ ✓ Ready in 30ms
+ ⨯ TypeError: fetch failed
+    at node:internal/deps/undici/undici:12637:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async fetchExternalImage (/app/node_modules/next/dist/server/image-optimizer.js:589:17)
+    at async NextNodeServer.imageOptimizer (/app/node_modules/next/dist/server/next-server.js:649:48)
+    at async cacheEntry.imageResponseCache.get.incrementalCache (/app/node_modules/next/dist/server/next-server.js:182:65)
+    at async /app/node_modules/next/dist/server/response-cache/index.js:90:36
+    at async /app/node_modules/next/dist/lib/batcher.js:45:32 {
+  cause: Error: connect ECONNREFUSED 127.0.0.1:3001
+      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1555:16) {
+    errno: -111,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3001
+  }
+}
+[2m2026-01-23T16:12:42.241889Z[0m [32m INFO[0m [2mlms_service::handlers[0m[2m:[0m get_course_outline: fetching course 3b492da6-b662-4894-a244-86cd4b7d4aa4
+[2m2026-01-23T16:12:42.247382Z[0m [32m INFO[0m [2mlms_service::handlers[0m[2m:[0m get_course_outline: fetching course e3b1fe67-c411-4dbd-a222-a6111ce786bb
+[2m2026-01-23T16:12:47.935236Z[0m [32m INFO[0m [2mlms_service::handlers[0m[2m:[0m get_course_outline: fetching course 3b492da6-b662-4894-a244-86cd4b7d4aa4
+[2m2026-01-23T16:12:50.853225Z[0m [32m INFO[0m [2mlms_service::handlers[0m[2m:[0m get_course_outline: fetching course 3b492da6-b662-4894-a244-86cd4b7d4aa4
+[2m2026-01-23T16:12:50.860842Z[0m [32m INFO[0m [2mlms_service::handlers[0m[2m:[0m get_course_outline: fetching course e3b1fe67-c411-4dbd-a222-a6111ce786bb
+[2m2026-01-23T16:12:53.661037Z[0m [32m INFO[0m [2mlms_service::handlers[0m[2m:[0m get_course_outline: fetching course e3b1fe67-c411-4dbd-a222-a6111ce786bb
+[2m2026-01-23T16:12:57.221143Z[0m [32m INFO[0m [2mlms_service::handlers[0m[2m:[0m get_course_outline: fetching course 3b492da6-b662-4894-a244-86cd4b7d4aa4
+[2m2026-01-23T16:12:57.239532Z[0m [32m INFO[0m [2mlms_service::handlers[0m[2m:[0m get_course_outline: fetching course e3b1fe67-c411-4dbd-a222-a6111ce786bb
+[2m2026-01-23T16:12:58.825384Z[0m [32m INFO[0m [2mlms_service::handlers[0m[2m:[0m get_course_outline: fetching course 3b492da6-b662-4894-a244-86cd4b7d4aa4
+[2m2026-01-23T16:12:58.834411Z[0m [32m INFO[0m [2mlms_service::handlers[0m[2m:[0m get_course_outline: fetching course e3b1fe67-c411-4dbd-a222-a6111ce786bb
+[2m2026-01-23T16:13:00.543902Z[0m [32m INFO[0m [2mlms_service::handlers[0m[2m:[0m get_course_outline: fetching course 3b492da6-b662-4894-a244-86cd4b7d4aa4
+[2m2026-01-23T16:13:00.559156Z[0m [32m INFO[0m [2mlms_service::handlers[0m[2m:[0m get_course_outline: fetching course e3b1fe67-c411-4dbd-a222-a6111ce786bb
+[2m2026-01-23T16:13:02.271758Z[0m [32m INFO[0m [2mlms_service::handlers[0m[2m:[0m get_course_outline: fetching course 3b492da6-b662-4894-a244-86cd4b7d4aa4
+[2m2026-01-23T16:22:32.087284Z[0m [32m INFO[0m [2mlms_service::handlers[0m[2m:[0m get_course_outline: fetching course 3b492da6-b662-4894-a244-86cd4b7d4aa4
+ ⨯ TypeError: fetch failed
+    at node:internal/deps/undici/undici:12637:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async fetchExternalImage (/app/node_modules/next/dist/server/image-optimizer.js:589:17)
+    at async NextNodeServer.imageOptimizer (/app/node_modules/next/dist/server/next-server.js:649:48)
+    at async cacheEntry.imageResponseCache.get.incrementalCache (/app/node_modules/next/dist/server/next-server.js:182:65)
+    at async /app/node_modules/next/dist/server/response-cache/index.js:90:36
+    at async /app/node_modules/next/dist/lib/batcher.js:45:32 {
+  cause: Error: connect ECONNREFUSED 127.0.0.1:3001
+      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1555:16)
+      at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:128:17) {
+    errno: -111,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3001
+  }
+}
+[2m2026-01-23T16:22:45.297187Z[0m [32m INFO[0m [2mlms_service::handlers[0m[2m:[0m get_course_outline: fetching course 3b492da6-b662-4894-a244-86cd4b7d4aa4
+ ⨯ TypeError: fetch failed
+    at node:internal/deps/undici/undici:12637:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async fetchExternalImage (/app/node_modules/next/dist/server/image-optimizer.js:589:17)
+    at async NextNodeServer.imageOptimizer (/app/node_modules/next/dist/server/next-server.js:649:48)
+    at async cacheEntry.imageResponseCache.get.incrementalCache (/app/node_modules/next/dist/server/next-server.js:182:65)
+    at async /app/node_modules/next/dist/server/response-cache/index.js:90:36
+    at async /app/node_modules/next/dist/lib/batcher.js:45:32 {
+  cause: Error: connect ECONNREFUSED 127.0.0.1:3001
+      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1555:16)
+      at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:128:17) {
+    errno: -111,
+    code: 'ECONNREFUSED',
+    syscall: 'connect',
+    address: '127.0.0.1',
+    port: 3001
+  }
+}

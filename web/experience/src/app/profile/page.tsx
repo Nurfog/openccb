@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/context/I18nContext";
-import { lmsApi, CMS_API_URL } from "@/lib/api";
+import { lmsApi, getCmsApiUrl } from "@/lib/api";
 import {
     Save,
     Shield,
@@ -60,7 +60,7 @@ export default function ProfilePage() {
         if (path.startsWith('http')) return path;
         const cleanPath = path.startsWith('/uploads') ? path.replace('/uploads', '/assets') : path;
         const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
-        return `${CMS_API_URL}${finalPath}`;
+        return `${getCmsApiUrl()}${finalPath}`;
     };
 
     const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

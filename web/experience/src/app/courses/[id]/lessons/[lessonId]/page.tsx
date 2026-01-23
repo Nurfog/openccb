@@ -19,6 +19,8 @@ import MemoryPlayer from "@/components/blocks/MemoryPlayer";
 import DocumentPlayer from "@/components/blocks/DocumentPlayer";
 import AudioResponsePlayer from "@/components/blocks/AudioResponsePlayer";
 import InteractiveTranscript from "@/components/InteractiveTranscript";
+import AITutor from "@/components/AITutor";
+import LessonLockedView from "@/components/LessonLockedView";
 import { ListMusic } from "lucide-react";
 
 export default function LessonPlayerPage({ params }: { params: { id: string, lessonId: string } }) {
@@ -188,179 +190,178 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                 </div>
                             )}
 
-                            {/* Render Blocks */}
-                            {(lesson.metadata?.blocks || []).length > 0 ? (
-                                <div className="space-y-24">
-                                    {lesson.metadata?.blocks?.map((block) => {
-                                        const renderBlock = () => {
-                                            switch (block.type) {
-                                                case 'description':
-                                                    return <DescriptionPlayer id={block.id} title={block.title} content={block.content || ""} />;
-                                                case 'media':
-                                                    return (
-                                                        <MediaPlayer
-                                                            id={block.id}
-                                                            lessonId={params.lessonId}
-                                                            title={block.title}
-                                                            url={block.url || ""}
-                                                            media_type={block.media_type || 'video'}
-                                                            config={block.config}
-                                                            onTimeUpdate={setCurrentTime}
-                                                            initialPlayCount={
-                                                                userGrade?.metadata?.play_counts
-                                                                    ? (userGrade.metadata.play_counts as Record<string, number>)[block.id] || 0
-                                                                    : 0
-                                                            }
-                                                            onPlay={async () => {
-                                                                if (user && lesson.max_attempts && (!userGrade || userGrade.attempts_count < lesson.max_attempts)) {
-                                                                    const currentPlayCounts = (userGrade?.metadata?.play_counts as Record<string, number>) || {};
-                                                                    const newPlayCounts = {
-                                                                        ...currentPlayCounts,
-                                                                        [block.id]: (currentPlayCounts[block.id] || 0) + 1
-                                                                    };
-
-                                                                    try {
-                                                                        const res = await lmsApi.submitScore(
-                                                                            user.id,
-                                                                            params.id,
-                                                                            params.lessonId,
-                                                                            userGrade?.score || 0,
-                                                                            { ...userGrade?.metadata, play_counts: newPlayCounts }
-                                                                        );
-                                                                        setUserGrade(res);
-                                                                    } catch (err) {
-                                                                        console.error("Error al guardar el recuento de reproducciones", err);
-                                                                    }
-                                                                }
-                                                            }}
-                                                            isGraded={lesson.is_graded}
-                                                            hasTranscription={!!lesson.transcription}
-                                                        />
-                                                    );
-                                                case 'document':
-                                                    return <DocumentPlayer id={block.id} title={block.title} url={block.url || ""} />;
-                                                case 'quiz':
-                                                    return (
-                                                        <QuizPlayer
-                                                            id={block.id}
-                                                            title={block.title}
-                                                            quizData={block.quiz_data || { questions: [] }}
-                                                            allowRetry={lesson.allow_retry}
-                                                            maxAttempts={lesson.max_attempts || undefined}
-                                                            initialAttempts={
-                                                                userGrade?.metadata?.block_attempts
-                                                                    ? (userGrade.metadata.block_attempts as Record<string, number>)[block.id] || 0
-                                                                    : 0
-                                                            }
-                                                            onAttempt={async () => {
-                                                                if (user) {
-                                                                    const currentAttempts = (userGrade?.metadata?.block_attempts as Record<string, number>) || {};
-                                                                    const newAttempts = {
-                                                                        ...currentAttempts,
-                                                                        [block.id]: (currentAttempts[block.id] || 0) + 1
-                                                                    };
-
-                                                                    try {
-                                                                        const res = await lmsApi.submitScore(
-                                                                            user.id,
-                                                                            params.id,
-                                                                            params.lessonId,
-                                                                            userGrade?.score || 0,
-                                                                            { ...userGrade?.metadata, block_attempts: newAttempts }
-                                                                        );
-                                                                        setUserGrade(res);
-                                                                    } catch (err) {
-                                                                        console.error("Error al guardar los intentos del bloque", err);
-                                                                    }
-                                                                }
-                                                            }}
-                                                        />
-                                                    );
-                                                case 'fill-in-the-blanks':
-                                                    return <FillInTheBlanksPlayer id={block.id} title={block.title} content={block.content || ""} allowRetry={lesson.allow_retry} />;
-                                                case 'matching':
-                                                    return <MatchingPlayer id={block.id} title={block.title} pairs={block.pairs || []} allowRetry={lesson.allow_retry} />;
-                                                case 'ordering':
-                                                    return <OrderingPlayer id={block.id} title={block.title} items={block.items || []} allowRetry={lesson.allow_retry} />;
-                                                case 'short-answer':
-                                                    return (
-                                                        <ShortAnswerPlayer
-                                                            id={block.id}
-                                                            title={block.title}
-                                                            prompt={block.prompt || ""}
-                                                            correctAnswers={block.correctAnswers || []}
-                                                            allowRetry={lesson.allow_retry}
-                                                        />
-                                                    );
-                                                case 'audio-response':
-                                                    return (
-                                                        <AudioResponsePlayer
-                                                            id={block.id}
-                                                            prompt={block.prompt || ""}
-                                                            keywords={block.keywords}
-                                                            timeLimit={block.timeLimit}
-                                                            isGraded={lesson.is_graded}
-                                                            onComplete={(score) => handleBlockComplete(block.id, score)}
-                                                        />
-                                                    );
-                                                case 'code':
-                                                    return (
-                                                        <CodeExercisePlayer
-                                                            title={block.title}
-                                                            instructions={block.instructions || ""}
-                                                            initialCode={block.initialCode || ""}
-                                                            onComplete={(score) => handleBlockComplete(block.id, score)}
-                                                        />
-                                                    );
-                                                case 'hotspot':
-                                                    return (
-                                                        <HotspotPlayer
-                                                            title={block.title}
-                                                            description={block.description || ""}
-                                                            imageUrl={block.imageUrl || ""}
-                                                            hotspots={block.hotspots || []}
-                                                            onComplete={(score) => handleBlockComplete(block.id, score)}
-                                                        />
-                                                    );
-                                                case 'memory-match':
-                                                    return (
-                                                        <MemoryPlayer
-                                                            title={block.title}
-                                                            pairs={block.pairs || []}
-                                                            onComplete={(score) => handleBlockComplete(block.id, score)}
-                                                        />
-                                                    );
-                                                default:
-                                                    return <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-gray-500 uppercase tracking-widest">Tipo de Bloque Desconocido: {block.type}</div>;
-                                            }
-                                        };
-
-                                        return (
-                                            <div key={block.id} className="animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
-                                                {renderBlock()}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                            {/* Render Blocks or Locked View */}
+                            {lesson.is_graded && userGrade && lesson.max_attempts && userGrade.attempts_count >= lesson.max_attempts ? (
+                                <LessonLockedView
+                                    lessonId={params.lessonId}
+                                    courseId={params.id}
+                                    grade={userGrade}
+                                    maxAttempts={lesson.max_attempts}
+                                />
                             ) : (
-                                <div className="py-20 text-center glass-card border-dashed border-white/10">
-                                    <p className="text-gray-500 font-bold uppercase tracking-widest">Actualmente, esta lección no tiene contenido.</p>
-                                </div>
+                                (lesson.metadata?.blocks || []).length > 0 ? (
+                                    <div className="space-y-24">
+                                        {lesson.metadata?.blocks?.map((block) => {
+                                            const renderBlock = () => {
+                                                switch (block.type) {
+                                                    case 'description':
+                                                        return <DescriptionPlayer id={block.id} title={block.title} content={block.content || ""} />;
+                                                    case 'media':
+                                                        return (
+                                                            <MediaPlayer
+                                                                id={block.id}
+                                                                lessonId={params.lessonId}
+                                                                title={block.title}
+                                                                url={block.url || ""}
+                                                                media_type={block.media_type || 'video'}
+                                                                config={block.config}
+                                                                onTimeUpdate={setCurrentTime}
+                                                                initialPlayCount={
+                                                                    userGrade?.metadata?.play_counts
+                                                                        ? (userGrade.metadata.play_counts as Record<string, number>)[block.id] || 0
+                                                                        : 0
+                                                                }
+                                                                onPlay={async () => {
+                                                                    if (user && lesson.max_attempts && (!userGrade || userGrade.attempts_count < lesson.max_attempts)) {
+                                                                        const currentPlayCounts = (userGrade?.metadata?.play_counts as Record<string, number>) || {};
+                                                                        const newPlayCounts = {
+                                                                            ...currentPlayCounts,
+                                                                            [block.id]: (currentPlayCounts[block.id] || 0) + 1
+                                                                        };
+
+                                                                        try {
+                                                                            const res = await lmsApi.submitScore(
+                                                                                user.id,
+                                                                                params.id,
+                                                                                params.lessonId,
+                                                                                userGrade?.score || 0,
+                                                                                { ...userGrade?.metadata, play_counts: newPlayCounts }
+                                                                            );
+                                                                            setUserGrade(res);
+                                                                        } catch (err) {
+                                                                            console.error("Error al guardar el recuento de reproducciones", err);
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                isGraded={lesson.is_graded}
+                                                                hasTranscription={!!lesson.transcription}
+                                                            />
+                                                        );
+                                                    case 'document':
+                                                        return <DocumentPlayer id={block.id} title={block.title} url={block.url || ""} />;
+                                                    case 'quiz':
+                                                        return (
+                                                            <QuizPlayer
+                                                                id={block.id}
+                                                                title={block.title}
+                                                                quizData={block.quiz_data || { questions: [] }}
+                                                                allowRetry={lesson.allow_retry}
+                                                                maxAttempts={lesson.max_attempts || undefined}
+                                                                initialAttempts={
+                                                                    userGrade?.metadata?.block_attempts
+                                                                        ? (userGrade.metadata.block_attempts as Record<string, number>)[block.id] || 0
+                                                                        : 0
+                                                                }
+                                                                onAttempt={async () => {
+                                                                    if (user) {
+                                                                        const currentAttempts = (userGrade?.metadata?.block_attempts as Record<string, number>) || {};
+                                                                        const newAttempts = {
+                                                                            ...currentAttempts,
+                                                                            [block.id]: (currentAttempts[block.id] || 0) + 1
+                                                                        };
+
+                                                                        try {
+                                                                            const res = await lmsApi.submitScore(
+                                                                                user.id,
+                                                                                params.id,
+                                                                                params.lessonId,
+                                                                                userGrade?.score || 0,
+                                                                                { ...userGrade?.metadata, block_attempts: newAttempts }
+                                                                            );
+                                                                            setUserGrade(res);
+                                                                        } catch (err) {
+                                                                            console.error("Error al guardar los intentos del bloque", err);
+                                                                        }
+                                                                    }
+                                                                }}
+                                                            />
+                                                        );
+                                                    case 'fill-in-the-blanks':
+                                                        return <FillInTheBlanksPlayer id={block.id} title={block.title} content={block.content || ""} allowRetry={lesson.allow_retry} />;
+                                                    case 'matching':
+                                                        return <MatchingPlayer id={block.id} title={block.title} pairs={block.pairs || []} allowRetry={lesson.allow_retry} />;
+                                                    case 'ordering':
+                                                        return <OrderingPlayer id={block.id} title={block.title} items={block.items || []} allowRetry={lesson.allow_retry} />;
+                                                    case 'short-answer':
+                                                        return (
+                                                            <ShortAnswerPlayer
+                                                                id={block.id}
+                                                                title={block.title}
+                                                                prompt={block.prompt || ""}
+                                                                correctAnswers={block.correctAnswers || []}
+                                                                allowRetry={lesson.allow_retry}
+                                                            />
+                                                        );
+                                                    case 'audio-response':
+                                                        return (
+                                                            <AudioResponsePlayer
+                                                                id={block.id}
+                                                                prompt={block.prompt || ""}
+                                                                keywords={block.keywords}
+                                                                timeLimit={block.timeLimit}
+                                                                isGraded={lesson.is_graded}
+                                                                onComplete={(score) => handleBlockComplete(block.id, score)}
+                                                            />
+                                                        );
+                                                    case 'code':
+                                                        return (
+                                                            <CodeExercisePlayer
+                                                                title={block.title}
+                                                                instructions={block.instructions || ""}
+                                                                initialCode={block.initialCode || ""}
+                                                                onComplete={(score) => handleBlockComplete(block.id, score)}
+                                                            />
+                                                        );
+                                                    case 'hotspot':
+                                                        return (
+                                                            <HotspotPlayer
+                                                                title={block.title}
+                                                                description={block.description || ""}
+                                                                imageUrl={block.imageUrl || ""}
+                                                                hotspots={block.hotspots || []}
+                                                                onComplete={(score) => handleBlockComplete(block.id, score)}
+                                                            />
+                                                        );
+                                                    case 'memory-match':
+                                                        return (
+                                                            <MemoryPlayer
+                                                                title={block.title}
+                                                                pairs={block.pairs || []}
+                                                                onComplete={(score) => handleBlockComplete(block.id, score)}
+                                                            />
+                                                        );
+                                                    default:
+                                                        return <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-gray-500 uppercase tracking-widest">Tipo de Bloque Desconocido: {block.type}</div>;
+                                                }
+                                            };
+
+                                            return (
+                                                <div key={block.id} className="animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
+                                                    {renderBlock()}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="py-20 text-center glass-card border-dashed border-white/10">
+                                        <p className="text-gray-500 font-bold uppercase tracking-widest">Actualmente, esta lección no tiene contenido.</p>
+                                    </div>
+                                )
                             )}
 
                             {lesson.is_graded && (
                                 <div className="pt-20 border-t border-white/5 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                                    {userGrade && lesson.max_attempts && userGrade.attempts_count >= lesson.max_attempts ? (
-                                        <div className="space-y-4">
-                                            <div className="inline-flex items-center gap-2 px-6 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full text-xs font-black uppercase tracking-widest">
-                                                Bloqueado: Se alcanzó el máximo de intentos ({lesson.max_attempts})
-                                            </div>
-                                            <div className="text-4xl font-black text-white">
-                                                Puntuación: <span className="text-blue-500">{userGrade.score * 100}%</span>
-                                            </div>
-                                            <p className="text-gray-500 text-xs italic">Esta evaluación ya está cerrada para futuras entregas.</p>
-                                        </div>
-                                    ) : (
+                                    {userGrade && lesson.max_attempts && userGrade.attempts_count >= lesson.max_attempts ? null : (
                                         <>
                                             <button
                                                 onClick={async () => {
@@ -442,6 +443,9 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                         </Link>
                     )}
                 </footer>
+
+                {/* AI Tutor Bubble/Panel */}
+                <AITutor lessonId={params.lessonId} />
             </main>
         </div>
     );
