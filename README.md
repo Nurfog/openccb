@@ -33,6 +33,8 @@ El proyecto ha sido optimizado para reducir la complejidad de la infraestructura
 - **AI Teaching Assistant (RAG)**: Tutor inteligente dentro de cada lección que ayuda a los estudiantes utilizando el contexto de la lección actual y el historial del curso.
 - **Persistent Grade Locking**: Bloqueo persistente de lecciones calificadas tras agotar los intentos, con retroalimentación personalizada generada por IA.
 - **Color-Coded Progress Navigation**: Sistema visual de seguimiento de progreso mediante colores (Verde: Completado, Amarillo: En Proceso, Rojo: Repetible) tanto a nivel de lección como de módulo.
+- **Adaptive Skill Analysis**: Motor de análisis de etiquetas que calcula la maestría de habilidades (Gramática, Vocabulario, etc.) para personalizar las recomendaciones de IA.
+- **Efficient Docker Builds**: Imágenes de contenedor optimizadas para desarrollo rápido y despliegue ligero.
 
 ##  Requisitos del Sistema
 

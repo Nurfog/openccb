@@ -1,7 +1,10 @@
 # Build stage for Rust CMS
 FROM rustlang/rust:nightly AS rust-builder
 WORKDIR /usr/src/app
-COPY . .
+# Copy only necessary files for Rust build to optimize cache
+COPY Cargo.toml Cargo.lock ./
+COPY services ./services
+COPY shared ./shared
 RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 RUN cargo build --release -p cms-service
 

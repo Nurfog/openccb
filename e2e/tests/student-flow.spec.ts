@@ -1,33 +1,52 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Student Flow', () => {
-    test('should login and view catalog', async ({ page }) => {
-        // 1. Register/Login
-        // For simplicity, we assume registration or reuse existing
-        await page.goto('/auth/login');
+    test.setTimeout(60000);
 
-        // Register link?
-        // await page.click('text=Sign up');
-        // ... fill registration ...
-
-        // OR just login if we seed the DB. 
-        // For E2E on fresh DB, we might need to register first.
-
-        // Let's try to register a new user every time to be safe
-        // Let's try to register a new user every time to be safe
+    test('should register, view catalog, enroll, and view progress', async ({ page, baseURL }) => {
         const email = `student_${Date.now()}@test.com`;
+        const name = 'Test Student';
+
+        console.log(`Starting Student Test for ${email} on ${baseURL}`);
+
+        // 1. Register
         await page.goto('/auth/register');
-        await page.fill('[placeholder="John Doe"]', 'Test Student');
-        await page.fill('[placeholder="name@company.com"]', email);
-        await page.fill('[placeholder="••••••••"]', 'password123');
-        await page.click('button[type="submit"]');
+        await page.fill('input[type="text"][placeholder*="Full Name"], input[placeholder="John Doe"]', name);
+        await page.fill('input[type="email"]', email);
+        await page.fill('input[type="password"]', 'password123');
+        // Handle optional Organization field if present or skip
 
-        // Should redirect to dashboard/catalog
-        await expect(page).toHaveURL('/', { timeout: 15000 });
-        await expect(page.locator('h1')).toContainText('Available Courses', { timeout: 10000 });
+        await page.click('button:has-text("Comenzar a Aprender")');
 
-        // Check if the course from instructor flow is visible (might need refresh)
-        await page.reload();
-        // await expect(page.locator('text=Playwright E2E Course')).toBeVisible();
+        // 2. View Catalog (Dashboard)
+        await expect(page).toHaveURL('/');
+        await expect(page.locator('h1')).toContainText(/Explorar|Explore/);
+
+        // 3. Find a course and Enroll
+        // Wait for course cards to load
+        // We look for "Inscribirse Gratis" or "Enroll Free"
+        const enrollButton = page.locator('button:has-text("Inscribirse Gratis"), button:has-text("Enroll Free")').first();
+
+        if (await enrollButton.count() > 0) {
+            await enrollButton.click();
+            // 4. Verify Enrollment
+            // Should change to "Continuar Aprendiendo" or "Continue Learning"
+            await expect(page.locator('a:has-text("Continuar Aprendiendo"), a:has-text("Continue Learning")').first()).toBeVisible({ timeout: 10000 });
+
+            // 5. Enter Course
+            await page.click('a:has-text("Continuar Aprendiendo"), a:has-text("Continue Learning")');
+
+            // 6. View Course Outline
+            await expect(page).toHaveURL(/.*\/courses\/.*/);
+            await expect(page.locator('h1')).toBeVisible(); // Course title
+
+            // 7. Check Progress Icons (Visual Check)
+            // We expect at least one module
+            await expect(page.locator('.glass-card').first()).toBeVisible();
+        } else {
+            console.log('No courses available to enroll. Skipping enrollment steps.');
+        }
+
+        console.log('Student flow completed successfully');
     });
 });

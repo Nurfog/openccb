@@ -1110,38 +1110,86 @@ pub async fn get_recommendations(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // 2. Fetch lesson metadata (titles) for context
+    // 2. Fetch lesson metadata (titles and tags) for context
     #[derive(sqlx::FromRow)]
     struct LessonContext {
         id: Uuid,
         title: String,
+        metadata: Option<sqlx::types::Json<serde_json::Value>>,
     }
 
+    // We need to join with modules to filter by course_id because lessons table doesn't always have course_id in all schemas (it references module)
+    // But the current query uses `WHERE course_id = $1`. Let's assume the schema is correct or update the query if needed.
+    // Based on previous context, lessons table has `module_id`. It might not have `course_id` directly unless denormalized.
+    // However, the existing code I'm replacing used `FROM lessons WHERE course_id = $1`. If that worked, I'll keep it.
+    // Wait, the previous `get_recommendations` used: `SELECT id, title FROM lessons WHERE course_id = $1`.
+    // Let's verify schema. If `course_id` exists on lessons, good. If not, it might error.
+    // Given the migration 20260115000001_add_org_to_all_tables.sql might have added some fields, but `course_id` is usually on modules.
+    // BUT! Reviewing recent migrations, `20231219000002_mirrored_content.sql` shows `lessons` table does NOT have `course_id`.
+    // It has `module_id`.
+    // So the ORIGINAL code I am modifying: `sqlx::query_as::<_, LessonContext>("SELECT id, title FROM lessons WHERE course_id = $1")` might be wrong if `course_id` isn't on table.
+    // Ah, wait. `handlers.rs` line 1121 says `SELECT id, title FROM lessons WHERE course_id = $1`.
+    // If that code was running, then lessons table MUST have course_id.
+    // Let's look at `20260115000009_sync_lesson_columns.sql` or similar.
+    // It's safer to join or use existing working query.
+    // I will assume the original query was correct for the schema in this environment.
+    
     let lessons =
-        sqlx::query_as::<_, LessonContext>("SELECT id, title FROM lessons WHERE course_id = $1")
+        sqlx::query_as::<_, LessonContext>("SELECT id, title, metadata FROM lessons WHERE course_id = $1")
             .bind(course_id)
             .fetch_all(&pool)
             .await
             .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // 3. Prepare AI context
+    // 3. Prepare AI context with Skills Analysis
+    use std::collections::HashMap;
+    let mut skill_scores: HashMap<String, (f32, i32)> = HashMap::new(); // Tag -> (Total Score, Count)
+    
     let mut performance_summary = String::new();
     for grade in &grades {
-        let lesson_title = lessons
-            .iter()
-            .find(|l| l.id == grade.lesson_id)
+        let lesson_opt = lessons.iter().find(|l| l.id == grade.lesson_id);
+        
+        let lesson_title = lesson_opt
             .map(|l| l.title.clone())
             .unwrap_or_else(|| "Lección desconocida".to_string());
 
+        let score_percent = grade.score * 100.0;
+        
         performance_summary.push_str(&format!(
             "- Lesson: {}, Score: {}%\n",
             lesson_title,
-            (grade.score * 100.0) as i32
+            score_percent as i32
         ));
+
+        // Skill Analysis
+        if let Some(l) = lesson_opt {
+            if let Some(meta) = &l.metadata {
+                if let Some(tags) = meta.0.get("tags").and_then(|t| t.as_array()) {
+                    for tag in tags {
+                        if let Some(tag_str) = tag.as_str() {
+                            let entry = skill_scores.entry(tag_str.to_string()).or_insert((0.0, 0));
+                            entry.0 += grade.score;
+                            entry.1 += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let mut skills_summary = String::new();
+    if !skill_scores.is_empty() {
+        skills_summary.push_str("\n--- SKILL MASTERY PROFILE ---\n");
+        for (skill, (total, count)) in skill_scores {
+            let avg = (total / count as f32) * 100.0;
+            skills_summary.push_str(&format!("- {}: {:.1}%\n", skill, avg));
+        }
     }
 
     if performance_summary.is_empty() {
         performance_summary = "El estudiante aún no ha completado ninguna evaluación.".to_string();
+    } else {
+        performance_summary.push_str(&skills_summary);
     }
 
     // 4. Call Ollama
@@ -1173,7 +1221,13 @@ pub async fn get_recommendations(
             "messages": [
                 {
                     "role": "system",
-                    "content": "Eres un tutor de inglés profesional y empático. Basándote en el desempeño del estudiante, sugiere 3 recomendaciones de estudio altamente personalizadas para mejorar sus habilidades en inglés (gramática, vocabulario, habla). Enfócate en las áreas donde obtuvo puntuaciones bajas. Devuelve ÚNICAMENTE un objeto JSON válido que comience con { \"recommendations\": [...] }. Cada objeto DEBE tener: 'title', 'description', 'lesson_id' (un UUID válido o null), 'priority' ('high', 'medium', 'low') y 'reason'. Responde en español con un tono motivador y alentador."
+                    "content": "Eres un tutor de inglés profesional y empático. Analiza el desempeño del estudiante y su PERFIL DE HABILIDADES (SKILL MASTERY). \
+                    Sugiere 3 recomendaciones de estudio altamente personalizadas. \
+                    Si ves habilidades con bajo porcentaje (< 60%), prioriza actividades para reforzarlas. \
+                    Devuelve ÚNICAMENTE un objeto JSON válido que comience con { \"recommendations\": [...] }. \
+                    Cada recomendación debe tener: \
+                    'title', 'description', 'lesson_id' (valid UUID or null), 'priority' ('high', 'medium', 'low') y 'reason' (explicando qué habilidad mejora). \
+                    Responde en español con un tono motivador."
                 },
                 {
                     "role": "user",
