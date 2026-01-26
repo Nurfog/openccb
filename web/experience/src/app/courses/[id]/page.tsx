@@ -1,29 +1,46 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { lmsApi, Course, Module, Recommendation } from "@/lib/api";
-import { Sparkles, AlertTriangle, ArrowRight } from "lucide-react";
+import { lmsApi, Course, Module, Recommendation, UserGrade } from "@/lib/api";
+import { Sparkles, AlertTriangle, ArrowRight, CheckCircle2, XCircle, Circle } from "lucide-react";
 import Link from "next/link";
 import { BookOpen, ChevronRight, PlayCircle, Calendar, Clock, Info } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function CourseOutlinePage({ params }: { params: { id: string } }) {
+    const { user } = useAuth();
     const [courseData, setCourseData] = useState<(Course & { modules: Module[] }) | null>(null);
     const [loading, setLoading] = useState(true);
     const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
     const [loadingAI, setLoadingAI] = useState(false);
+    const [userGrades, setUserGrades] = useState<UserGrade[]>([]);
 
     useEffect(() => {
-        lmsApi.getCourseOutline(params.id)
-            .then(data => setCourseData({ ...data.course, modules: data.modules }))
-            .catch(console.error)
-            .finally(() => setLoading(false));
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                const data = await lmsApi.getCourseOutline(params.id);
+                setCourseData({ ...data.course, modules: data.modules });
+
+                if (user) {
+                    const grades = await lmsApi.getUserGrades(user.id, params.id);
+                    setUserGrades(grades);
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
 
         setLoadingAI(true);
         lmsApi.getRecommendations(params.id)
             .then(res => setRecommendations(res.recommendations))
             .catch(console.error)
             .finally(() => setLoadingAI(false));
-    }, [params.id]);
+    }, [params.id, user]);
 
     if (loading) {
         return (
@@ -40,6 +57,29 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
     }
 
     if (!courseData) return <div className="text-center py-20 text-gray-500">Curso no encontrado.</div>;
+
+    const getStatusIcon = (lessonId: string, isGraded: boolean, allowRetry: boolean) => {
+        const grade = userGrades.find(g => g.lesson_id === lessonId);
+        if (!grade) {
+            return <Circle size={18} className="text-white/20" />;
+        }
+
+        if (isGraded) {
+            const passing = courseData.passing_percentage || 70;
+            if (grade.score >= passing) {
+                return <CheckCircle2 size={18} className="text-green-500" />;
+            } else {
+                return (
+                    <div className="flex items-center gap-1">
+                        <XCircle size={18} className="text-red-500" />
+                        {allowRetry && <span className="text-[8px] font-black uppercase text-white/40">Repetible</span>}
+                    </div>
+                );
+            }
+        }
+
+        return <CheckCircle2 size={18} className="text-white/40" />;
+    };
 
     return (
         <div className="max-w-4xl mx-auto px-6 py-20">
@@ -189,6 +229,7 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-6">
+                                                {getStatusIcon(lesson.id, lesson.is_graded, lesson.allow_retry)}
                                                 {lesson.due_date && (
                                                     <div className="text-right hidden sm:block">
                                                         <div className="text-[9px] font-black uppercase tracking-widest text-gray-600">Vencimiento</div>

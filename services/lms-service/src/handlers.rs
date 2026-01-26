@@ -131,14 +131,14 @@ pub async fn register(
     Json(payload): Json<AuthPayload>,
 ) -> Result<Json<AuthResponse>, (StatusCode, String)> {
     let password_hash = hash(payload.password, DEFAULT_COST)
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Hashing failed".into()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error al procesar la contraseña".into()))?;
 
     let full_name = payload.full_name.unwrap_or_else(|| {
         payload
             .email
             .split('@')
             .next()
-            .unwrap_or("Student")
+            .unwrap_or("Estudiante")
             .to_string()
     });
 
@@ -155,7 +155,7 @@ pub async fn register(
         .bind(&org_name)
         .fetch_one(&mut *tx)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to find or create organization: {}", e)))?
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al buscar o crear la organización: {}", e)))?
     } else {
         sqlx::query_as::<_, Organization>(
             "SELECT * FROM organizations WHERE id = '00000000-0000-0000-0000-000000000001'",
@@ -165,7 +165,7 @@ pub async fn register(
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Default organization not found".into(),
+                "Organización por defecto no encontrada".into(),
             )
         })?
     };
@@ -179,7 +179,7 @@ pub async fn register(
     .bind(organization.id)
     .fetch_one(&mut *tx)
     .await
-    .map_err(|e| (StatusCode::CONFLICT, format!("User already exists or DB error: {}", e)))?;
+    .map_err(|e| (StatusCode::CONFLICT, format!("El usuario ya existe o error en la BD: {}", e)))?;
 
     tx.commit()
         .await
@@ -188,7 +188,7 @@ pub async fn register(
     let token = create_jwt(user.id, user.organization_id, "student").map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            "JWT generation failed".into(),
+            "Error al generar el token de acceso".into(),
         )
     })?;
 
@@ -217,15 +217,15 @@ pub async fn login(
         .bind(&payload.email)
         .fetch_one(&pool)
         .await
-        .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid credentials".into()))?;
+        .map_err(|_| (StatusCode::UNAUTHORIZED, "Credenciales inválidas".into()))?;
 
     if !verify(payload.password, &user.password_hash).map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            "Verification failed".into(),
+            "Error de verificación".into(),
         )
     })? {
-        return Err((StatusCode::UNAUTHORIZED, "Invalid credentials".into()));
+        return Err((StatusCode::UNAUTHORIZED, "Credenciales inválidas".into()));
     }
 
     let token = create_jwt(user.id, user.organization_id, "student").map_err(|_| {
@@ -635,7 +635,7 @@ pub async fn submit_lesson_score(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     if max_attempts.is_none() {
-        return Err((StatusCode::NOT_FOUND, "Lesson not found".into()));
+        return Err((StatusCode::NOT_FOUND, "Lección no encontrada".into()));
     }
     let max_attempts = max_attempts.flatten();
 
@@ -653,7 +653,7 @@ pub async fn submit_lesson_score(
             if count >= max {
                 return Err((
                     StatusCode::FORBIDDEN,
-                    "Maximum attempts reached for this assessment".into(),
+                    "Se ha alcanzado el número máximo de intentos para esta evaluación".into(),
                 ));
             }
         }
@@ -1057,7 +1057,7 @@ pub async fn update_user(
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<UserResponse>, (StatusCode, String)> {
     if claims.sub != id {
-        return Err((StatusCode::FORBIDDEN, "Not authorized".into()));
+        return Err((StatusCode::FORBIDDEN, "No autorizado".into()));
     }
 
     let full_name = payload.get("full_name").and_then(|f| f.as_str());
@@ -1131,7 +1131,7 @@ pub async fn get_recommendations(
             .iter()
             .find(|l| l.id == grade.lesson_id)
             .map(|l| l.title.clone())
-            .unwrap_or_else(|| "Unknown Lesson".to_string());
+            .unwrap_or_else(|| "Lección desconocida".to_string());
 
         performance_summary.push_str(&format!(
             "- Lesson: {}, Score: {}%\n",
@@ -1141,7 +1141,7 @@ pub async fn get_recommendations(
     }
 
     if performance_summary.is_empty() {
-        performance_summary = "Student hasn't completed any assessments yet.".to_string();
+        performance_summary = "El estudiante aún no ha completado ninguna evaluación.".to_string();
     }
 
     // 4. Call Ollama
@@ -1173,11 +1173,11 @@ pub async fn get_recommendations(
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a supportive and professional English Tutor. Based on the student's performance, suggest 3 highly personalized study recommendations to improve their English skills (grammar, vocabulary, speaking). Focus on areas where they scored low. Return ONLY a valid JSON object starting with { \"recommendations\": [...] }. Each object MUST have: 'title', 'description', 'lesson_id' (a valid UUID or null), 'priority' ('high', 'medium', 'low'), and 'reason'. Respond in Spanish in a motivating and encouraging tone."
+                    "content": "Eres un tutor de inglés profesional y empático. Basándote en el desempeño del estudiante, sugiere 3 recomendaciones de estudio altamente personalizadas para mejorar sus habilidades en inglés (gramática, vocabulario, habla). Enfócate en las áreas donde obtuvo puntuaciones bajas. Devuelve ÚNICAMENTE un objeto JSON válido que comience con { \"recommendations\": [...] }. Cada objeto DEBE tener: 'title', 'description', 'lesson_id' (un UUID válido o null), 'priority' ('high', 'medium', 'low') y 'reason'. Responde en español con un tono motivador y alentador."
                 },
                 {
                     "role": "user",
-                    "content": format!("Student performance in course:\n{}", performance_summary)
+                    "content": format!("Desempeño del estudiante en el curso:\n{}", performance_summary)
                 }
             ],
             "response_format": { "type": "json_object" }
@@ -1214,12 +1214,12 @@ pub async fn evaluate_audio_response(
         )
     };
 
-    let system_prompt = "You are an expert English Teacher. Evaluate the student's spoken response transcript. \
-        Compare it against the prompt and expected keywords. \
-        Provide a score from 0 to 100. \
-        Identify which keywords were used. \
-        Give constructive feedback in Spanish about their pronunciation (based on the transcript quality) and content. \
-        Return ONLY a JSON object: { \"score\": number, \"found_keywords\": [string], \"feedback\": string }.";
+    let system_prompt = "Eres un profesor de inglés experto. Evalúa la transcripción de la respuesta hablada del estudiante. \
+        Compárala con el prompt y las palabras clave esperadas. \
+        Proporciona una puntuación de 0 a 100. \
+        Identifica qué palabras clave fueron utilizadas. \
+        Da retroalimentación constructiva en español sobre su pronunciación (basándote en la calidad de la transcripción) y contenido. \
+        Devuelve ÚNICAMENTE un objeto JSON: { \"score\": number, \"found_keywords\": [string], \"feedback\": string }.";
 
     let user_content = format!(
         "Prompt: {}\nExpected Keywords: {:?}\nStudent Transcript: {}",
@@ -1285,7 +1285,7 @@ pub async fn evaluate_audio_file(
     }
 
     if audio_data.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "No audio file provided".into()));
+        return Err((StatusCode::BAD_REQUEST, "No se proporcionó ningún archivo de audio".into()));
     }
 
     // 1. Send to Whisper
@@ -1301,21 +1301,21 @@ pub async fn evaluate_audio_file(
         .multipart(form)
         .send()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Whisper request failed: {}", e)))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error en la solicitud a Whisper: {}", e)))?;
 
     if !response.status().is_success() {
         let err_body = response.text().await.unwrap_or_default();
         tracing::error!("Whisper error: {}", err_body);
-        return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Whisper API error: {}", err_body)));
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Error de la API de Whisper: {}", err_body)));
     }
 
     let transcription_result: serde_json::Value = response.json().await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to parse Whisper response: {}", e)))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al analizar la respuesta de Whisper: {}", e)))?;
 
     let transcript = transcription_result["text"].as_str().unwrap_or("").to_string();
     
     if transcript.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "Whisper could not detect any speech. Please speak louder or check your mic.".into()));
+        return Err((StatusCode::BAD_REQUEST, "Whisper no pudo detectar voz. Por favor, habla más fuerte o revisa tu micrófono.".into()));
     }
 
     let keywords: Vec<String> = if keywords_str.trim().starts_with('[') {
@@ -1338,12 +1338,12 @@ pub async fn evaluate_audio_file(
         )
     };
 
-    let system_prompt = "You are an expert Teacher. Evaluate the student's spoken response transcript. \
-        Compare it against the prompt and expected keywords. \
-        Provide a score from 0 to 100. \
-        Identify which keywords were used. \
-        Give constructive feedback in Spanish about their pronunciation (based on the transcript quality) and content. \
-        Return ONLY a JSON object: { \"score\": number, \"found_keywords\": [string], \"feedback\": string }.";
+    let system_prompt = "Eres un profesor experto. Evalúa la transcripción de la respuesta hablada del estudiante. \
+        Compárala con el prompt y las palabras clave esperadas. \
+        Proporciona una puntuación de 0 a 100. \
+        Identifica qué palabras clave fueron utilizadas. \
+        Da retroalimentación constructiva en español sobre su pronunciación (basándote en la calidad de la transcripción) y contenido. \
+        Devuelve ÚNICAMENTE un objeto JSON: { \"score\": number, \"found_keywords\": [string], \"feedback\": string }.";
 
     let user_content = format!(
         "Prompt: {}\nExpected Keywords: {:?}\nStudent Transcript: {}",
@@ -1363,10 +1363,10 @@ pub async fn evaluate_audio_file(
         }))
         .send()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error en la solicitud de IA: {}", e)))?;
 
     let ai_data: serde_json::Value = response.json().await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("AI response parse failed: {}", e)))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al analizar la respuesta de la IA: {}", e)))?;
 
     let grading: AudioGradingResponse = serde_json::from_value(
         ai_data["choices"][0]["message"]["content"]
@@ -1409,14 +1409,14 @@ pub async fn chat_with_tutor(
         .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
-        .map_err(|_| (StatusCode::NOT_FOUND, "Lesson not found".into()))?;
+        .map_err(|_| (StatusCode::NOT_FOUND, "Lección no encontrada".into()))?;
 
     // 1.5 Fetch previous lessons in the course for context
     let module = sqlx::query_as::<_, Module>("SELECT * FROM modules WHERE id = $1")
         .bind(lesson.module_id)
         .fetch_one(&pool)
         .await
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch module context".into()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error al obtener el contexto del módulo".into()))?;
 
     let previous_lessons = sqlx::query(
         r#"
@@ -1445,7 +1445,7 @@ pub async fn chat_with_tutor(
             history_context.push_str(&format!(
                 "Past Lesson: {}\nSummary: {}\n\n",
                 title,
-                summary.as_deref().unwrap_or("No summary available.")
+                summary.as_deref().unwrap_or("No hay resumen disponible.")
             ));
         }
     }
@@ -1456,7 +1456,7 @@ pub async fn chat_with_tutor(
         "CURRENT Lesson Title: {}\nSummary: {}\nTranscription (Partial): {}\n\n--- CURRENT LESSON CONTENT (BLOCKS & ACTIVITIES) ---\n{}\n{}",
         lesson.title,
         lesson.summary.as_deref().unwrap_or_default(),
-        lesson.transcription.as_ref().and_then(|t| t.get("text").and_then(|text| text.as_str())).unwrap_or("No transcript available."),
+        lesson.transcription.as_ref().and_then(|t| t.get("text").and_then(|text| text.as_str())).unwrap_or("No hay transcripción disponible."),
         block_content,
         history_context
     );
@@ -1475,12 +1475,12 @@ pub async fn chat_with_tutor(
         .bind(org_ctx.id)
         .bind(claims.sub)
         .bind(Some(lesson_id))
-        .bind(format!("Chat about {}", lesson.title))
+        .bind(format!("Chat sobre {}", lesson.title))
         .fetch_one(&pool)
         .await
         .map_err(|e| {
             tracing::error!("Failed to create chat session: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create chat session".into())
+            (StatusCode::INTERNAL_SERVER_ERROR, "Error al crear la sesión de chat".into())
         })?;
     
         use sqlx::Row;
@@ -1510,7 +1510,7 @@ pub async fn chat_with_tutor(
 
     let mut memory_context = String::new();
     if !history_rows.is_empty() {
-        memory_context.push_str("\n--- CONVERSATION HISTORY (RECENT) ---\n");
+        memory_context.push_str("\n--- HISTORIAL RECIENTE DE LA CONVERSACIÓN ---\n");
         // Reverse to get chronological order
         for row in history_rows.into_iter().rev() {
             let role: String = row.get("role");
@@ -1537,7 +1537,7 @@ pub async fn chat_with_tutor(
 
     let mut kb_context = String::new();
     if !search_results.is_empty() {
-        kb_context.push_str("\n--- ADDITIONAL KNOWLEDGE BASE CONTEXT ---\n");
+        kb_context.push_str("\n--- CONTEXTO ADICIONAL DE LA BASE DE CONOCIMIENTOS ---\n");
         for row in search_results {
             let chunk: String = row.get("content_chunk");
             kb_context.push_str(&format!("Relevant Snippet: {}\n\n", chunk));
@@ -1557,20 +1557,20 @@ pub async fn chat_with_tutor(
     };
 
     let system_prompt = format!(
-        "You are an expert AI Teaching Assistant for the OpenCCB platform. \
-        Your purpose is to help the student understand the content of this lesson and how it relates to previous lessons in the course. \
+        "Eres un asistente pedagógico de IA experto para la plataforma OpenCCB. \
+        Tu propósito es ayudar al estudiante a comprender el contenido de esta lección y cómo se relaciona con las lecciones anteriores del curso. \
         \
-        STRICT RULES: \
-        1. You can ONLY answer questions related to the CURRENT lesson, the PAST lessons, or the provided KNOWLEDGE BASE CONTEXT. \
-        2. If a student asks about topics NOT covered in the provided contexts (e.g., general knowledge, future topics, or off-topic conversation), \
-           you MUST politely decline and remind them that you are here only to help with the course content up to this point. \
-        3. CRITICAL: Do NOT provide direct answers for the CURRENT lesson's activities, quizzes, or code exercises. \
-           Even if the answer is in the memory or knowledge base, you must only provide hints or explain concepts. \
-        4. Use the CONVERSATION HISTORY to maintain continuity and provide personalized help based on previous questions. \
-        5. Maintain a supportive, encouraging, and educational tone. \
-        6. Answer in the same language as the student's question. \
+        REGLAS ESTRICTAS: \
+        1. Solo puedes responder preguntas relacionadas con la lección ACTUAL, las lecciones PASADAS o el CONTEXTO de la BASE DE CONOCIMIENTOS proporcionado. \
+        2. Si un estudiante pregunta sobre temas NO cubiertos en los contextos proporcionados (ej. cultura general, temas futuros o conversaciones fuera de tema), \
+        DEBES rechazar cortésmente y recordarle que estás aquí solo para ayudar con el contenido del curso hasta este punto. \
+        3. CRÍTICO: NO proporciones respuestas directas para las actividades, cuestionarios o ejercicios de código de la lección ACTUAL. \
+        Incluso si la respuesta está en la memoria o base de conocimientos, solo debes proporcionar pistas o explicar conceptos. \
+        4. Usa el HISTORIAL DE LA CONVERSACIÓN para mantener la continuidad y brindar ayuda personalizada basada en preguntas anteriores. \
+        5. Mantén un tono de apoyo, alentador y educativo. \
+        6. Responde en el mismo idioma de la pregunta del estudiante. \
         \
-        LESSON & HISTORY CONTEXT:\n{}\n{}\n{}",
+        CONTEXTO DE LA LECCIÓN E HISTORIAL:\n{}\n{}\n{}",
         context,
         memory_context,
         kb_context
@@ -1589,15 +1589,15 @@ pub async fn chat_with_tutor(
         }))
         .send()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("AI request failed: {}", e)))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error en la solicitud de IA: {}", e)))?;
 
     if !response.status().is_success() {
         let err_body = response.text().await.unwrap_or_default();
-        return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("AI API error: {}", err_body)));
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Error de la API de IA: {}", err_body)));
     }
 
     let ai_data: serde_json::Value = response.json().await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to parse AI response: {}", e)))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al analizar la respuesta de la IA: {}", e)))?;
 
     let tutor_response = ai_data["choices"][0]["message"]["content"]
         .as_str()
@@ -1634,7 +1634,7 @@ pub async fn get_lesson_feedback(
         .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
-        .map_err(|_| (StatusCode::NOT_FOUND, "Lesson not found".into()))?;
+        .map_err(|_| (StatusCode::NOT_FOUND, "Lección no encontrada".into()))?;
 
     // 2. Fetch user's grade for this lesson
     let grade = sqlx::query_as::<_, common::models::UserGrade>(
@@ -1645,7 +1645,7 @@ pub async fn get_lesson_feedback(
     .fetch_optional(&pool)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-    .ok_or((StatusCode::BAD_REQUEST, "No grade found for this lesson".into()))?;
+    .ok_or((StatusCode::BAD_REQUEST, "No se encontró calificación para esta lección".into()))?;
 
     let score_pct = (grade.score * 100.0) as i32;
 
@@ -1678,18 +1678,18 @@ pub async fn get_lesson_feedback(
     };
 
     let system_prompt = format!(
-        "You are an expert AI Teaching Assistant. The student has completed a graded assessment and is now seeing their final results. \
-        Provide a personalized message based on their score ({}%). \
+        "Eres un asistente pedagógico de IA experto. El estudiante ha completado una evaluación calificada y ahora está viendo sus resultados finales. \
+        Proporciona un mensaje personalizado basado en su puntuación ({}%). \
         \
-        STRICT RULES: \
-        1. Base your feedback ONLY on the lesson content and the student's performance. \
-        2. If the score is high (>= 80%), congratulate them warmly. \
-        3. If the score is medium (60-79%), acknowledge their effort and suggest specific areas to improve based on the lesson content. \
-        4. If the score is low (< 60%), provide encouragement and list specific topics or related blocks they should repeat or review to improve. \
-        5. Keep the message concise, supportive, and professional. \
-        6. Answer in Spanish as the platform is mainly used in that language. \
+        REGLAS ESTRICTAS: \
+        1. Basa tu retroalimentación ÚNICAMENTE en el contenido de la lección y el desempeño del estudiante. \
+        2. Si la puntuación es alta (>= 80%), felicítalo calurosamente. \
+        3. Si la puntuación es media (60-79%), reconoce su esfuerzo y sugiere áreas específicas para mejorar basadas en el contenido de la lección. \
+        4. Si la puntuación es baja (< 60%), brinda aliento y numera temas específicos o bloques relacionados que debería repetir o revisar para mejorar. \
+        5. Mantén el mensaje conciso, de apoyo y profesional. \
+        6. Responde en español ya que la plataforma se usa principalmente en ese idioma. \
         \
-        LESSON CONTEXT:\n{}",
+        CONTEXTO DE LA LECCIÓN:\n{}",
         score_pct,
         context
     );
@@ -1707,15 +1707,15 @@ pub async fn get_lesson_feedback(
         }))
         .send()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("AI request failed: {}", e)))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error en la solicitud de IA: {}", e)))?;
 
     if !response.status().is_success() {
         let err_body = response.text().await.unwrap_or_default();
-        return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("AI API error: {}", err_body)));
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Error de la API de IA: {}", err_body)));
     }
 
     let ai_data: serde_json::Value = response.json().await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to parse AI response: {}", e)))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al analizar la respuesta de la IA: {}", e)))?;
 
     let tutor_response = ai_data["choices"][0]["message"]["content"]
         .as_str()
