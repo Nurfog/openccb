@@ -10,13 +10,23 @@ test.describe('Student Flow', () => {
         console.log(`Starting Student Test for ${email} on ${baseURL}`);
 
         // 1. Register
-        await page.goto('/auth/register');
-        await page.fill('input[type="text"][placeholder*="Full Name"], input[placeholder="John Doe"]', name);
+        await page.goto('/auth/login');
+
+        // New Flow: Select "Personas" first (if we are on the selection screen)
+        // Note: /auth/register might still load the main component which defaults to 'selection' view
+        // The URL logic in the component doesn't automatically switch viewMode based on route yet (it defaults to selection)
+        // Let's assume we need to click "Personas"
+        await page.click('button:has-text("Personas")');
+
+        // Also ensure we are in "Registrarse" mode inside Personal view
+        await page.click('button:has-text("Registrarse")');
+
+        await page.fill('input[type="text"][placeholder*="Full Name"], input[placeholder="Juan Pérez"]', name);
         await page.fill('input[type="email"]', email);
         await page.fill('input[type="password"]', 'password123');
         // Handle optional Organization field if present or skip
 
-        await page.click('button:has-text("Comenzar a Aprender")');
+        await page.click('button:has-text("Crear Cuenta")');
 
         // 2. View Catalog (Dashboard)
         await expect(page).toHaveURL('/');

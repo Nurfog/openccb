@@ -291,6 +291,104 @@ pub struct RecommendationResponse {
     pub recommendations: Vec<Recommendation>,
 }
 
+// Discussion Forums Models
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct DiscussionThread {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub course_id: Uuid,
+    pub lesson_id: Option<Uuid>,
+    pub author_id: Uuid,
+    pub title: String,
+    pub content: String,
+    pub is_pinned: bool,
+    pub is_locked: bool,
+    pub view_count: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct DiscussionPost {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub thread_id: Uuid,
+    pub parent_post_id: Option<Uuid>,
+    pub author_id: Uuid,
+    pub content: String,
+    pub upvotes: i32,
+    pub is_endorsed: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct DiscussionVote {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub post_id: Uuid,
+    pub user_id: Uuid,
+    pub vote_type: String, // 'upvote' or 'downvote'
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct DiscussionSubscription {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub thread_id: Uuid,
+    pub user_id: Uuid,
+    pub created_at: DateTime<Utc>,
+}
+
+// Response DTOs for Discussion APIs
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct ThreadWithAuthor {
+    // Thread fields
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub course_id: Uuid,
+    pub lesson_id: Option<Uuid>,
+    pub author_id: Uuid,
+    pub title: String,
+    pub content: String,
+    pub is_pinned: bool,
+    pub is_locked: bool,
+    pub view_count: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    // Author info
+    pub author_name: String,
+    pub author_avatar: Option<String>,
+    // Aggregated data
+    pub post_count: i64,
+    pub has_endorsed_answer: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct PostWithAuthor {
+    // Post fields
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub thread_id: Uuid,
+    pub parent_post_id: Option<Uuid>,
+    pub author_id: Uuid,
+    pub content: String,
+    pub upvotes: i32,
+    pub is_endorsed: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    // Author info
+    pub author_name: String,
+    pub author_avatar: Option<String>,
+    // User interaction
+    pub user_vote: Option<String>, // 'upvote', 'downvote', or null
+    // Nested replies (not from DB, populated manually)
+    #[sqlx(skip)]
+    pub replies: Vec<PostWithAuthor>,
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;

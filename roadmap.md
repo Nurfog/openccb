@@ -169,11 +169,34 @@
 - [x] **QA y Estabilidad**: Verificación del flujo completo de evaluación en entornos de producción.
 - [x] **Rutas de Aprendizaje**: Recomendaciones basadas en el historial personalizadas y perfiles de habilidades.
 - [x] **Optimización de Contenedores**: Limpieza automatizada y reducción de huella de infraestructura mediante Build Context optimizado.
+- [x] **Split Login Flow**: Separación de flujos de autenticación para Personas y Empresas.
+
+## Fase 17: Funcionalidades Estilo Open edX (En Progreso)
+- [x] **Discussion Forums**: Sistema de foros por curso con hilos, respuestas anidadas y moderación.
+  - [x] Base de datos (4 tablas: threads, posts, votes, subscriptions)
+  - [x] Backend API (10 endpoints para gestión completa)
+  - [x] Permisos diferenciados (estudiante vs instructor)
+  - [x] Sistema de votación y endorsement
+  - [ ] Frontend (componentes React)
+  - [ ] Integración con notificaciones
+- [ ] **Course Announcements**: Sistema de anuncios de instructores con notificaciones.
+- [ ] **Student Notes**: Anotaciones personales por lección con exportación a PDF.
+- [ ] **Peer Assessment**: Evaluación entre pares con rúbricas configurables.
+- [ ] **Cohorts & Groups**: Segmentación de estudiantes con contenido específico.
+- [ ] **Content Libraries**: Repositorio reutilizable de bloques y lecciones.
+- [ ] **Advanced Grading**: Rúbricas detalladas y workflows de calificación.
+- [ ] **Learning Sequences**: Prerequisitos y rutas condicionales entre lecciones.
+- [ ] **Bulk Operations**: Inscripción masiva, exportación de calificaciones, comunicación masiva.
+- [ ] **Course Teams**: Múltiples instructores con roles y permisos granulares.
+- [ ] **Course Preview**: Vista previa de lecciones sin inscripción.
+- [ ] **Bookmarks**: Sistema de favoritos para lecciones importantes.
+- [ ] **Progress Dashboard**: Gráficos de progreso temporal y predicción de finalización.
 
 ---
 
-**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica y una **interfaz 100% responsiva**.
+**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados y **sistema de foros de discusión funcional (backend completo)**.
 
 **Próximas Prioridades**:
-1. **Escalado Horizontal**: Orquestación con Kubernetes.
-2. **Apps Móviles**: Desarrollo de clientes nativos.
+1. **Discussion Forums Frontend**: Componentes React para interfaz de foros.
+2. **Course Announcements**: Comunicación instructor-estudiante.
+3. **Student Notes**: Anotaciones personales exportables.

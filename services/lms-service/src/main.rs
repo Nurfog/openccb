@@ -1,5 +1,6 @@
 mod db_util;
 mod handlers;
+mod handlers_discussions;
 
 use axum::{
     Router, middleware,
@@ -88,6 +89,17 @@ async fn main() {
             "/notifications/{id}/read",
             post(handlers::mark_notification_as_read),
         )
+        // Discussion Forums Routes
+        .route("/courses/{id}/discussions", get(handlers_discussions::list_threads))
+        .route("/courses/{id}/discussions", post(handlers_discussions::create_thread))
+        .route("/discussions/{id}", get(handlers_discussions::get_thread_detail))
+        .route("/discussions/{id}/pin", post(handlers_discussions::pin_thread))
+        .route("/discussions/{id}/lock", post(handlers_discussions::lock_thread))
+        .route("/discussions/{id}/posts", post(handlers_discussions::create_post))
+        .route("/posts/{id}/endorse", post(handlers_discussions::endorse_post))
+        .route("/posts/{id}/vote", post(handlers_discussions::vote_post))
+        .route("/discussions/{id}/subscribe", post(handlers_discussions::subscribe_thread))
+        .route("/discussions/{id}/unsubscribe", post(handlers_discussions::unsubscribe_thread))
         .route_layer(middleware::from_fn(
             common::middleware::org_extractor_middleware,
         ));

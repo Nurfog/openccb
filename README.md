@@ -35,6 +35,8 @@ El proyecto ha sido optimizado para reducir la complejidad de la infraestructura
 - **Color-Coded Progress Navigation**: Sistema visual de seguimiento de progreso mediante colores (Verde: Completado, Amarillo: En Proceso, Rojo: Repetible) tanto a nivel de lección como de módulo.
 - **Adaptive Skill Analysis**: Motor de análisis de etiquetas que calcula la maestría de habilidades (Gramática, Vocabulario, etc.) para personalizar las recomendaciones de IA.
 - **Efficient Docker Builds**: Imágenes de contenedor optimizadas para desarrollo rápido y despliegue ligero.
+- **Discussion Forums**: Sistema completo de foros por curso con hilos de discusión, respuestas anidadas, votación, moderación por instructores y suscripciones.
+- **Split Authentication Flow**: Flujos de autenticación diferenciados para usuarios personales (email/password) y empresas (dominio corporativo).
 
 ##  Requisitos del Sistema
 
@@ -388,7 +390,118 @@ Generador de reportes personalizados para exportación.
 
 ---
 
-### 5. Multi-tenancy and Global Management (Super Admin)
+### 5. Discussion Forums (Foros de Discusión)
+Sistema completo de foros por curso con hilos, respuestas anidadas y moderación.
+
+#### GET /courses/{id}/discussions
+Lista todos los hilos de discusión de un curso.
+
+- **Filtros Disponibles**:
+  - `filter=all`: Todos los hilos (por defecto)
+  - `filter=my_threads`: Solo hilos creados por el usuario
+  - `filter=unanswered`: Hilos sin respuestas
+  - `filter=resolved`: Hilos con respuestas marcadas como correctas
+  - `lesson_id={uuid}`: Filtrar por lección específica
+- **Paginación**: `page=1` (50 hilos por página)
+- **Respuesta**: Array de `ThreadWithAuthor` con información del autor y estadísticas agregadas.
+
+```bash
+# Listar hilos sin responder
+curl "http://localhost:3002/courses/{course_id}/discussions?filter=unanswered" \
+     -H "Authorization: Bearer $TOKEN"
+```
+
+#### POST /courses/{id}/discussions
+Crea un nuevo hilo de discusión.
+
+- **Auto-suscripción**: El autor se suscribe automáticamente para recibir notificaciones.
+- **Cuerpo ( CreateThreadPayload ):**
+  ```json
+  {
+    "title": "string",
+    "content": "string",
+    "lesson_id": "uuid (opcional)"
+  }
+  ```
+
+#### GET /discussions/{id}
+Obtiene un hilo completo con todas sus respuestas anidadas.
+
+- **Contador de Vistas**: Incrementa automáticamente el `view_count`.
+- **Árbol de Respuestas**: Las respuestas se devuelven en estructura jerárquica con anidación infinita.
+- **Respuesta**: Objeto con `thread` y `posts` (árbol de respuestas).
+
+#### POST /discussions/{id}/posts
+Crea una respuesta en un hilo.
+
+- **Respuestas Anidadas**: Usa `parent_post_id` para responder a un post específico.
+- **Validación**: No permite responder si el hilo está bloqueado.
+- **Cuerpo ( CreatePostPayload ):**
+  ```json
+  {
+    "content": "string",
+    "parent_post_id": "uuid (opcional, null para respuesta directa al hilo)"
+  }
+  ```
+
+#### POST /posts/{id}/vote
+Vota por una respuesta (upvote/downvote).
+
+- **Lógica**: Un usuario solo puede votar una vez por post. Cambiar el voto actualiza el registro existente.
+- **Recalculo Automático**: El contador de upvotes se actualiza inmediatamente.
+- **Cuerpo ( VotePayload ):**
+  ```json
+  {
+    "vote_type": "upvote" // o "downvote"
+  }
+  ```
+
+#### POST /posts/{id}/endorse (Solo Instructores)
+Marca una respuesta como correcta/aprobada.
+
+- **Indicador Visual**: Las respuestas endorsadas aparecen primero en la lista.
+- **Permiso**: Solo instructores y administradores pueden endorsar.
+
+#### POST /discussions/{id}/pin (Solo Instructores)
+Fija/desfija un hilo en la parte superior de la lista.
+
+- **Uso**: Para destacar anuncios importantes o FAQs.
+- **Permiso**: Solo instructores y administradores.
+
+#### POST /discussions/{id}/lock (Solo Instructores)
+Bloquea/desbloquea un hilo para prevenir nuevas respuestas.
+
+- **Uso**: Para cerrar discusiones resueltas o inapropiadas.
+- **Permiso**: Solo instructores y administradores.
+
+#### POST /discussions/{id}/subscribe
+Suscribe al usuario a las notificaciones del hilo.
+
+- **Notificaciones**: El usuario recibirá alertas cuando haya nuevas respuestas.
+
+#### POST /discussions/{id}/unsubscribe
+Cancela la suscripción del usuario al hilo.
+
+```bash
+# Crear hilo
+curl -X POST "http://localhost:3002/courses/{course_id}/discussions" \
+     -H "Authorization: Bearer $TOKEN" \
+     -d '{"title": "Pregunta sobre Módulo 2", "content": "No entiendo la sección de..."}'
+
+# Responder a hilo
+curl -X POST "http://localhost:3002/discussions/{thread_id}/posts" \
+     -H "Authorization: Bearer $TOKEN" \
+     -d '{"content": "Aquí está mi respuesta..."}'
+
+# Votar respuesta
+curl -X POST "http://localhost:3002/posts/{post_id}/vote" \
+     -H "Authorization: Bearer $TOKEN" \
+     -d '{"vote_type": "upvote"}'
+```
+
+---
+
+### 6. Multi-tenancy and Global Management (Super Admin)
 OpenCCB is built for multi-tenancy. Organizations are isolated, but a **Super Admin** can manage everything.
 
 #### Super Admin Definition
@@ -442,6 +555,8 @@ Obtiene una lista de todas las organizaciones registradas.
 - **Context-Aware AI Tutor**: Smart assistant with RAG that remembers past lessons and protects activity answers.
 - **Personalized AI Feedback**: Motivational and instructional feedback generated uniquely for each student's results.
 - **Color-Coded Navigation**: Real-time visual progress indicators for lessons and modules (Green/Yellow/Red).
+- **Discussion Forums**: Complete forum system with threaded replies, voting, instructor moderation, and subscriptions.
+- **Split Authentication**: Separate login flows for personal users and enterprise organizations with SSO support.
 
 ## 📄 Licencia
 Este proyecto es código abierto y está disponible bajo los términos de la licencia especificada en el repositorio.

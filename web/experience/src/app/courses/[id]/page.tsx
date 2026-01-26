@@ -6,6 +6,7 @@ import { Sparkles, AlertTriangle, ArrowRight, CheckCircle2, XCircle, Circle } fr
 import Link from "next/link";
 import { BookOpen, ChevronRight, PlayCircle, Calendar, Clock, Info } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import DiscussionBoard from "@/components/DiscussionBoard";
 
 export default function CourseOutlinePage({ params }: { params: { id: string } }) {
     const { user } = useAuth();
@@ -249,6 +250,11 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                         </div>
                     </div>
                 ))}
+            </div>
+
+            {/* Discussions Section */}
+            <div className="mt-20">
+                <DiscussionBoard courseId={params.id} />
             </div>
         </div>
     );

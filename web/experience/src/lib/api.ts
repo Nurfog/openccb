@@ -191,6 +191,87 @@ export interface Module {
     lessons: Lesson[];
 }
 
+// Discussion Forums Types
+export interface DiscussionThread {
+    id: string;
+    organization_id: string;
+    course_id: string;
+    lesson_id?: string;
+    author_id: string;
+    title: string;
+    content: string;
+    is_pinned: boolean;
+    is_locked: boolean;
+    view_count: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ThreadWithAuthor {
+    id: string;
+    organization_id: string;
+    course_id: string;
+    lesson_id?: string;
+    author_id: string;
+    title: string;
+    content: string;
+    is_pinned: boolean;
+    is_locked: boolean;
+    view_count: number;
+    created_at: string;
+    updated_at: string;
+    author_name: string;
+    author_avatar?: string;
+    post_count: number;
+    has_endorsed_answer: boolean;
+}
+
+export interface DiscussionPost {
+    id: string;
+    organization_id: string;
+    thread_id: string;
+    parent_post_id?: string;
+    author_id: string;
+    content: string;
+    upvotes: number;
+    is_endorsed: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface PostWithAuthor {
+    id: string;
+    organization_id: string;
+    thread_id: string;
+    parent_post_id?: string;
+    author_id: string;
+    content: string;
+    upvotes: number;
+    is_endorsed: boolean;
+    created_at: string;
+    updated_at: string;
+    author_name: string;
+    author_avatar?: string;
+    user_vote?: 'upvote' | 'downvote';
+    replies: PostWithAuthor[];
+}
+
+export interface CreateThreadPayload {
+    title: string;
+    content: string;
+    lesson_id?: string;
+}
+
+export interface CreatePostPayload {
+    content: string;
+    parent_post_id?: string;
+}
+
+export interface VotePayload {
+    vote_type: 'upvote' | 'downvote';
+}
+
+
 const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('experience_token') : null;
 
 const apiFetch = async (url: string, options: RequestInit = {}, isCMS: boolean = false) => {
@@ -362,5 +443,70 @@ export const lmsApi = {
     },
     async getLessonFeedback(lessonId: string): Promise<{ response: string, session_id: string }> {
         return apiFetch(`/lessons/${lessonId}/feedback`);
+    },
+
+    // Discussion Forums API
+    async getDiscussions(courseId: string, filter?: string, lessonId?: string, page?: number): Promise<ThreadWithAuthor[]> {
+        const params = new URLSearchParams();
+        if (filter) params.append('filter', filter);
+        if (lessonId) params.append('lesson_id', lessonId);
+        if (page) params.append('page', page.toString());
+        const query = params.toString() ? `?${params.toString()}` : '';
+        return apiFetch(`/courses/${courseId}/discussions${query}`);
+    },
+
+    async createThread(courseId: string, payload: CreateThreadPayload): Promise<DiscussionThread> {
+        return apiFetch(`/courses/${courseId}/discussions`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+    },
+
+    async getThreadDetail(threadId: string): Promise<{ thread: ThreadWithAuthor, posts: PostWithAuthor[] }> {
+        return apiFetch(`/discussions/${threadId}`);
+    },
+
+    async createPost(threadId: string, payload: CreatePostPayload): Promise<DiscussionPost> {
+        return apiFetch(`/discussions/${threadId}/posts`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+    },
+
+    async votePost(postId: string, voteType: 'upvote' | 'downvote'): Promise<void> {
+        return apiFetch(`/posts/${postId}/vote`, {
+            method: 'POST',
+            body: JSON.stringify({ vote_type: voteType })
+        });
+    },
+
+    async endorsePost(postId: string): Promise<void> {
+        return apiFetch(`/posts/${postId}/endorse`, {
+            method: 'POST'
+        });
+    },
+
+    async pinThread(threadId: string): Promise<void> {
+        return apiFetch(`/discussions/${threadId}/pin`, {
+            method: 'POST'
+        });
+    },
+
+    async lockThread(threadId: string): Promise<void> {
+        return apiFetch(`/discussions/${threadId}/lock`, {
+            method: 'POST'
+        });
+    },
+
+    async subscribeThread(threadId: string): Promise<void> {
+        return apiFetch(`/discussions/${threadId}/subscribe`, {
+            method: 'POST'
+        });
+    },
+
+    async unsubscribeThread(threadId: string): Promise<void> {
+        return apiFetch(`/discussions/${threadId}/unsubscribe`, {
+            method: 'POST'
+        });
     }
 };
