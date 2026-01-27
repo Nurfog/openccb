@@ -6,10 +6,10 @@ use axum::{
 use common::auth::Claims;
 use common::middleware::Org;
 use common::models::{
-    DiscussionThread, DiscussionPost, DiscussionVote, DiscussionSubscription,
+    DiscussionThread, DiscussionPost,
     ThreadWithAuthor, PostWithAuthor,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
 

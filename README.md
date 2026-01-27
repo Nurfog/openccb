@@ -501,6 +501,29 @@ curl -X POST "http://localhost:3002/posts/{post_id}/vote" \
 
 ---
 
+### 5. Course Announcements (Anuncios)
+
+| Action | Method | Endpoint | Description |
+|--------|--------|----------|-------------|
+| List | GET | `/courses/{id}/announcements` | Get all announcements for a course |
+| Create | POST | `/courses/{id}/announcements` | Create a new announcement (Instructor/Admin only) |
+| Update | PUT | `/announcements/{id}` | Update an announcement (Instructor/Admin only) |
+| Delete | DELETE| `/announcements/{id}` | Delete an announcement (Instructor/Admin only) |
+
+#### Create Announcement Example
+```bash
+curl -X POST http://localhost:3002/courses/{course_id}/announcements \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Bienvenida al curso",
+    "content": "Bienvenidos a todos a este emocionante curso.",
+    "is_pinned": true
+  }'
+```
+
+---
+
 ### 6. Multi-tenancy and Global Management (Super Admin)
 OpenCCB is built for multi-tenancy. Organizations are isolated, but a **Super Admin** can manage everything.
 
@@ -556,6 +579,7 @@ Obtiene una lista de todas las organizaciones registradas.
 - **Personalized AI Feedback**: Motivational and instructional feedback generated uniquely for each student's results.
 - **Color-Coded Navigation**: Real-time visual progress indicators for lessons and modules (Green/Yellow/Red).
 - **Discussion Forums**: Complete forum system with threaded replies, voting, instructor moderation, and subscriptions.
+- **Course Announcements**: Instructor-to-student communication system with automatic notifications and pinning functionality.
 - **Split Authentication**: Separate login flows for personal users and enterprise organizations with SSO support.
 
 ## 📄 Licencia

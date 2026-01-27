@@ -1,10 +1,11 @@
 mod db_util;
 mod handlers;
 mod handlers_discussions;
+mod handlers_announcements;
 
 use axum::{
     Router, middleware,
-    routing::{get, post},
+    routing::{get, post, put, delete},
 };
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
@@ -100,6 +101,11 @@ async fn main() {
         .route("/posts/{id}/vote", post(handlers_discussions::vote_post))
         .route("/discussions/{id}/subscribe", post(handlers_discussions::subscribe_thread))
         .route("/discussions/{id}/unsubscribe", post(handlers_discussions::unsubscribe_thread))
+        // Announcements
+        .route("/courses/{id}/announcements", get(handlers_announcements::list_announcements))
+        .route("/courses/{id}/announcements", post(handlers_announcements::create_announcement))
+        .route("/announcements/{id}", put(handlers_announcements::update_announcement))
+        .route("/announcements/{id}", delete(handlers_announcements::delete_announcement))
         .route_layer(middleware::from_fn(
             common::middleware::org_extractor_middleware,
         ));

@@ -388,6 +388,38 @@ pub struct PostWithAuthor {
     pub replies: Vec<PostWithAuthor>,
 }
 
+// Course Announcements
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct CourseAnnouncement {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub course_id: Uuid,
+    pub author_id: Uuid,
+    pub title: String,
+    pub content: String,
+    pub is_pinned: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct AnnouncementWithAuthor {
+    // Announcement fields
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub course_id: Uuid,
+    pub author_id: Uuid,
+    pub title: String,
+    pub content: String,
+    pub is_pinned: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    // Author info
+    pub author_name: String,
+    pub author_avatar: Option<String>,
+}
+
+
 
 #[cfg(test)]
 mod tests {

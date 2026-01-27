@@ -7,6 +7,7 @@ import Link from "next/link";
 import { BookOpen, ChevronRight, PlayCircle, Calendar, Clock, Info } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import DiscussionBoard from "@/components/DiscussionBoard";
+import { AnnouncementsList } from "@/components/AnnouncementsList";
 
 export default function CourseOutlinePage({ params }: { params: { id: string } }) {
     const { user } = useAuth();
@@ -198,6 +199,11 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                     </div>
                 </div>
             )}
+
+            {/* Announcements Section */}
+            <div className="mb-16">
+                <AnnouncementsList courseId={params.id} isInstructor={user?.role === 'instructor' || user?.role === 'admin'} />
+            </div>
 
             <div className="space-y-12">
                 {courseData.modules.map((module, idx) => (

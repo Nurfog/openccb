@@ -271,6 +271,36 @@ export interface VotePayload {
     vote_type: 'upvote' | 'downvote';
 }
 
+export interface CourseAnnouncement {
+    id: string;
+    organization_id: string;
+    course_id: string;
+    author_id: string;
+    title: string;
+    content: string;
+    is_pinned: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface AnnouncementWithAuthor extends CourseAnnouncement {
+    author_name: string;
+    author_avatar?: string;
+}
+
+export interface CreateAnnouncementPayload {
+    title: string;
+    content: string;
+    is_pinned?: boolean;
+}
+
+export interface UpdateAnnouncementPayload {
+    title?: string;
+    content?: string;
+    is_pinned?: boolean;
+}
+
+
 
 const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('experience_token') : null;
 
@@ -507,6 +537,31 @@ export const lmsApi = {
     async unsubscribeThread(threadId: string): Promise<void> {
         return apiFetch(`/discussions/${threadId}/unsubscribe`, {
             method: 'POST'
+        });
+    },
+
+    // Announcements API
+    async getAnnouncements(courseId: string): Promise<AnnouncementWithAuthor[]> {
+        return apiFetch(`/courses/${courseId}/announcements`);
+    },
+
+    async createAnnouncement(courseId: string, payload: CreateAnnouncementPayload): Promise<CourseAnnouncement> {
+        return apiFetch(`/courses/${courseId}/announcements`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+    },
+
+    async updateAnnouncement(id: string, payload: UpdateAnnouncementPayload): Promise<CourseAnnouncement> {
+        return apiFetch(`/announcements/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+        });
+    },
+
+    async deleteAnnouncement(id: string): Promise<void> {
+        return apiFetch(`/announcements/${id}`, {
+            method: 'DELETE'
         });
     }
 };

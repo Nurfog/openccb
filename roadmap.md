@@ -177,9 +177,9 @@
   - [x] Backend API (10 endpoints para gestión completa)
   - [x] Permisos diferenciados (estudiante vs instructor)
   - [x] Sistema de votación y endorsement
-  - [ ] Frontend (componentes React)
-  - [ ] Integración con notificaciones
-- [ ] **Course Announcements**: Sistema de anuncios de instructores con notificaciones.
+  - [x] Frontend (componentes React)
+  - [x] Integración con notificaciones
+- [x] **Course Announcements**: Sistema de anuncios de instructores con notificaciones.
 - [ ] **Student Notes**: Anotaciones personales por lección con exportación a PDF.
 - [ ] **Peer Assessment**: Evaluación entre pares con rúbricas configurables.
 - [ ] **Cohorts & Groups**: Segmentación de estudiantes con contenido específico.
@@ -194,9 +194,9 @@
 
 ---
 
-**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados y **sistema de foros de discusión funcional (backend completo)**.
+**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados, **sistema de foros de discusión funcional** y **gestión de anuncios del curso con notificaciones automáticas**.
 
 **Próximas Prioridades**:
-1. **Discussion Forums Frontend**: Componentes React para interfaz de foros.
-2. **Course Announcements**: Comunicación instructor-estudiante.
-3. **Student Notes**: Anotaciones personales exportables.
+1. **Course Wiki**: Espacio colaborativo para documentación de cursos.
+2. **Student Notes**: Anotaciones personales exportables.
+3. **Course Teams**: Permisos granulares para múltiples instructores.
