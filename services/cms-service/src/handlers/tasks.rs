@@ -36,7 +36,8 @@ pub async fn get_background_tasks(
             l.transcription_status,
             l.updated_at
         FROM lessons l
-        JOIN courses c ON l.course_id = c.id
+        JOIN modules m ON l.module_id = m.id
+        JOIN courses c ON m.course_id = c.id
         WHERE l.transcription_status IN ('queued', 'processing', 'failed')
         ORDER BY l.updated_at DESC
     "#;
