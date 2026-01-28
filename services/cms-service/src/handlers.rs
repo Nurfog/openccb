@@ -750,6 +750,7 @@ pub async fn run_transcription_task(pool: PgPool, lesson_id: Uuid) -> Result<(),
     let file_path = format!("uploads/{}", filename);
 
     // 2. Set status to processing
+    tracing::info!("Starting transcription for lesson {} (file: {})", lesson_id, file_path);
     sqlx::query("UPDATE lessons SET transcription_status = 'processing' WHERE id = $1")
         .bind(lesson_id)
         .execute(&pool)
@@ -759,7 +760,13 @@ pub async fn run_transcription_task(pool: PgPool, lesson_id: Uuid) -> Result<(),
     // 3. Read file
     let file_data = tokio::fs::read(&file_path)
         .await
-        .map_err(|e| format!("File read failed ({}): {}", file_path, e))?;
+        .map_err(|e| {
+            let err = format!("File read failed ({}): {}", file_path, e);
+            tracing::error!("{}", err);
+            err
+        })?;
+    
+    tracing::info!("File read successfully ({} bytes). Sending to Whisper...", file_data.len());
 
     // 4. Send to Whisper
     let whisper_url = env::var("LOCAL_WHISPER_URL").unwrap_or_else(|_| "http://localhost:8000".to_string());
@@ -775,16 +782,24 @@ pub async fn run_transcription_task(pool: PgPool, lesson_id: Uuid) -> Result<(),
         .multipart(form)
         .send()
         .await
-        .map_err(|e| format!("Whisper request failed: {}", e))?;
+        .map_err(|e| {
+            let err = format!("Whisper request failed: {}", e);
+            tracing::error!("{}", err);
+            err
+        })?;
 
     if !response.status().is_success() {
         let status = response.status();
         let err_body = response.text().await.unwrap_or_default();
-        return Err(format!("Whisper API error: {} - {}", status, err_body));
+        let err = format!("Whisper API error: {} - {}", status, err_body);
+        tracing::error!("{}", err);
+        return Err(err);
     }
 
     let transcription_result: serde_json::Value = response.json().await
         .map_err(|e| format!("Failed to parse Whisper response: {}", e))?;
+
+    tracing::info!("Transcription received successfully for lesson {}", lesson_id);
 
     // 5. Update lesson with transcription
     sqlx::query("UPDATE lessons SET transcription = $1, transcription_status = 'completed' WHERE id = $2")
@@ -797,7 +812,9 @@ pub async fn run_transcription_task(pool: PgPool, lesson_id: Uuid) -> Result<(),
     // 6. Optional: Trigger Summarization using Ollama
     let full_text = transcription_result["text"].as_str().unwrap_or("");
     if !full_text.is_empty() {
+        tracing::info!("Triggering AI summary for lesson {}", lesson_id);
         if let Ok(summary) = generate_summary_with_ollama(full_text).await {
+            tracing::info!("Summary generated successfully for lesson {}", lesson_id);
             let _ = sqlx::query("UPDATE lessons SET summary = $1 WHERE id = $2")
                 .bind(summary)
                 .bind(lesson_id)
@@ -832,7 +849,11 @@ async fn generate_summary_with_ollama(text: &str) -> Result<String, String> {
         }))
         .send()
         .await
-        .map_err(|e| format!("Ollama summary request failed: {}", e))?;
+        .map_err(|e| {
+            let err = format!("Ollama summary request failed: {}", e);
+            tracing::error!("{}", err);
+            err
+        })?;
 
     if !response.status().is_success() {
         return Err("Ollama summary API error".into());

@@ -136,16 +136,23 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
         try {
             // Sync content_url for video/audio lessons from the first media block
             let content_url = lesson.content_url;
-            if (lesson.content_type === 'video' || lesson.content_type === 'audio') {
-                const mediaBlock = blocks.find(b => b.type === 'media');
-                if (mediaBlock && mediaBlock.url) {
-                    content_url = mediaBlock.url;
+            let content_type = lesson.content_type;
+
+            const mediaBlock = blocks.find(b => b.type === 'media' || b.type === 'video_marker');
+            if (mediaBlock && mediaBlock.url) {
+                content_url = mediaBlock.url;
+                // If it's a video marker or explicitly a video/audio media block
+                if (mediaBlock.type === 'video_marker') {
+                    content_type = 'video';
+                } else if (mediaBlock.type === 'media') {
+                    content_type = mediaBlock.media_type || 'video';
                 }
             }
 
             const updated = await cmsApi.updateLesson(lesson.id, {
                 metadata: { ...lesson.metadata, blocks },
                 content_url,
+                content_type, // Sync type to ensure backend triggers transcription
                 summary,
                 is_graded: isGraded,
                 grading_category_id: selectedCategoryId || null,
