@@ -666,7 +666,7 @@ pub async fn process_transcription(
     Ok(Json(updated_lesson))
 }
 
-async fn _translate_text(text: &str, target_lang: &str) -> Result<String, String> {
+async fn translate_text(text: &str, target_lang: &str) -> Result<String, String> {
     let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
     let client = reqwest::Client::new();
 
@@ -796,12 +796,32 @@ pub async fn run_transcription_task(pool: PgPool, lesson_id: Uuid) -> Result<(),
         return Err(err);
     }
 
-    let transcription_result: serde_json::Value = response.json().await
+    let mut transcription_result: serde_json::Value = response.json().await
         .map_err(|e| format!("Failed to parse Whisper response: {}", e))?;
 
     tracing::info!("Transcription received successfully for lesson {}", lesson_id);
 
-    // 5. Update lesson with transcription
+    // 5. Bilingual translation with Ollama
+    let text = transcription_result["text"].as_str().unwrap_or("").to_string();
+    let detected_lang = transcription_result["language"].as_str().unwrap_or("es").to_string();
+    
+    // Ensure the detected language text is stored in its own key
+    transcription_result[detected_lang.clone()] = serde_json::json!(text);
+
+    let target_lang = if detected_lang == "es" { "en" } else { "es" };
+    tracing::info!("Translating transcription from {} to {} using Ollama...", detected_lang, target_lang);
+    
+    if !text.is_empty() {
+        match translate_text(&text, target_lang).await {
+            Ok(translated) => {
+                tracing::info!("Translation to {} successful", target_lang);
+                transcription_result[target_lang] = serde_json::json!(translated);
+            },
+            Err(e) => tracing::error!("Translation failed: {}", e),
+        }
+    }
+
+    // 6. Update lesson with bilinguial transcription
     sqlx::query("UPDATE lessons SET transcription = $1, transcription_status = 'completed' WHERE id = $2")
         .bind(&transcription_result)
         .bind(lesson_id)
