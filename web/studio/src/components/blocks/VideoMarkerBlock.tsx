@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Clock, Plus, Trash2, Play, AlertCircle } from "lucide-react";
+import MediaPlayer from "../MediaPlayer";
 
 interface VideoMarker {
     timestamp: number;
@@ -16,6 +17,7 @@ interface VideoMarkerBlockProps {
     markers: VideoMarker[];
     onChange: (updates: { title?: string; markers?: VideoMarker[] }) => void;
     editMode: boolean;
+    isGraded?: boolean;
 }
 
 export default function VideoMarkerBlock({
@@ -23,7 +25,8 @@ export default function VideoMarkerBlock({
     videoUrl,
     markers,
     onChange,
-    editMode
+    editMode,
+    isGraded
 }: VideoMarkerBlockProps) {
     const [currentTime, setCurrentTime] = useState(0);
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -124,12 +127,14 @@ export default function VideoMarkerBlock({
                     <span className="text-xs font-mono text-gray-500">{formatTime(currentTime)}</span>
                 </div>
 
-                <video
-                    src={videoUrl}
-                    controls
-                    className="w-full rounded-lg"
-                    onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                />
+                <div className="rounded-lg overflow-hidden">
+                    <MediaPlayer
+                        src={videoUrl}
+                        type="video"
+                        isGraded={isGraded}
+                        showInteractive={false} // Interactive markers are separate here
+                    />
+                </div>
 
                 <button
                     onClick={addMarker}

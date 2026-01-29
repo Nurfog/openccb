@@ -39,9 +39,10 @@ interface MediaBlockProps {
         es?: string;
         cues?: { start: number; end: number; text: string }[];
     } | null;
+    isGraded?: boolean;
 }
 
-export default function MediaBlock({ title, url, type, config, editMode, onChange, transcription }: MediaBlockProps) {
+export default function MediaBlock({ title, url, type, config, editMode, onChange, transcription, isGraded }: MediaBlockProps) {
     const [localPlays, setLocalPlays] = useState(config.currentPlays || 0);
     const [sourceType, setSourceType] = useState<"url" | "upload">(url.startsWith("/assets/") ? "upload" : "url");
     const maxPlays = config.maxPlays || 0;
@@ -298,6 +299,8 @@ export default function MediaBlock({ title, url, type, config, editMode, onChang
                     type={type}
                     transcription={transcription}
                     locked={isLocked}
+                    isGraded={isGraded}
+                    showInteractive={config.show_transcript !== false}
                     onEnded={handleEnded}
                 />
 

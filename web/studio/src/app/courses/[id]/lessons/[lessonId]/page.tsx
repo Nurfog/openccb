@@ -546,6 +546,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                     config={block.config || {}}
                                     editMode={editMode}
                                     transcription={lesson.transcription}
+                                    isGraded={isGraded}
                                     onChange={(updates) => updateBlock(block.id, updates)}
                                 />
                             )}
@@ -610,6 +611,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                     videoUrl={block.url || ""}
                                     markers={block.markers || []}
                                     editMode={editMode}
+                                    isGraded={isGraded}
                                     onChange={(updates) => updateBlock(block.id, updates)}
                                 />
                             )}

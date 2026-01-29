@@ -12,22 +12,31 @@ interface MediaPlayerProps {
     } | null;
     locked?: boolean;
     onEnded?: () => void;
+    isGraded?: boolean;
+    showInteractive?: boolean;
 }
 
-export default function MediaPlayer({ src, type, transcription, locked, onEnded }: MediaPlayerProps) {
+export default function MediaPlayer({ src, type, transcription, locked, onEnded, isGraded, showInteractive = true }: MediaPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const audioRef = useRef<HTMLAudioElement>(null);
+    const [currentTime, setCurrentTime] = useState(0);
     const [currentCaption, setCurrentCaption] = useState("");
     const [language, setLanguage] = useState<"en" | "es">("en");
+
+    // Hide everything if graded activity or explicitely disabled
+    const shouldShowTranscription = transcription && !locked && !isGraded && showInteractive;
 
     useEffect(() => {
         const media = type === "video" ? videoRef.current : audioRef.current;
         if (!media) return;
 
         const handleTimeUpdate = () => {
+            const time = media.currentTime;
+            setCurrentTime(time);
+
             if (transcription?.cues) {
                 const activeCue = transcription.cues.find(cue =>
-                    media.currentTime >= cue.start && media.currentTime <= cue.end
+                    time >= cue.start && time <= cue.end
                 );
                 setCurrentCaption(activeCue?.text || "");
             }
@@ -44,6 +53,14 @@ export default function MediaPlayer({ src, type, transcription, locked, onEnded 
             media.removeEventListener("ended", handleEnded);
         };
     }, [type, transcription, onEnded]);
+
+    const handleSeek = (time: number) => {
+        const media = type === "video" ? videoRef.current : audioRef.current;
+        if (media) {
+            media.currentTime = time;
+            media.play();
+        }
+    };
 
     if (!src) {
         return (
@@ -68,18 +85,18 @@ export default function MediaPlayer({ src, type, transcription, locked, onEnded 
         return match ? match[1] : null;
     };
 
-    if (isYouTube || isVimeo) {
-        let embedUrl = "";
-        if (isYouTube) {
-            const id = getYouTubeId(src);
-            embedUrl = `https://www.youtube.com/embed/${id}`;
-        } else {
-            const id = getVimeoId(src);
-            embedUrl = `https://player.vimeo.com/video/${id}`;
-        }
+    const renderMedia = () => {
+        if (isYouTube || isVimeo) {
+            let embedUrl = "";
+            if (isYouTube) {
+                const id = getYouTubeId(src);
+                embedUrl = `https://www.youtube.com/embed/${id}`;
+            } else {
+                const id = getVimeoId(src);
+                embedUrl = `https://player.vimeo.com/video/${id}`;
+            }
 
-        return (
-            <div className="space-y-4 relative group">
+            return (
                 <div className={`glass overflow-hidden border border-white/10 aspect-video ${locked ? 'blur-xl grayscale' : ''}`}>
                     <iframe
                         src={embedUrl}
@@ -88,45 +105,10 @@ export default function MediaPlayer({ src, type, transcription, locked, onEnded 
                         allowFullScreen
                     ></iframe>
                 </div>
+            );
+        }
 
-                {locked && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm rounded-xl z-10 text-center p-6 border border-white/10">
-                        <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-4 border border-white/20">
-                            <span className="text-3xl">🔒</span>
-                        </div>
-                        <h3 className="text-xl font-bold text-white mb-2">Playback Limited</h3>
-                        <p className="text-sm text-gray-300 max-w-xs">This content can only be played once according to the activity rules.</p>
-                    </div>
-                )}
-
-                {transcription && !locked && (
-                    <div className="glass p-6 space-y-4 border border-blue-500/20">
-                        <div className="flex justify-between items-center">
-                            <h4 className="text-lg font-semibold flex items-center gap-2">
-                                Transcription <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">AI Enhanced</span>
-                            </h4>
-                            <div className="flex bg-white/5 rounded-lg p-1">
-                                <button
-                                    onClick={() => setLanguage("en")}
-                                    className={`px-3 py-1 text-xs rounded-md transition-all ${language === "en" ? "bg-blue-500 text-white shadow-lg" : "text-gray-400 hover:text-white"}`}
-                                >EN</button>
-                                <button
-                                    onClick={() => setLanguage("es")}
-                                    className={`px-3 py-1 text-xs rounded-md transition-all ${language === "es" ? "bg-blue-500 text-white shadow-lg" : "text-gray-400 hover:text-white"}`}
-                                >ES</button>
-                            </div>
-                        </div>
-                        <div className="text-sm text-gray-400 leading-relaxed max-h-40 overflow-y-auto italic bg-white/5 p-4 rounded-lg">
-                            &quot;{transcription[language] || "Transcription not available."}&quot;
-                        </div>
-                    </div>
-                )}
-            </div>
-        );
-    }
-
-    return (
-        <div className="space-y-4 relative group">
+        return (
             <div className={`relative glass overflow-hidden border border-white/10 ${locked ? 'blur-xl grayscale' : ''}`}>
                 {type === "video" ? (
                     <video
@@ -151,36 +133,89 @@ export default function MediaPlayer({ src, type, transcription, locked, onEnded 
                     </div>
                 )}
             </div>
+        );
+    };
 
-            {locked && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm rounded-xl z-10 text-center p-6 border border-white/10">
-                    <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-4 border border-white/20">
-                        <span className="text-3xl">🔒</span>
+    return (
+        <div className={`grid grid-cols-1 ${shouldShowTranscription && transcription?.cues ? 'xl:grid-cols-12' : ''} gap-8 h-full`}>
+            {/* Media Content */}
+            <div className={`${shouldShowTranscription && transcription?.cues ? 'xl:col-span-8' : ''} space-y-4 relative group`}>
+                {renderMedia()}
+
+                {locked && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm rounded-xl z-10 text-center p-6 border border-white/10">
+                        <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-4 border border-white/20">
+                            <span className="text-3xl">🔒</span>
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">Playback Limited</h3>
+                        <p className="text-sm text-gray-300 max-w-xs">This content can only be played once according to the activity rules.</p>
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">Playback Limited</h3>
-                    <p className="text-sm text-gray-300 max-w-xs">This content can only be played once according to the activity rules.</p>
-                </div>
-            )}
+                )}
 
-            {transcription && !locked && (
-                <div className="glass p-6 space-y-4 border border-blue-500/20">
-                    <div className="flex justify-between items-center">
-                        <h4 className="text-lg font-semibold flex items-center gap-2">
-                            Transcription <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">AI Enhanced</span>
-                        </h4>
+                {/* Simple Transcript (Fallback or Mobile) */}
+                {shouldShowTranscription && !transcription?.cues && (
+                    <div className="glass p-6 space-y-4 border border-blue-500/20">
+                        <div className="flex justify-between items-center">
+                            <h4 className="text-lg font-semibold flex items-center gap-2">
+                                Transcription <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">AI Enhanced</span>
+                            </h4>
+                            <div className="flex bg-white/5 rounded-lg p-1">
+                                <button
+                                    onClick={() => setLanguage("en")}
+                                    className={`px-3 py-1 text-xs rounded-md transition-all ${language === "en" ? "bg-blue-500 text-white shadow-lg" : "text-gray-400 hover:text-white"}`}
+                                >EN</button>
+                                <button
+                                    onClick={() => setLanguage("es")}
+                                    className={`px-3 py-1 text-xs rounded-md transition-all ${language === "es" ? "bg-blue-500 text-white shadow-lg" : "text-gray-400 hover:text-white"}`}
+                                >ES</button>
+                            </div>
+                        </div>
+                        <div className="text-sm text-gray-400 leading-relaxed max-h-40 overflow-y-auto italic bg-white/5 p-4 rounded-lg">
+                            &quot;{transcription[language] || "Transcription not available."}&quot;
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Interactive Sidebar */}
+            {shouldShowTranscription && transcription?.cues && (
+                <div className="xl:col-span-4 glass border-white/5 bg-white/5 rounded-2xl overflow-hidden flex flex-col h-[500px] xl:h-auto border border-blue-500/10">
+                    <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
+                        <h4 className="text-xs font-black uppercase tracking-widest text-gray-400">Interactive Content</h4>
                         <div className="flex bg-white/5 rounded-lg p-1">
                             <button
                                 onClick={() => setLanguage("en")}
-                                className={`px-3 py-1 text-xs rounded-md transition-all ${language === "en" ? "bg-blue-500 text-white shadow-lg" : "text-gray-400 hover:text-white"}`}
+                                className={`px-2 py-1 text-[10px] font-bold rounded ${language === "en" ? "bg-blue-500 text-white" : "text-gray-500 hover:text-white"}`}
                             >EN</button>
                             <button
                                 onClick={() => setLanguage("es")}
-                                className={`px-3 py-1 text-xs rounded-md transition-all ${language === "es" ? "bg-blue-500 text-white shadow-lg" : "text-gray-400 hover:text-white"}`}
+                                className={`px-2 py-1 text-[10px] font-bold rounded ${language === "es" ? "bg-blue-500 text-white" : "text-gray-500 hover:text-white"}`}
                             >ES</button>
                         </div>
                     </div>
-                    <div className="text-sm text-gray-400 leading-relaxed max-h-40 overflow-y-auto italic bg-white/5 p-4 rounded-lg">
-                        &quot;{transcription[language] || "Transcription not available."}&quot;
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                        {language === "en" && transcription.en && !transcription.cues.some(c => c.text === transcription.en) && (
+                            <p className="text-sm text-gray-500 italic mb-4 p-4 bg-blue-500/5 rounded-xl border border-blue-500/10">
+                                {transcription.en}
+                            </p>
+                        )}
+                        {transcription.cues.map((cue, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => handleSeek(cue.start)}
+                                className={`text-left p-3 rounded-xl transition-all border group relative ${currentTime >= cue.start && currentTime <= cue.end
+                                    ? "bg-blue-500/20 border-blue-500/40 text-white shadow-lg shadow-blue-500/10"
+                                    : "bg-white/5 border-transparent text-gray-400 hover:bg-white/10 hover:border-white/10"
+                                    }`}
+                            >
+                                <span className={`text-[9px] font-mono mb-1 block ${currentTime >= cue.start && currentTime <= cue.end ? 'text-blue-300' : 'text-gray-600'}`}>
+                                    {Math.floor(cue.start / 60)}:{String(Math.floor(cue.start % 60)).padStart(2, '0')}
+                                </span>
+                                <p className="text-sm leading-relaxed font-medium">
+                                    {cue.text}
+                                </p>
+                            </button>
+                        ))}
                     </div>
                 </div>
             )}
