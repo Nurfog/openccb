@@ -25,8 +25,42 @@ export default function MediaPlayer({ src, type, transcription, locked, onEnded,
     const [currentCaption, setCurrentCaption] = useState("");
     const [language, setLanguage] = useState<"en" | "es">("en");
 
+    const sidebarRef = useRef<HTMLDivElement>(null);
+    const cueRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
     // Hide everything if graded activity or explicitely disabled
     const shouldShowTranscription = transcription && !locked && !isGraded && showInteractive;
+
+    // Determine which cues to use based on language
+    const getActiveCues = () => {
+        if (language === "en" && transcription?.cues_en) return transcription.cues_en;
+        return transcription?.cues || [];
+    };
+
+    const activeCues = getActiveCues();
+
+    // Auto-scroll logic
+    useEffect(() => {
+        if (!shouldShowTranscription) return;
+
+        const activeIdx = activeCues.findIndex(cue =>
+            currentTime >= cue.start && currentTime <= cue.end
+        );
+
+        if (activeIdx !== -1 && cueRefs.current[activeIdx] && sidebarRef.current) {
+            const activeElem = cueRefs.current[activeIdx];
+            const container = sidebarRef.current;
+
+            // Calculate center position
+            const offsetTop = activeElem.offsetTop;
+            const centerScroll = offsetTop - (container.clientHeight / 2) + (activeElem.clientHeight / 2);
+
+            container.scrollTo({
+                top: centerScroll,
+                behavior: 'smooth'
+            });
+        }
+    }, [currentTime, activeCues, shouldShowTranscription]);
 
     useEffect(() => {
         const media = type === "video" ? videoRef.current : audioRef.current;
@@ -37,8 +71,12 @@ export default function MediaPlayer({ src, type, transcription, locked, onEnded,
             setCurrentTime(time);
             if (onTimeUpdate) onTimeUpdate(time);
 
-            if (transcription?.cues) {
-                const activeCue = transcription.cues.find(cue =>
+            // Re-calculate active cues inside to avoid stale closures in handleTimeUpdate
+            // or just use the one from the outer scope if dependencies are correct
+            const cuesToSearch = (language === "en" && transcription?.cues_en) ? transcription.cues_en : (transcription?.cues || []);
+
+            if (cuesToSearch.length > 0) {
+                const activeCue = cuesToSearch.find(cue =>
                     time >= cue.start && time <= cue.end
                 );
                 setCurrentCaption(activeCue?.text || "");
@@ -55,7 +93,7 @@ export default function MediaPlayer({ src, type, transcription, locked, onEnded,
             media.removeEventListener("timeupdate", handleTimeUpdate);
             media.removeEventListener("ended", handleEnded);
         };
-    }, [type, transcription, onEnded]);
+    }, [type, transcription, onEnded, onTimeUpdate, language]);
 
     const handleSeek = (time: number) => {
         const media = type === "video" ? videoRef.current : audioRef.current;
@@ -140,90 +178,108 @@ export default function MediaPlayer({ src, type, transcription, locked, onEnded,
     };
 
     return (
-        <div className="flex flex-col gap-6 w-full">
-            {/* Top Row: Media + Interactive Sidebar */}
-            <div className={`grid grid-cols-1 ${shouldShowTranscription && activeCues.length > 0 ? 'xl:grid-cols-12' : ''} gap-6 w-full`}>
-                {/* Media Content */}
-                <div className={`${shouldShowTranscription && activeCues.length > 0 ? 'xl:col-span-8' : 'w-full'} relative`}>
-                    {renderMedia()}
+        <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto">
+            {/* Unified Player Unit */}
+            <div className="bg-[#0a0c10] rounded-[24px] xl:rounded-[32px] overflow-hidden border border-white/5 shadow-2xl relative group">
+                <div className="flex flex-col xl:flex-row">
+                    {/* Media Section */}
+                    <div className="flex-1 relative bg-black flex items-center justify-center min-h-[200px]">
+                        <div className="w-full h-full">
+                            {renderMedia()}
+                        </div>
 
-                    {locked && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm rounded-xl z-10 text-center p-6 border border-white/10">
-                            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-4 border border-white/20">
-                                <span className="text-3xl">🔒</span>
+                        {locked && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md z-10 text-center p-8">
+                                <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/10">
+                                    <span className="text-4xl text-white/50">🔒</span>
+                                </div>
+                                <h3 className="text-2xl font-black text-white mb-3 uppercase tracking-wider">Playback Limited</h3>
+                                <p className="text-gray-400 max-w-xs text-sm leading-relaxed">This exclusive content is protected and can only be viewed once.</p>
                             </div>
-                            <h3 className="text-xl font-bold text-white mb-2">Playback Limited</h3>
-                            <p className="text-sm text-gray-300 max-w-xs">This content can only be played once according to the activity rules.</p>
+                        )}
+                    </div>
+
+                    {/* Integrated Interactive Sidebar */}
+                    {shouldShowTranscription && activeCues.length > 0 && (
+                        <div className="xl:w-[300px] 2xl:w-[340px] border-t xl:border-t-0 xl:border-l border-white/5 flex flex-col bg-white/[0.02] backdrop-blur-xl h-[400px] xl:h-auto self-stretch">
+                            <div className="p-5 border-b border-white/5 flex items-center justify-between bg-white/[0.03]">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Interactive</h4>
+                                </div>
+                                <div className="flex bg-black/20 rounded-lg p-1 border border-white/5">
+                                    <button
+                                        onClick={() => setLanguage("en")}
+                                        className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${language === "en" ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "text-gray-500 hover:text-white"}`}
+                                    >EN</button>
+                                    <button
+                                        onClick={() => setLanguage("es")}
+                                        className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${language === "es" ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "text-gray-500 hover:text-white"}`}
+                                    >ES</button>
+                                </div>
+                            </div>
+                            <div
+                                ref={sidebarRef}
+                                className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar bg-black/10"
+                            >
+                                {activeCues.map((cue, idx) => (
+                                    <button
+                                        key={idx}
+                                        ref={(el) => { cueRefs.current[idx] = el; }}
+                                        onClick={() => handleSeek(cue.start)}
+                                        className={`text-left p-4 rounded-2xl transition-all border group relative w-full ${currentTime >= cue.start && currentTime <= cue.end
+                                            ? "bg-blue-600/20 border-blue-500/40 text-white shadow-[0_4px_20px_rgba(59,130,246,0.1)]"
+                                            : "bg-white/[0.03] border-white/5 text-gray-400 hover:bg-white/[0.07] hover:border-white/10"
+                                            }`}
+                                    >
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${currentTime >= cue.start && currentTime <= cue.end ? 'bg-blue-500/30 text-blue-200' : 'bg-white/5 text-gray-500'}`}>
+                                                {Math.floor(cue.start / 60)}:{String(Math.floor(cue.start % 60)).padStart(2, '0')}
+                                            </span>
+                                            {currentTime >= cue.start && currentTime <= cue.end && (
+                                                <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
+                                            )}
+                                        </div>
+                                        <p className="text-xs leading-relaxed font-medium line-clamp-3 group-hover:line-clamp-none transition-all">
+                                            {cue.text}
+                                        </p>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
-
-                {/* Interactive Sidebar (Cues Only) */}
-                {shouldShowTranscription && activeCues.length > 0 && (
-                    <div className="xl:col-span-4 glass border-white/5 bg-white/5 rounded-2xl overflow-hidden flex flex-col h-[300px] xl:h-[unset] xl:max-h-full border border-blue-500/10 self-stretch">
-                        <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
-                            <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Interactive Content</h4>
-                            <div className="flex bg-white/5 rounded-lg p-1">
-                                <button
-                                    onClick={() => setLanguage("en")}
-                                    className={`px-2 py-1 text-[10px] font-bold rounded ${language === "en" ? "bg-blue-500 text-white" : "text-gray-500 hover:text-white"}`}
-                                >EN</button>
-                                <button
-                                    onClick={() => setLanguage("es")}
-                                    className={`px-2 py-1 text-[10px] font-bold rounded ${language === "es" ? "bg-blue-500 text-white" : "text-gray-500 hover:text-white"}`}
-                                >ES</button>
-                            </div>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-                            {activeCues.map((cue, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => handleSeek(cue.start)}
-                                    className={`text-left p-3 rounded-xl transition-all border group relative w-full ${currentTime >= cue.start && currentTime <= cue.end
-                                        ? "bg-blue-500/20 border-blue-500/40 text-white"
-                                        : "bg-white/5 border-transparent text-gray-400 hover:bg-white/10 hover:border-white/10"
-                                        }`}
-                                >
-                                    <span className={`text-[9px] font-mono mb-1 block ${currentTime >= cue.start && currentTime <= cue.end ? 'text-blue-300' : 'text-gray-600'}`}>
-                                        {Math.floor(cue.start / 60)}:{String(Math.floor(cue.start % 60)).padStart(2, '0')}
-                                    </span>
-                                    <p className="text-xs leading-relaxed font-medium line-clamp-2">
-                                        {cue.text}
-                                    </p>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </div>
 
-            {/* Bottom Row: Full Transcription Text */}
+            {/* Transcription text now clearly separated below the whole unit */}
             {shouldShowTranscription && (
-                <div className="glass p-6 rounded-2xl border-white/5 bg-white/5 flex flex-col gap-4">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-gray-500 flex items-center gap-2">
-                            <span>📝</span> Full Transcription ({language.toUpperCase()})
+                <div className="glass-card !p-8 border-white/5 bg-white/[0.02] relative overflow-hidden group/text">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-blue-500/30 group-hover/text:bg-blue-500 transition-all" />
+                    <div className="flex items-center justify-between mb-6">
+                        <h4 className="text-xs font-black uppercase tracking-[0.3em] text-gray-500 flex items-center gap-3">
+                            <span className="text-lg">📄</span> Full Transcription
                         </h4>
                         {!transcription.cues && (
-                            <div className="flex bg-white/5 rounded-lg p-1">
+                            <div className="flex bg-white/5 rounded-lg p-1 border border-white/5">
                                 <button
                                     onClick={() => setLanguage("en")}
-                                    className={`px-2 py-1 text-[10px] font-bold rounded ${language === "en" ? "bg-blue-500 text-white" : "text-gray-500 hover:text-white"}`}
+                                    className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${language === "en" ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "text-gray-500 hover:text-white"}`}
                                 >EN</button>
                                 <button
                                     onClick={() => setLanguage("es")}
-                                    className={`px-2 py-1 text-[10px] font-bold rounded ${language === "es" ? "bg-blue-500 text-white" : "text-gray-500 hover:text-white"}`}
+                                    className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${language === "es" ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "text-gray-500 hover:text-white"}`}
                                 >ES</button>
                             </div>
                         )}
                     </div>
-                    <div className="text-sm text-gray-400 leading-relaxed italic max-h-60 overflow-y-auto custom-scrollbar pr-4">
+                    <div className="text-[15px] text-gray-400 font-medium leading-[1.8] italic bg-black/20 p-6 rounded-2xl border border-white/5 relative">
                         &quot;{transcription[language] || "Transcription not available."}&quot;
+                        <div className="absolute bottom-4 right-6 text-[10px] font-black uppercase tracking-widest text-blue-500/40">
+                            Official {language.toUpperCase()} Text
+                        </div>
                     </div>
                 </div>
             )}
         </div>
     );
-}
-        );
 }
