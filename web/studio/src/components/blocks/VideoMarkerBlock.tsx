@@ -133,6 +133,7 @@ export default function VideoMarkerBlock({
                         type="video"
                         isGraded={isGraded}
                         showInteractive={false} // Interactive markers are separate here
+                        onTimeUpdate={setCurrentTime}
                     />
                 </div>
 

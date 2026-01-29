@@ -14,9 +14,10 @@ interface MediaPlayerProps {
     onEnded?: () => void;
     isGraded?: boolean;
     showInteractive?: boolean;
+    onTimeUpdate?: (time: number) => void;
 }
 
-export default function MediaPlayer({ src, type, transcription, locked, onEnded, isGraded, showInteractive = true }: MediaPlayerProps) {
+export default function MediaPlayer({ src, type, transcription, locked, onEnded, isGraded, showInteractive = true, onTimeUpdate }: MediaPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const audioRef = useRef<HTMLAudioElement>(null);
     const [currentTime, setCurrentTime] = useState(0);
@@ -33,6 +34,7 @@ export default function MediaPlayer({ src, type, transcription, locked, onEnded,
         const handleTimeUpdate = () => {
             const time = media.currentTime;
             setCurrentTime(time);
+            if (onTimeUpdate) onTimeUpdate(time);
 
             if (transcription?.cues) {
                 const activeCue = transcription.cues.find(cue =>
