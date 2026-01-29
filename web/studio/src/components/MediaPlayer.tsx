@@ -278,9 +278,9 @@ export default function MediaPlayer({ src, type, transcription, locked, onEnded,
                             </div>
                         )}
                     </div>
-                    <div className="text-[15px] text-gray-400 font-medium leading-[1.8] italic bg-black/20 p-6 rounded-2xl border border-white/5 relative">
+                    <div className="text-[13px] text-gray-400 font-medium leading-[1.7] italic bg-black/20 p-5 rounded-2xl border border-white/5 relative max-h-[300px] overflow-y-auto custom-scrollbar">
                         &quot;{transcription[language] || "Transcription not available."}&quot;
-                        <div className="absolute bottom-4 right-6 text-[10px] font-black uppercase tracking-widest text-blue-500/40">
+                        <div className="sticky bottom-0 right-0 text-[10px] font-black uppercase tracking-widest text-blue-500/40 text-right mt-4 pt-3 bg-gradient-to-t from-black/40 to-transparent">
                             Official {language.toUpperCase()} Text
                         </div>
                     </div>
