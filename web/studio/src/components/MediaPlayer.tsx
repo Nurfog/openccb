@@ -51,9 +51,11 @@ export default function MediaPlayer({ src, type, transcription, locked, onEnded,
             const activeElem = cueRefs.current[activeIdx];
             const container = sidebarRef.current;
 
-            // Calculate center position
+            // Center the active element in the visible area
             const offsetTop = activeElem.offsetTop;
-            const centerScroll = offsetTop - (container.clientHeight / 2) + (activeElem.clientHeight / 2);
+            const elementHeight = activeElem.offsetHeight;
+            const containerHeight = container.clientHeight;
+            const centerScroll = offsetTop - (containerHeight / 2) + (elementHeight / 2);
 
             container.scrollTo({
                 top: centerScroll,
@@ -179,30 +181,34 @@ export default function MediaPlayer({ src, type, transcription, locked, onEnded,
 
     return (
         <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto">
-            {/* Unified Player Unit */}
-            <div className="bg-[#0a0c10] rounded-[24px] xl:rounded-[32px] overflow-hidden border border-white/5 shadow-2xl relative group">
-                <div className="flex flex-col xl:flex-row">
-                    {/* Media Section */}
-                    <div className="flex-1 relative bg-black flex items-center justify-center min-h-[200px]">
-                        <div className="w-full h-full">
-                            {renderMedia()}
-                        </div>
-
-                        {locked && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md z-10 text-center p-8">
-                                <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/10">
-                                    <span className="text-4xl text-white/50">🔒</span>
-                                </div>
-                                <h3 className="text-2xl font-black text-white mb-3 uppercase tracking-wider">Playback Limited</h3>
-                                <p className="text-gray-400 max-w-xs text-sm leading-relaxed">This exclusive content is protected and can only be viewed once.</p>
+            {/* Player + Sidebar Grid */}
+            <div className={`grid grid-cols-1 ${shouldShowTranscription && activeCues.length > 0 ? 'xl:grid-cols-12' : ''} gap-6 w-full`}>
+                {/* Video Player Container */}
+                <div className={`${shouldShowTranscription && activeCues.length > 0 ? 'xl:col-span-8' : 'w-full'}`}>
+                    <div className="bg-[#0a0c10] rounded-[24px] xl:rounded-[32px] overflow-hidden border border-white/5 shadow-2xl relative">
+                        <div className="relative bg-black flex items-center justify-center min-h-[200px]">
+                            <div className="w-full h-full">
+                                {renderMedia()}
                             </div>
-                        )}
-                    </div>
 
-                    {/* Integrated Interactive Sidebar */}
-                    {shouldShowTranscription && activeCues.length > 0 && (
-                        <div className="xl:w-[300px] 2xl:w-[340px] border-t xl:border-t-0 xl:border-l border-white/5 flex flex-col bg-white/[0.02] backdrop-blur-xl h-[400px] xl:h-auto self-stretch">
-                            <div className="p-5 border-b border-white/5 flex items-center justify-between bg-white/[0.03]">
+                            {locked && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md z-10 text-center p-8">
+                                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/10">
+                                        <span className="text-4xl text-white/50">🔒</span>
+                                    </div>
+                                    <h3 className="text-2xl font-black text-white mb-3 uppercase tracking-wider">Playback Limited</h3>
+                                    <p className="text-gray-400 max-w-xs text-sm leading-relaxed">This exclusive content is protected and can only be viewed once.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Interactive Sidebar (Separate Column) */}
+                {shouldShowTranscription && activeCues.length > 0 && (
+                    <div className="xl:col-span-4">
+                        <div className="bg-[#0a0c10] rounded-[24px] xl:rounded-[32px] border border-white/5 shadow-2xl flex flex-col max-h-[500px]">
+                            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/[0.03]">
                                 <div className="flex items-center gap-3">
                                     <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
                                     <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Interactive</h4>
@@ -220,35 +226,35 @@ export default function MediaPlayer({ src, type, transcription, locked, onEnded,
                             </div>
                             <div
                                 ref={sidebarRef}
-                                className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar bg-black/10"
+                                className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar bg-black/10"
                             >
                                 {activeCues.map((cue, idx) => (
                                     <button
                                         key={idx}
                                         ref={(el) => { cueRefs.current[idx] = el; }}
                                         onClick={() => handleSeek(cue.start)}
-                                        className={`text-left p-4 rounded-2xl transition-all border group relative w-full ${currentTime >= cue.start && currentTime <= cue.end
-                                            ? "bg-blue-600/20 border-blue-500/40 text-white shadow-[0_4px_20px_rgba(59,130,246,0.1)]"
+                                        className={`text-left p-2.5 rounded-lg transition-all border group relative w-full ${currentTime >= cue.start && currentTime <= cue.end
+                                            ? "bg-blue-600/20 border-blue-500/40 text-white shadow-[0_2px_12px_rgba(59,130,246,0.15)]"
                                             : "bg-white/[0.03] border-white/5 text-gray-400 hover:bg-white/[0.07] hover:border-white/10"
                                             }`}
                                     >
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${currentTime >= cue.start && currentTime <= cue.end ? 'bg-blue-500/30 text-blue-200' : 'bg-white/5 text-gray-500'}`}>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${currentTime >= cue.start && currentTime <= cue.end ? 'bg-blue-500/30 text-blue-200' : 'bg-white/5 text-gray-500'}`}>
                                                 {Math.floor(cue.start / 60)}:{String(Math.floor(cue.start % 60)).padStart(2, '0')}
                                             </span>
                                             {currentTime >= cue.start && currentTime <= cue.end && (
                                                 <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
                                             )}
                                         </div>
-                                        <p className="text-xs leading-relaxed font-medium line-clamp-3 group-hover:line-clamp-none transition-all">
+                                        <p className="text-[11px] leading-snug font-medium line-clamp-2">
                                             {cue.text}
                                         </p>
                                     </button>
                                 ))}
                             </div>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
 
             {/* Transcription text now clearly separated below the whole unit */}
