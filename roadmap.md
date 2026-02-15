@@ -192,11 +192,13 @@
 - [ ] **Bookmarks**: Sistema de favoritos para lecciones importantes.
 - [ ] **Progress Dashboard**: Gráficos de progreso temporal y predicción de finalización.
 
-## Fase 18: Monetización y Estandarización (Nuevas Sugerencias)
-- [ ] **E-Commerce & Monetización**:
-  - [ ] Integración con Mercado Pago y Stripe.
-  - [ ] Sistema de precios por curso y organización.
-  - [ ] Dashboard de transacciones y conciliación.
+## Fase 18: Monetización y Estandarización ✅
+- [x] **E-Commerce & Monetización**: (Completado)
+  - [x] Integración con Mercado Pago (Preferencia de pago y Webhooks).
+  - [x] Sistema de precios y moneda por curso.
+  - [x] Inscripción automática tras pago exitoso.
+  - [x] Verificación de seguridad de acceso a lecciones basada en inscripción.
+  - [x] Dashboard de transacciones básico en base de datos.
 - [ ] **Interoperabilidad**:
   - [ ] Implementación de LTI 1.3 (Tool Provider).
   - [ ] Conectividad con LMS externos (Moodle/Canvas).
@@ -213,10 +215,9 @@
 
 ---
 
-**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados, **sistema de foros de discusión funcional** y **gestión de anuncios del curso con notificaciones automáticas**.
+**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados, **sistema de foros de discusión funcional**, **gestión de anuncios** y **monetización integrada con Mercado Pago**.
 
 **Próximas Prioridades**:
-1. **Monetización Core**: Preparación de infraestructura para pagos y precios.
-2. **LTI 1.3 Research**: Bases para la interoperabilidad.
+1. **LTI 1.3 Research**: Bases para la interoperabilidad con LMS externos.
 3. **Course Wiki**: Espacio colaborativo para documentación de cursos.
 4. **Student Notes**: Anotaciones personales exportables.

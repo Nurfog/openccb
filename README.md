@@ -37,6 +37,7 @@ El proyecto ha sido optimizado para reducir la complejidad de la infraestructura
 - **Efficient Docker Builds**: Imágenes de contenedor optimizadas para desarrollo rápido y despliegue ligero.
 - **Discussion Forums**: Sistema completo de foros por curso con hilos de discusión, respuestas anidadas, votación, moderación por instructores y suscripciones.
 - **Split Authentication Flow**: Flujos de autenticación diferenciados para usuarios personales (email/password) y empresas (dominio corporativo).
+- **Course Monetization**: Integración con Mercado Pago para venta de cursos, con inscripciones automáticas y paneles de precios para instructores.
 
 ##  Requisitos del Sistema
 
@@ -581,6 +582,7 @@ Obtiene una lista de todas las organizaciones registradas.
 - **Discussion Forums**: Complete forum system with threaded replies, voting, instructor moderation, and subscriptions.
 - **Course Announcements**: Instructor-to-student communication system with automatic notifications and pinning functionality.
 - **Split Authentication**: Separate login flows for personal users and enterprise organizations with SSO support.
+- **Mercado Pago Monetization**: Integrated payment gateway with automatic course unlocking and transaction tracking.
 
 ## 📄 Licencia
 Este proyecto es código abierto y está disponible bajo los términos de la licencia especificada en el repositorio.

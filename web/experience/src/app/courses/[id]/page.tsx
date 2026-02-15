@@ -89,7 +89,7 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
     if (!courseData) return <div className="text-center py-20 text-gray-500">Curso no encontrado.</div>;
 
     const getStatusIcon = (lessonId: string, isGraded: boolean, allowRetry: boolean) => {
-        const grade = userGrades.find(g => g.lesson_id === lessonId);
+        const grade = userGrades.find((g: UserGrade) => g.lesson_id === lessonId);
         if (!grade) {
             return <Circle size={18} className="text-white/20" />;
         }
@@ -125,7 +125,9 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                 </p>
 
                 <div className="flex flex-wrap items-center gap-4 mb-10">
-                    <div className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold uppercase tracking-widest ${courseData.pacing_mode === 'instructor_led' ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold uppercase tracking-widest ${courseData.pacing_mode === 'instructor_led'
+                        ? 'bg-purple-500/10 border-purple-500/30 text-purple-400'
+                        : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
                         }`}>
                         {courseData.pacing_mode === 'instructor_led' ? <Clock size={14} /> : <Info size={14} />}
                         {courseData.pacing_mode === 'instructor_led' ? 'Dirigido por un Instructor' : 'A tu Ritmo'}
@@ -210,7 +212,7 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                                 <div className="h-3 w-2/3 bg-white/10 rounded"></div>
                             </div>
                         ) : (
-                            recommendations.map((rec, i) => (
+                            recommendations.map((rec: Recommendation, i: number) => (
                                 <div key={i} className="glass-card border-white/5 hover:border-purple-500/30 transition-all p-6 group">
                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                         <div className="space-y-3">
@@ -251,7 +253,7 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
             </div>
 
             <div className="space-y-12">
-                {courseData.modules.map((module, idx) => (
+                {courseData.modules.map((module: Module, idx: number) => (
                     <div key={module.id} className="relative">
                         <div className="flex items-center gap-4 mb-6">
                             <div className="w-10 h-10 rounded-xl glass border-blue-500/20 bg-blue-500/10 flex items-center justify-center">
@@ -261,7 +263,7 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                         </div>
 
                         <div className="grid gap-3 pl-14">
-                            {module.lessons.map((lesson) => (
+                            {module.lessons.map((lesson: any) => (
                                 isEnrolled ? (
                                     <Link key={lesson.id} href={`/courses/${params.id}/lessons/${lesson.id}`}>
                                         <div className="glass-card !p-4 group hover:bg-white/10 border-white/5 active:scale-[0.99] transition-all">
@@ -328,6 +330,6 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
             <div className="mt-20">
                 <DiscussionBoard courseId={params.id} />
             </div>
-        </div >
+        </div>
     );
 }

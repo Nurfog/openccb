@@ -5,10 +5,7 @@ use axum::{
 };
 use common::auth::Claims;
 use common::middleware::Org;
-use common::models::{
-    DiscussionThread, DiscussionPost,
-    ThreadWithAuthor, PostWithAuthor,
-};
+use common::models::{DiscussionPost, DiscussionThread, PostWithAuthor, ThreadWithAuthor};
 use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -63,12 +60,12 @@ pub async fn list_threads(
         FROM discussion_threads t
         LEFT JOIN users u ON t.author_id = u.id
         LEFT JOIN discussion_posts p ON t.id = p.thread_id
-        WHERE t.course_id = $1 AND t.organization_id = $2"
+        WHERE t.course_id = $1 AND t.organization_id = $2",
     );
 
     let mut bind_count = 2;
 
-    if let Some(lesson_id) = params.lesson_id {
+    if let Some(_lesson_id) = params.lesson_id {
         bind_count += 1;
         query.push_str(&format!(" AND t.lesson_id = ${}", bind_count));
     }
@@ -80,7 +77,9 @@ pub async fn list_threads(
                 query.push_str(&format!(" AND t.author_id = ${}", bind_count));
             }
             "unanswered" => {
-                query.push_str(" AND NOT EXISTS (SELECT 1 FROM discussion_posts WHERE thread_id = t.id)");
+                query.push_str(
+                    " AND NOT EXISTS (SELECT 1 FROM discussion_posts WHERE thread_id = t.id)",
+                );
             }
             "resolved" => {
                 query.push_str(" AND EXISTS (SELECT 1 FROM discussion_posts WHERE thread_id = t.id AND is_endorsed = true)");
@@ -146,7 +145,7 @@ pub async fn create_thread(
     let _ = sqlx::query(
         "INSERT INTO discussion_subscriptions (organization_id, thread_id, user_id)
          VALUES ($1, $2, $3)
-         ON CONFLICT DO NOTHING"
+         ON CONFLICT DO NOTHING",
     )
     .bind(org_ctx.id)
     .bind(thread.id)
@@ -181,7 +180,7 @@ pub async fn get_thread_detail(
         LEFT JOIN users u ON t.author_id = u.id
         LEFT JOIN discussion_posts p ON t.id = p.thread_id
         WHERE t.id = $1 AND t.organization_id = $2
-        GROUP BY t.id, u.full_name, u.avatar_url"
+        GROUP BY t.id, u.full_name, u.avatar_url",
     )
     .bind(thread_id)
     .bind(org_ctx.id)
@@ -205,7 +204,13 @@ fn get_thread_posts_recursive<'a>(
     parent_id: Option<Uuid>,
     user_id: Uuid,
     org_id: Uuid,
-) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<PostWithAuthor>, (StatusCode, String)>> + Send + 'a>> {
+) -> std::pin::Pin<
+    Box<
+        dyn std::future::Future<Output = Result<Vec<PostWithAuthor>, (StatusCode, String)>>
+            + Send
+            + 'a,
+    >,
+> {
     Box::pin(async move {
         let parent_filter = match parent_id {
             Some(_) => "parent_post_id = $2",
@@ -226,8 +231,7 @@ fn get_thread_posts_recursive<'a>(
             parent_filter
         );
 
-        let mut sql_query = sqlx::query_as::<_, PostWithAuthor>(&query)
-            .bind(thread_id);
+        let mut sql_query = sqlx::query_as::<_, PostWithAuthor>(&query).bind(thread_id);
 
         if let Some(pid) = parent_id {
             sql_query = sql_query.bind(pid);
@@ -242,7 +246,8 @@ fn get_thread_posts_recursive<'a>(
 
         // Recursively fetch replies for each post
         for post in &mut posts {
-            post.replies = get_thread_posts_recursive(pool, thread_id, Some(post.id), user_id, org_id).await?;
+            post.replies =
+                get_thread_posts_recursive(pool, thread_id, Some(post.id), user_id, org_id).await?;
         }
 
         Ok(posts)
@@ -263,7 +268,10 @@ pub async fn pin_thread(
         .map_err(|_| (StatusCode::UNAUTHORIZED, "User not found".to_string()))?;
 
     if user.0 != "instructor" && user.0 != "admin" {
-        return Err((StatusCode::FORBIDDEN, "Only instructors can pin threads".to_string()));
+        return Err((
+            StatusCode::FORBIDDEN,
+            "Only instructors can pin threads".to_string(),
+        ));
     }
 
     sqlx::query("UPDATE discussion_threads SET is_pinned = NOT is_pinned WHERE id = $1 AND organization_id = $2")
@@ -290,7 +298,10 @@ pub async fn lock_thread(
         .map_err(|_| (StatusCode::UNAUTHORIZED, "User not found".to_string()))?;
 
     if user.0 != "instructor" && user.0 != "admin" {
-        return Err((StatusCode::FORBIDDEN, "Only instructors can lock threads".to_string()));
+        return Err((
+            StatusCode::FORBIDDEN,
+            "Only instructors can lock threads".to_string(),
+        ));
     }
 
     sqlx::query("UPDATE discussion_threads SET is_locked = NOT is_locked WHERE id = $1 AND organization_id = $2")
@@ -313,11 +324,12 @@ pub async fn create_post(
     Json(payload): Json<CreatePostPayload>,
 ) -> Result<Json<DiscussionPost>, (StatusCode, String)> {
     // Check if thread is locked
-    let thread = sqlx::query_as::<_, (bool,)>("SELECT is_locked FROM discussion_threads WHERE id = $1")
-        .bind(thread_id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| (StatusCode::NOT_FOUND, "Thread not found".to_string()))?;
+    let thread =
+        sqlx::query_as::<_, (bool,)>("SELECT is_locked FROM discussion_threads WHERE id = $1")
+            .bind(thread_id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| (StatusCode::NOT_FOUND, "Thread not found".to_string()))?;
 
     if thread.0 {
         return Err((StatusCode::FORBIDDEN, "Thread is locked".to_string()));
@@ -356,7 +368,10 @@ pub async fn endorse_post(
         .map_err(|_| (StatusCode::UNAUTHORIZED, "User not found".to_string()))?;
 
     if user.0 != "instructor" && user.0 != "admin" {
-        return Err((StatusCode::FORBIDDEN, "Only instructors can endorse posts".to_string()));
+        return Err((
+            StatusCode::FORBIDDEN,
+            "Only instructors can endorse posts".to_string(),
+        ));
     }
 
     sqlx::query("UPDATE discussion_posts SET is_endorsed = NOT is_endorsed WHERE id = $1 AND organization_id = $2")
@@ -385,7 +400,7 @@ pub async fn vote_post(
         "INSERT INTO discussion_votes (organization_id, post_id, user_id, vote_type)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (post_id, user_id) 
-         DO UPDATE SET vote_type = EXCLUDED.vote_type"
+         DO UPDATE SET vote_type = EXCLUDED.vote_type",
     )
     .bind(org_ctx.id)
     .bind(post_id)
@@ -397,7 +412,7 @@ pub async fn vote_post(
 
     // Recalculate upvotes
     let upvote_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM discussion_votes WHERE post_id = $1 AND vote_type = 'upvote'"
+        "SELECT COUNT(*) FROM discussion_votes WHERE post_id = $1 AND vote_type = 'upvote'",
     )
     .bind(post_id)
     .fetch_one(&pool)
@@ -425,7 +440,7 @@ pub async fn subscribe_thread(
     sqlx::query(
         "INSERT INTO discussion_subscriptions (organization_id, thread_id, user_id)
          VALUES ($1, $2, $3)
-         ON CONFLICT DO NOTHING"
+         ON CONFLICT DO NOTHING",
     )
     .bind(org_ctx.id)
     .bind(thread_id)
@@ -445,7 +460,7 @@ pub async fn unsubscribe_thread(
 ) -> Result<StatusCode, (StatusCode, String)> {
     sqlx::query(
         "DELETE FROM discussion_subscriptions 
-         WHERE thread_id = $1 AND user_id = $2 AND organization_id = $3"
+         WHERE thread_id = $1 AND user_id = $2 AND organization_id = $3",
     )
     .bind(thread_id)
     .bind(claims.sub)
