@@ -14,6 +14,10 @@ WORKDIR /app
 COPY web/experience/package*.json ./
 RUN npm install
 COPY web/experience/ .
+ARG NEXT_PUBLIC_LMS_API_URL
+ENV NEXT_PUBLIC_LMS_API_URL=$NEXT_PUBLIC_LMS_API_URL
+ARG NEXT_PUBLIC_CMS_API_URL
+ENV NEXT_PUBLIC_CMS_API_URL=$NEXT_PUBLIC_CMS_API_URL
 RUN npm run build
 
 # Final stage

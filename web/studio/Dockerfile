@@ -14,6 +14,8 @@ WORKDIR /app
 COPY web/studio/package*.json ./
 RUN npm install
 COPY web/studio/ .
+ARG NEXT_PUBLIC_CMS_API_URL
+ENV NEXT_PUBLIC_CMS_API_URL=$NEXT_PUBLIC_CMS_API_URL
 RUN npm run build
 
 # Final stage
