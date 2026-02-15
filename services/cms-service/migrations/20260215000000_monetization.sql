@@ -1,6 +1,6 @@
 -- Add price and currency to courses table
-ALTER TABLE courses ADD COLUMN price NUMERIC(10, 2) DEFAULT 0.00;
-ALTER TABLE courses ADD COLUMN currency VARCHAR(10) DEFAULT 'USD';
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS price DOUBLE PRECISION DEFAULT 0.0;
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'USD';
 
 -- Update fn_create_course to handle price and currency
 CREATE OR REPLACE FUNCTION fn_create_course(
@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION fn_create_course(
     p_instructor_id UUID,
     p_title TEXT,
     p_pacing_mode TEXT DEFAULT 'self_paced',
-    p_price NUMERIC(10, 2) DEFAULT 0.00,
+    p_price DOUBLE PRECISION DEFAULT 0.0,
     p_currency TEXT DEFAULT 'USD'
 ) RETURNS SETOF courses AS $$
 BEGIN
@@ -42,7 +42,7 @@ CREATE OR REPLACE FUNCTION fn_update_course(
     p_start_date TIMESTAMP WITH TIME ZONE,
     p_end_date TIMESTAMP WITH TIME ZONE,
     p_certificate_template TEXT,
-    p_price NUMERIC(10, 2),
+    p_price DOUBLE PRECISION,
     p_currency TEXT
 ) RETURNS SETOF courses AS $$
 BEGIN
