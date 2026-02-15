@@ -53,12 +53,71 @@ pub async fn create_payment_preference(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // 3. Call Mercado Pago API (Mocked for now as per plan)
-    let preference_id = format!("pref_{}", Uuid::new_v4().simple());
-    let init_point = format!(
-        "https://www.mercadopago.cl/checkout/v1/redirect?pref_id={}",
-        preference_id
-    );
+    // 3. Call Mercado Pago API
+    let mp_access_token = std::env::var("MP_ACCESS_TOKEN").unwrap_or_default();
+    let back_url_success = std::env::var("MP_BACK_URL_SUCCESS").unwrap_or_default();
+    let back_url_failure = std::env::var("MP_BACK_URL_FAILURE").unwrap_or_default();
+    let notification_url = std::env::var("MP_NOTIFICATION_URL").unwrap_or_default();
+
+    let client = reqwest::Client::new();
+    let preference_payload = serde_json::json!({
+        "items": [
+            {
+                "id": course_id.to_string(),
+                "title": course.title,
+                "quantity": 1,
+                "unit_price": course.price,
+                "currency_id": course.currency
+            }
+        ],
+        "back_urls": {
+            "success": back_url_success,
+            "failure": back_url_failure,
+            "pending": back_url_failure
+        },
+        "auto_return": "approved",
+        "notification_url": notification_url,
+        "external_reference": transaction_id.to_string(),
+        "metadata": {
+            "course_id": course_id,
+            "user_id": user_id,
+            "transaction_id": transaction_id
+        }
+    });
+
+    let mp_response = client
+        .post("https://api.mercadopago.com/checkout/preferences")
+        .header("Authorization", format!("Bearer {}", mp_access_token))
+        .json(&preference_payload)
+        .send()
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("MP Error: {}", e),
+            )
+        })?;
+
+    if !mp_response.status().is_success() {
+        let err_text = mp_response.text().await.unwrap_or_default();
+        return Err((
+            StatusCode::BAD_GATEWAY,
+            format!("MP API Error: {}", err_text),
+        ));
+    }
+
+    let mp_data: serde_json::Value = mp_response.json().await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to parse MP response: {}", e),
+        )
+    })?;
+
+    let preference_id = mp_data["id"].as_str().unwrap_or_default().to_string();
+    let init_point = mp_data["init_point"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
 
     // Update transaction with provider reference
     sqlx::query("UPDATE transactions SET provider_reference = $1 WHERE id = $2")
@@ -94,18 +153,50 @@ pub async fn mercadopago_webhook(
     }
 
     let payment_id = payload.data.id;
+    let mp_access_token = std::env::var("MP_ACCESS_TOKEN").unwrap_or_default();
 
-    // Simplified success logic for the mock
-    let transaction: Option<(Uuid, Uuid)> =
-        sqlx::query_as("SELECT user_id, course_id FROM transactions WHERE provider_reference = $1")
-            .bind(&payment_id)
-            .fetch_optional(&pool)
-            .await
-            .unwrap_or(None);
+    // 1. Fetch payment details from Mercado Pago to verify status
+    let client = reqwest::Client::new();
+    let mp_response = client
+        .get(format!(
+            "https://api.mercadopago.com/v1/payments/{}",
+            payment_id
+        ))
+        .header("Authorization", format!("Bearer {}", mp_access_token))
+        .send()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    if let Some((user_id, course_id)) = transaction {
-        sqlx::query("UPDATE transactions SET status = 'success', updated_at = NOW() WHERE provider_reference = $1")
-            .bind(&payment_id)
+    if !mp_response.status().is_success() {
+        return Err(StatusCode::BAD_GATEWAY);
+    }
+
+    let payment_data: serde_json::Value = mp_response
+        .json()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let status = payment_data["status"].as_str().unwrap_or("pending");
+    let external_reference = payment_data["external_reference"]
+        .as_str()
+        .unwrap_or_default();
+
+    if status != "approved" {
+        return Ok(StatusCode::OK); // Payment not yet approved, wait for next notification
+    }
+
+    // 2. Find transaction by external reference (transaction_id)
+    let transaction: Option<(Uuid, Uuid, Uuid)> = sqlx::query_as(
+        "SELECT id, user_id, course_id FROM transactions WHERE id = $1 OR provider_reference = $1",
+    )
+    .bind(&external_reference) // Try by external reference first
+    .fetch_optional(&pool)
+    .await
+    .unwrap_or(None);
+
+    if let Some((trans_id, user_id, course_id)) = transaction {
+        // Mark transaction as success
+        sqlx::query("UPDATE transactions SET status = 'success', updated_at = NOW() WHERE id = $1")
+            .bind(trans_id)
             .execute(&pool)
             .await
             .ok();
