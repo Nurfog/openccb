@@ -23,6 +23,7 @@ services:
       DATABASE_URL: postgresql://user:password@db:5432/openccb_cms
       JWT_SECRET: ${JWT_SECRET:-openccb_secret_key_2025_production}
       NEXT_PUBLIC_CMS_API_URL: ${NEXT_PUBLIC_CMS_API_URL:-http://localhost:3001}
+      RUST_LOG: debug
       LMS_INTERNAL_URL: http://experience:3002
     volumes:
       - uploads_data:/app/uploads
@@ -45,6 +46,7 @@ services:
     environment:
       DATABASE_URL: postgresql://user:password@db:5432/openccb_lms
       JWT_SECRET: ${JWT_SECRET:-openccb_secret_key_2025_production}
+      RUST_LOG: debug
       NEXT_PUBLIC_LMS_API_URL: ${NEXT_PUBLIC_LMS_API_URL:-http://localhost:3002}
       NEXT_PUBLIC_CMS_API_URL: ${NEXT_PUBLIC_CMS_API_URL:-http://localhost:3001}
     env_file: .env

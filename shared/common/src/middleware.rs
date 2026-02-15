@@ -1,10 +1,10 @@
 use axum::{
     extract::{FromRequestParts, Request},
-    http::{request::Parts, StatusCode},
+    http::{StatusCode, request::Parts},
     middleware::Next,
     response::Response,
 };
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 use uuid::Uuid;
 
 use crate::auth::Claims;

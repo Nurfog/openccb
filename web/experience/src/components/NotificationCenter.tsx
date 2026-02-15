@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { lmsApi, Notification } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { Bell, X, Calendar, Info, AlertTriangle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
@@ -10,7 +11,10 @@ export default function NotificationCenter() {
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    const { user } = useAuth();
+
     const fetchNotifications = async () => {
+        if (!user) return;
         setLoading(true);
         try {
             const data = await lmsApi.getNotifications();
@@ -23,11 +27,13 @@ export default function NotificationCenter() {
     };
 
     useEffect(() => {
-        fetchNotifications();
-        // Poll every 5 minutes
-        const interval = setInterval(fetchNotifications, 300000);
-        return () => clearInterval(interval);
-    }, []);
+        if (user) {
+            fetchNotifications();
+            // Poll every 5 minutes
+            const interval = setInterval(fetchNotifications, 300000);
+            return () => clearInterval(interval);
+        }
+    }, [user]);
 
     const markAsRead = async (id: string) => {
         try {
