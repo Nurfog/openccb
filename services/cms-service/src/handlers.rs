@@ -261,11 +261,23 @@ pub async fn create_course(
         org_ctx.id
     };
 
-    let course = sqlx::query_as::<_, Course>("SELECT * FROM fn_create_course($1, $2, $3, $4)")
+    let price = payload
+        .get("price")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.0);
+    
+    let currency = payload
+        .get("currency")
+        .and_then(|v| v.as_str())
+        .unwrap_or("USD");
+
+    let course = sqlx::query_as::<_, Course>("SELECT * FROM fn_create_course($1, $2, $3, $4, $5, $6)")
         .bind(target_org_id)
         .bind(instructor_id)
         .bind(title)
         .bind(pacing_mode)
+        .bind(price)
+        .bind(currency)
         .fetch_one(&mut *tx)
         .await
         .map_err(|e| {
@@ -358,6 +370,17 @@ pub async fn update_course(
         .and_then(|s| s.parse::<DateTime<Utc>>().ok())
         .or(existing.end_date);
 
+    let price = payload
+        .get("price")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(existing.price);
+
+    let currency = payload
+        .get("currency")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or(existing.currency);
+
     // BEGIN TRANSACTION
     let mut tx = pool
         .begin()
@@ -375,7 +398,7 @@ pub async fn update_course(
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let course = sqlx::query_as::<_, Course>(
-        "SELECT * FROM fn_update_course($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        "SELECT * FROM fn_update_course($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
     )
     .bind(id)
     .bind(org_ctx.id)
@@ -386,6 +409,8 @@ pub async fn update_course(
     .bind(start_date)
     .bind(end_date)
     .bind(certificate_template)
+    .bind(price)
+    .bind(currency)
     .fetch_one(&mut *tx)
     .await
     .map_err(|e| {

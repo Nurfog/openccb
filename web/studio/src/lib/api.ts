@@ -31,6 +31,8 @@ export interface Course {
     end_date?: string;
     passing_percentage: number;
     certificate_template?: string;
+    price: number;
+    currency: string;
     created_at: string;
     updated_at: string;
     modules?: Module[];

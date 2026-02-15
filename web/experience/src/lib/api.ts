@@ -55,7 +55,14 @@ export interface Course {
     pacing_mode: string;
     start_date?: string;
     end_date?: string;
+    price: number;
+    currency: string;
     created_at: string;
+}
+
+export interface PaymentPreferenceResponse {
+    preference_id: string;
+    init_point: string;
 }
 
 export interface QuizQuestion {
@@ -370,6 +377,13 @@ export const lmsApi = {
 
     async getEnrollments(userId: string): Promise<Enrollment[]> {
         return apiFetch(`/enrollments/${userId}`);
+    },
+
+    async createPaymentPreference(courseId: string): Promise<PaymentPreferenceResponse> {
+        return apiFetch('/payments/preference', {
+            method: 'POST',
+            body: JSON.stringify({ course_id: courseId })
+        });
     },
 
     async submitScore(userId: string, course_id: string, lessonId: string, score: number, metadata: Record<string, unknown> = {}): Promise<UserGrade> {

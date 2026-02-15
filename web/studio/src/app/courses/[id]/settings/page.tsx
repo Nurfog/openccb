@@ -35,6 +35,8 @@ export default function CourseSettingsPage() {
     const [endDate, setEndDate] = useState("");
     const [exporting, setExporting] = useState(false);
     const [importing, setImporting] = useState(false);
+    const [price, setPrice] = useState(0);
+    const [currency, setCurrency] = useState("USD");
 
     useEffect(() => {
         const fetchCourse = async () => {
@@ -46,6 +48,8 @@ export default function CourseSettingsPage() {
                 setPacingMode(data.pacing_mode || "self_paced");
                 setStartDate(data.start_date ? new Date(data.start_date).toISOString().split('T')[0] : "");
                 setEndDate(data.end_date ? new Date(data.end_date).toISOString().split('T')[0] : "");
+                setPrice(data.price || 0);
+                setCurrency(data.currency || "USD");
             } catch (err) {
                 console.error("Failed to load course", err);
             } finally {
@@ -63,7 +67,9 @@ export default function CourseSettingsPage() {
                 certificate_template: certificateTemplate,
                 pacing_mode: pacingMode,
                 start_date: startDate ? new Date(startDate).toISOString() : undefined,
-                end_date: endDate ? new Date(endDate).toISOString() : undefined
+                end_date: endDate ? new Date(endDate).toISOString() : undefined,
+                price: price,
+                currency: currency
             });
             setCourse(updated);
             alert("Course settings updated successfully!");
@@ -286,6 +292,53 @@ export default function CourseSettingsPage() {
                                     </div>
                                 </div>
                             )}
+                        </div>
+                    </section>
+
+                    {/* Course Pricing Section */}
+                    <section className="bg-white/5 border border-white/10 rounded-3xl p-8">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                                <span className="text-xl font-bold">$</span>
+                            </div>
+                            <h2 className="text-2xl font-black">Course Pricing</h2>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <label className="block text-sm font-bold text-gray-300">Price</label>
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={price}
+                                        onChange={(e) => setPrice(parseFloat(e.target.value))}
+                                        className="w-full bg-black/30 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                                        placeholder="0.00"
+                                    />
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">
+                                        {currency}
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500">Set to 0 for a free course.</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="block text-sm font-bold text-gray-300">Currency</label>
+                                <select
+                                    value={currency}
+                                    onChange={(e) => setCurrency(e.target.value)}
+                                    className="w-full bg-black/30 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
+                                >
+                                    <option value="USD">USD - US Dollar</option>
+                                    <option value="CLP">CLP - Chilean Peso</option>
+                                    <option value="ARS">ARS - Argentine Peso</option>
+                                    <option value="BRL">BRL - Brazilian Real</option>
+                                    <option value="MXN">MXN - Mexican Peso</option>
+                                    <option value="COP">COP - Colombian Peso</option>
+                                </select>
+                            </div>
                         </div>
                     </section>
 

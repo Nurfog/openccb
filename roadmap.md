@@ -192,11 +192,31 @@
 - [ ] **Bookmarks**: Sistema de favoritos para lecciones importantes.
 - [ ] **Progress Dashboard**: Gráficos de progreso temporal y predicción de finalización.
 
+## Fase 18: Monetización y Estandarización (Nuevas Sugerencias)
+- [ ] **E-Commerce & Monetización**:
+  - [ ] Integración con Mercado Pago y Stripe.
+  - [ ] Sistema de precios por curso y organización.
+  - [ ] Dashboard de transacciones y conciliación.
+- [ ] **Interoperabilidad**:
+  - [ ] Implementación de LTI 1.3 (Tool Provider).
+  - [ ] Conectividad con LMS externos (Moodle/Canvas).
+- [ ] **Analíticas Predictivas**:
+  - [ ] Motor de IA para detección de riesgo de abandono.
+  - [ ] Notificaciones proactivas para instructores.
+- [ ] **Gestión de Activos**:
+  - [ ] Biblioteca de medios global (Global Asset Manager).
+  - [ ] Reutilización de recursos multi-curso.
+- [ ] **Aprendizaje en Vivo**:
+  - [ ] Integración con BigBlueButton/Jitsi.
+- [ ] **Portafolio del Estudiante**:
+  - [ ] Perfil profesional público con Open Badges.
+
 ---
 
 **Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados, **sistema de foros de discusión funcional** y **gestión de anuncios del curso con notificaciones automáticas**.
 
 **Próximas Prioridades**:
-1. **Course Wiki**: Espacio colaborativo para documentación de cursos.
-2. **Student Notes**: Anotaciones personales exportables.
-3. **Course Teams**: Permisos granulares para múltiples instructores.
+1. **Monetización Core**: Preparación de infraestructura para pagos y precios.
+2. **LTI 1.3 Research**: Bases para la interoperabilidad.
+3. **Course Wiki**: Espacio colaborativo para documentación de cursos.
+4. **Student Notes**: Anotaciones personales exportables.

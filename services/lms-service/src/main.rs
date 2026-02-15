@@ -1,11 +1,12 @@
 mod db_util;
 mod handlers;
-mod handlers_discussions;
 mod handlers_announcements;
+mod handlers_discussions;
+mod handlers_payments;
 
 use axum::{
     Router, middleware,
-    routing::{get, post, put, delete},
+    routing::{delete, get, post, put},
 };
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
@@ -48,6 +49,10 @@ async fn main() {
     let protected_routes = Router::new()
         .route("/enroll", post(handlers::enroll_user))
         .route("/enrollments/{id}", get(handlers::get_user_enrollments))
+        .route(
+            "/payments/preference",
+            post(handlers_payments::create_payment_preference),
+        )
         .route("/courses/{id}/outline", get(handlers::get_course_outline))
         .route("/lessons/{id}", get(handlers::get_lesson_content))
         .route("/grades", post(handlers::submit_lesson_score))
@@ -77,10 +82,7 @@ async fn main() {
             "/lessons/{id}/interactions",
             post(handlers::record_interaction),
         )
-        .route(
-            "/lessons/{id}/heatmap",
-            get(handlers::get_lesson_heatmap),
-        )
+        .route("/lessons/{id}/heatmap", get(handlers::get_lesson_heatmap))
         .route("/audio/evaluate", post(handlers::evaluate_audio_response))
         .route("/audio/evaluate-file", post(handlers::evaluate_audio_file))
         .route("/lessons/{id}/chat", post(handlers::chat_with_tutor))
@@ -91,21 +93,60 @@ async fn main() {
             post(handlers::mark_notification_as_read),
         )
         // Discussion Forums Routes
-        .route("/courses/{id}/discussions", get(handlers_discussions::list_threads))
-        .route("/courses/{id}/discussions", post(handlers_discussions::create_thread))
-        .route("/discussions/{id}", get(handlers_discussions::get_thread_detail))
-        .route("/discussions/{id}/pin", post(handlers_discussions::pin_thread))
-        .route("/discussions/{id}/lock", post(handlers_discussions::lock_thread))
-        .route("/discussions/{id}/posts", post(handlers_discussions::create_post))
-        .route("/posts/{id}/endorse", post(handlers_discussions::endorse_post))
+        .route(
+            "/courses/{id}/discussions",
+            get(handlers_discussions::list_threads),
+        )
+        .route(
+            "/courses/{id}/discussions",
+            post(handlers_discussions::create_thread),
+        )
+        .route(
+            "/discussions/{id}",
+            get(handlers_discussions::get_thread_detail),
+        )
+        .route(
+            "/discussions/{id}/pin",
+            post(handlers_discussions::pin_thread),
+        )
+        .route(
+            "/discussions/{id}/lock",
+            post(handlers_discussions::lock_thread),
+        )
+        .route(
+            "/discussions/{id}/posts",
+            post(handlers_discussions::create_post),
+        )
+        .route(
+            "/posts/{id}/endorse",
+            post(handlers_discussions::endorse_post),
+        )
         .route("/posts/{id}/vote", post(handlers_discussions::vote_post))
-        .route("/discussions/{id}/subscribe", post(handlers_discussions::subscribe_thread))
-        .route("/discussions/{id}/unsubscribe", post(handlers_discussions::unsubscribe_thread))
+        .route(
+            "/discussions/{id}/subscribe",
+            post(handlers_discussions::subscribe_thread),
+        )
+        .route(
+            "/discussions/{id}/unsubscribe",
+            post(handlers_discussions::unsubscribe_thread),
+        )
         // Announcements
-        .route("/courses/{id}/announcements", get(handlers_announcements::list_announcements))
-        .route("/courses/{id}/announcements", post(handlers_announcements::create_announcement))
-        .route("/announcements/{id}", put(handlers_announcements::update_announcement))
-        .route("/announcements/{id}", delete(handlers_announcements::delete_announcement))
+        .route(
+            "/courses/{id}/announcements",
+            get(handlers_announcements::list_announcements),
+        )
+        .route(
+            "/courses/{id}/announcements",
+            post(handlers_announcements::create_announcement),
+        )
+        .route(
+            "/announcements/{id}",
+            put(handlers_announcements::update_announcement),
+        )
+        .route(
+            "/announcements/{id}",
+            delete(handlers_announcements::delete_announcement),
+        )
         .route_layer(middleware::from_fn(
             common::middleware::org_extractor_middleware,
         ));
@@ -115,6 +156,10 @@ async fn main() {
         .route("/ingest", post(handlers::ingest_course))
         .route("/auth/register", post(handlers::register))
         .route("/auth/login", post(handlers::login))
+        .route(
+            "/payments/mercadopago/webhook",
+            post(handlers_payments::mercadopago_webhook),
+        )
         .merge(protected_routes)
         .layer(cors)
         .with_state(pool);

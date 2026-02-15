@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    extract::{Path, Query, State, Multipart},
+    extract::{Multipart, Path, Query, State},
     http::StatusCode,
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
@@ -28,6 +28,30 @@ pub async fn enroll_user(
         .ok_or(StatusCode::BAD_REQUEST)?;
     let course_id = Uuid::parse_str(course_id_str).map_err(|_| StatusCode::BAD_REQUEST)?;
     let user_id = claims.sub;
+
+    // 1. Check if course exists and get its price
+    let course_info: (f64, String) =
+        sqlx::query_as("SELECT price, currency FROM courses WHERE id = $1")
+            .bind(course_id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    // 2. If it's a paid course, check for a successful transaction
+    if course_info.0 > 0.0 {
+        let has_paid: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM transactions WHERE user_id = $1 AND course_id = $2 AND status = 'success')"
+        )
+        .bind(user_id)
+        .bind(course_id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        if !has_paid {
+            return Err(StatusCode::PAYMENT_REQUIRED);
+        }
+    }
 
     let mut tx = pool
         .begin()
@@ -130,8 +154,12 @@ pub async fn register(
     State(pool): State<PgPool>,
     Json(payload): Json<AuthPayload>,
 ) -> Result<Json<AuthResponse>, (StatusCode, String)> {
-    let password_hash = hash(payload.password, DEFAULT_COST)
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error al procesar la contraseña".into()))?;
+    let password_hash = hash(payload.password, DEFAULT_COST).map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Error al procesar la contraseña".into(),
+        )
+    })?;
 
     let full_name = payload.full_name.unwrap_or_else(|| {
         payload
@@ -262,7 +290,11 @@ pub async fn get_course_catalog(
     State(pool): State<PgPool>,
     Query(query): Query<CatalogQuery>,
 ) -> Result<Json<Vec<Course>>, StatusCode> {
-    tracing::info!("get_course_catalog: org_id={:?}, user_id={:?}", query.organization_id, query.user_id);
+    tracing::info!(
+        "get_course_catalog: org_id={:?}, user_id={:?}",
+        query.organization_id,
+        query.user_id
+    );
     let courses = match (query.organization_id, query.user_id) {
         (Some(org_id), Some(user_id)) => {
             sqlx::query_as::<_, Course>(
@@ -346,8 +378,8 @@ pub async fn ingest_course(
 
     // 2. Upsert Course
     sqlx::query(
-        "INSERT INTO courses (id, title, description, instructor_id, start_date, end_date, passing_percentage, certificate_template, updated_at, organization_id, pacing_mode)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        "INSERT INTO courses (id, title, description, instructor_id, start_date, end_date, passing_percentage, certificate_template, updated_at, organization_id, pacing_mode, price, currency)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
          ON CONFLICT (id) DO UPDATE SET
             title = EXCLUDED.title,
             description = EXCLUDED.description,
@@ -358,7 +390,9 @@ pub async fn ingest_course(
             certificate_template = EXCLUDED.certificate_template,
             updated_at = EXCLUDED.updated_at,
             organization_id = EXCLUDED.organization_id,
-            pacing_mode = EXCLUDED.pacing_mode"
+            pacing_mode = EXCLUDED.pacing_mode,
+            price = EXCLUDED.price,
+            currency = EXCLUDED.currency"
     )
     .bind(payload.course.id)
     .bind(&payload.course.title)
@@ -371,6 +405,8 @@ pub async fn ingest_course(
     .bind(payload.course.updated_at)
     .bind(org_id)
     .bind(&payload.course.pacing_mode)
+    .bind(payload.course.price)
+    .bind(&payload.course.currency)
     .execute(&mut *tx)
     .await
     .map_err(|e| {
@@ -471,7 +507,7 @@ pub async fn ingest_course(
             }
             // Also ingest summary as a high-relevance chunk
             if let Some(summary) = &lesson.summary {
-                 let _ = ingest_lesson_knowledge(&pool, org_id, lesson.id, summary).await;
+                let _ = ingest_lesson_knowledge(&pool, org_id, lesson.id, summary).await;
             }
         }
     }
@@ -518,11 +554,18 @@ pub async fn get_course_outline(
     .fetch_one(&pool)
     .await
     .map_err(|e| {
-        tracing::error!("get_course_outline: organization fetch failed for {}: {}", course.organization_id, e);
+        tracing::error!(
+            "get_course_outline: organization fetch failed for {}: {}",
+            course.organization_id,
+            e
+        );
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    tracing::info!("get_course_outline: organization found: {}", organization.name);
+    tracing::info!(
+        "get_course_outline: organization found: {}",
+        organization.name
+    );
 
     // 4. Fetch Grading Categories
     let grading_categories = sqlx::query_as::<_, common::models::GradingCategory>(
@@ -546,7 +589,11 @@ pub async fn get_course_outline(
         .fetch_all(&pool)
         .await
         .map_err(|e| {
-            tracing::error!("get_course_outline: lessons fetch failed for module {}: {}", module.id, e);
+            tracing::error!(
+                "get_course_outline: lessons fetch failed for module {}: {}",
+                module.id,
+                e
+            );
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -563,17 +610,43 @@ pub async fn get_course_outline(
 
 pub async fn get_lesson_content(
     Org(_org_ctx): Org,
+    claims: Claims,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Lesson>, StatusCode> {
-    tracing::info!("get_lesson_content: fetching lesson {}", id);
-    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1")
-        .bind(id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| StatusCode::NOT_FOUND)?;
+    tracing::info!(
+        "get_lesson_content: fetching lesson {} for user {}",
+        id,
+        claims.sub
+    );
 
-    Ok(Json(lesson))
+    // Check if user is enrolled in the course this lesson belongs to
+    let lesson = sqlx::query_as::<_, Lesson>(
+        "SELECT l.* FROM lessons l
+         JOIN modules m ON l.module_id = m.id
+         JOIN enrollments e ON m.course_id = e.course_id
+         WHERE l.id = $1 AND e.user_id = $2",
+    )
+    .bind(id)
+    .bind(claims.sub)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("get_lesson_content: DB error: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    match lesson {
+        Some(l) => Ok(Json(l)),
+        None => {
+            tracing::warn!(
+                "get_lesson_content: User {} not enrolled or lesson {} not found",
+                claims.sub,
+                id
+            );
+            Err(StatusCode::FORBIDDEN)
+        }
+    }
 }
 
 pub async fn get_user_enrollments(
@@ -581,7 +654,11 @@ pub async fn get_user_enrollments(
     State(pool): State<PgPool>,
     Path(user_id): Path<Uuid>,
 ) -> Result<Json<Vec<Enrollment>>, StatusCode> {
-    tracing::info!("get_user_enrollments: user_id={}, caller_org_id={}", user_id, org_ctx.id);
+    tracing::info!(
+        "get_user_enrollments: user_id={}, caller_org_id={}",
+        user_id,
+        org_ctx.id
+    );
     let enrollments =
         sqlx::query_as::<_, Enrollment>("SELECT * FROM enrollments WHERE user_id = $1")
             .bind(user_id)
@@ -1133,32 +1210,32 @@ pub async fn get_recommendations(
     // Let's look at `20260115000009_sync_lesson_columns.sql` or similar.
     // It's safer to join or use existing working query.
     // I will assume the original query was correct for the schema in this environment.
-    
-    let lessons =
-        sqlx::query_as::<_, LessonContext>("SELECT id, title, metadata FROM lessons WHERE course_id = $1")
-            .bind(course_id)
-            .fetch_all(&pool)
-            .await
-            .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let lessons = sqlx::query_as::<_, LessonContext>(
+        "SELECT id, title, metadata FROM lessons WHERE course_id = $1",
+    )
+    .bind(course_id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // 3. Prepare AI context with Skills Analysis
     use std::collections::HashMap;
     let mut skill_scores: HashMap<String, (f32, i32)> = HashMap::new(); // Tag -> (Total Score, Count)
-    
+
     let mut performance_summary = String::new();
     for grade in &grades {
         let lesson_opt = lessons.iter().find(|l| l.id == grade.lesson_id);
-        
+
         let lesson_title = lesson_opt
             .map(|l| l.title.clone())
             .unwrap_or_else(|| "Lección desconocida".to_string());
 
         let score_percent = grade.score * 100.0;
-        
+
         performance_summary.push_str(&format!(
             "- Lesson: {}, Score: {}%\n",
-            lesson_title,
-            score_percent as i32
+            lesson_title, score_percent as i32
         ));
 
         // Skill Analysis
@@ -1254,12 +1331,17 @@ pub async fn evaluate_audio_response(
     Json(payload): Json<AudioGradingPayload>,
 ) -> Result<Json<AudioGradingResponse>, (StatusCode, String)> {
     let client = reqwest::Client::new();
-    
+
     let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
     let (url, auth_header, model) = if provider == "local" {
-        let base_url = env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://ollama:11434".to_string());
+        let base_url =
+            env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://ollama:11434".to_string());
         let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3:8b".to_string());
-        (format!("{}/v1/chat/completions", base_url), "".to_string(), model)
+        (
+            format!("{}/v1/chat/completions", base_url),
+            "".to_string(),
+            model,
+        )
     } else {
         (
             "https://api.openai.com/v1/chat/completions".to_string(),
@@ -1280,7 +1362,8 @@ pub async fn evaluate_audio_response(
         payload.prompt, payload.keywords, payload.transcript
     );
 
-    let response = client.post(&url)
+    let response = client
+        .post(&url)
         .header("Content-Type", "application/json")
         .header("Authorization", auth_header)
         .json(&serde_json::json!({
@@ -1295,8 +1378,12 @@ pub async fn evaluate_audio_response(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let ai_data: serde_json::Value = response.json().await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("AI response parse failed: {}", e)))?;
+    let ai_data: serde_json::Value = response.json().await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("AI response parse failed: {}", e),
+        )
+    })?;
 
     let grading: AudioGradingResponse = serde_json::from_value(
         ai_data["choices"][0]["message"]["content"]
@@ -1325,65 +1412,109 @@ pub async fn evaluate_audio_file(
     let mut audio_data = Vec::new();
     let mut filename = "audio.webm".to_string();
 
-    while let Some(field) = multipart.next_field().await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))? {
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?
+    {
         let name = field.name().unwrap_or_default().to_string();
         match name.as_str() {
             "prompt" => prompt = field.text().await.unwrap_or_default(),
             "keywords" => keywords_str = field.text().await.unwrap_or_default(),
             "file" => {
                 filename = field.file_name().unwrap_or("audio.webm").to_string();
-                audio_data = field.bytes().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?.to_vec();
-            },
+                audio_data = field
+                    .bytes()
+                    .await
+                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+                    .to_vec();
+            }
             _ => {}
         }
     }
 
     if audio_data.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "No se proporcionó ningún archivo de audio".into()));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "No se proporcionó ningún archivo de audio".into(),
+        ));
     }
 
     // 1. Send to Whisper
-    let whisper_url = env::var("LOCAL_WHISPER_URL").unwrap_or_else(|_| "http://localhost:8000".to_string());
+    let whisper_url =
+        env::var("LOCAL_WHISPER_URL").unwrap_or_else(|_| "http://localhost:8000".to_string());
     let client = reqwest::Client::new();
-    
+
     let form = reqwest::multipart::Form::new()
-        .part("file", reqwest::multipart::Part::bytes(audio_data).file_name(filename))
+        .part(
+            "file",
+            reqwest::multipart::Part::bytes(audio_data).file_name(filename),
+        )
         .text("model", "whisper-1")
         .text("response_format", "json");
 
-    let response = client.post(format!("{}/v1/audio/transcriptions", whisper_url))
+    let response = client
+        .post(format!("{}/v1/audio/transcriptions", whisper_url))
         .multipart(form)
         .send()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error en la solicitud a Whisper: {}", e)))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Error en la solicitud a Whisper: {}", e),
+            )
+        })?;
 
     if !response.status().is_success() {
         let err_body = response.text().await.unwrap_or_default();
         tracing::error!("Whisper error: {}", err_body);
-        return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Error de la API de Whisper: {}", err_body)));
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Error de la API de Whisper: {}", err_body),
+        ));
     }
 
-    let transcription_result: serde_json::Value = response.json().await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al analizar la respuesta de Whisper: {}", e)))?;
+    let transcription_result: serde_json::Value = response.json().await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Error al analizar la respuesta de Whisper: {}", e),
+        )
+    })?;
 
-    let transcript = transcription_result["text"].as_str().unwrap_or("").to_string();
-    
+    let transcript = transcription_result["text"]
+        .as_str()
+        .unwrap_or("")
+        .to_string();
+
     if transcript.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "Whisper no pudo detectar voz. Por favor, habla más fuerte o revisa tu micrófono.".into()));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Whisper no pudo detectar voz. Por favor, habla más fuerte o revisa tu micrófono."
+                .into(),
+        ));
     }
 
     let keywords: Vec<String> = if keywords_str.trim().starts_with('[') {
         serde_json::from_str(&keywords_str).unwrap_or_default()
     } else {
-        keywords_str.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect()
+        keywords_str
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect()
     };
 
     // 2. Perform AI Grading
     let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
     let (url, auth_header, model) = if provider == "local" {
-        let base_url = env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://ollama:11434".to_string());
+        let base_url =
+            env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://ollama:11434".to_string());
         let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3:8b".to_string());
-        (format!("{}/v1/chat/completions", base_url), "".to_string(), model)
+        (
+            format!("{}/v1/chat/completions", base_url),
+            "".to_string(),
+            model,
+        )
     } else {
         (
             "https://api.openai.com/v1/chat/completions".to_string(),
@@ -1404,7 +1535,8 @@ pub async fn evaluate_audio_file(
         prompt, keywords, transcript
     );
 
-    let response = client.post(&url)
+    let response = client
+        .post(&url)
         .header("Content-Type", "application/json")
         .header("Authorization", auth_header)
         .json(&serde_json::json!({
@@ -1417,10 +1549,19 @@ pub async fn evaluate_audio_file(
         }))
         .send()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error en la solicitud de IA: {}", e)))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Error en la solicitud de IA: {}", e),
+            )
+        })?;
 
-    let ai_data: serde_json::Value = response.json().await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al analizar la respuesta de la IA: {}", e)))?;
+    let ai_data: serde_json::Value = response.json().await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Error al analizar la respuesta de la IA: {}", e),
+        )
+    })?;
 
     let grading: AudioGradingResponse = serde_json::from_value(
         ai_data["choices"][0]["message"]["content"]
@@ -1458,19 +1599,25 @@ pub async fn chat_with_tutor(
     Json(payload): Json<ChatPayload>,
 ) -> Result<Json<ChatResponse>, (StatusCode, String)> {
     // 1. Fetch lesson context (summary and transcription)
-    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
-        .bind(lesson_id)
-        .bind(org_ctx.id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| (StatusCode::NOT_FOUND, "Lección no encontrada".into()))?;
+    let lesson =
+        sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
+            .bind(lesson_id)
+            .bind(org_ctx.id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| (StatusCode::NOT_FOUND, "Lección no encontrada".into()))?;
 
     // 1.5 Fetch previous lessons in the course for context
     let module = sqlx::query_as::<_, Module>("SELECT * FROM modules WHERE id = $1")
         .bind(lesson.module_id)
         .fetch_one(&pool)
         .await
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error al obtener el contexto del módulo".into()))?;
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Error al obtener el contexto del módulo".into(),
+            )
+        })?;
 
     let previous_lessons = sqlx::query(
         r#"
@@ -1487,7 +1634,12 @@ pub async fn chat_with_tutor(
     .bind(lesson.position)
     .fetch_all(&pool)
     .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch previous lessons".into()))?;
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to fetch previous lessons".into(),
+        )
+    })?;
 
     let mut history_context = String::new();
     if !previous_lessons.is_empty() {
@@ -1510,7 +1662,11 @@ pub async fn chat_with_tutor(
         "CURRENT Lesson Title: {}\nSummary: {}\nTranscription (Partial): {}\n\n--- CURRENT LESSON CONTENT (BLOCKS & ACTIVITIES) ---\n{}\n{}",
         lesson.title,
         lesson.summary.as_deref().unwrap_or_default(),
-        lesson.transcription.as_ref().and_then(|t| t.get("text").and_then(|text| text.as_str())).unwrap_or("No hay transcripción disponible."),
+        lesson
+            .transcription
+            .as_ref()
+            .and_then(|t| t.get("text").and_then(|text| text.as_str()))
+            .unwrap_or("No hay transcripción disponible."),
         block_content,
         history_context
     );
@@ -1536,22 +1692,25 @@ pub async fn chat_with_tutor(
             tracing::error!("Failed to create chat session: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "Error al crear la sesión de chat".into())
         })?;
-    
+
         use sqlx::Row;
         let sid: Uuid = row.get(0);
         sid
     };
 
     // Save user message
-    sqlx::query(
-        "INSERT INTO chat_messages (session_id, role, content) VALUES ($1, $2, $3)"
-    )
-    .bind(session_id)
-    .bind("user")
-    .bind(&payload.message)
-    .execute(&pool)
-    .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to save user message".into()))?;
+    sqlx::query("INSERT INTO chat_messages (session_id, role, content) VALUES ($1, $2, $3)")
+        .bind(session_id)
+        .bind("user")
+        .bind(&payload.message)
+        .execute(&pool)
+        .await
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to save user message".into(),
+            )
+        })?;
 
     // Fetch last 6 messages for context
     let history_rows = sqlx::query(
@@ -1599,9 +1758,14 @@ pub async fn chat_with_tutor(
     }
 
     let (url, auth_header, model) = if provider == "local" {
-        let base_url = env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://ollama:11434".to_string());
+        let base_url =
+            env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://ollama:11434".to_string());
         let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3:8b".to_string());
-        (format!("{}/v1/chat/completions", base_url), "".to_string(), model)
+        (
+            format!("{}/v1/chat/completions", base_url),
+            "".to_string(),
+            model,
+        )
     } else {
         (
             "https://api.openai.com/v1/chat/completions".to_string(),
@@ -1625,12 +1789,11 @@ pub async fn chat_with_tutor(
         6. Responde en el mismo idioma de la pregunta del estudiante. \
         \
         CONTEXTO DE LA LECCIÓN E HISTORIAL:\n{}\n{}\n{}",
-        context,
-        memory_context,
-        kb_context
+        context, memory_context, kb_context
     );
 
-    let response = client.post(&url)
+    let response = client
+        .post(&url)
         .header("Content-Type", "application/json")
         .header("Authorization", auth_header)
         .json(&serde_json::json!({
@@ -1643,15 +1806,27 @@ pub async fn chat_with_tutor(
         }))
         .send()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error en la solicitud de IA: {}", e)))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Error en la solicitud de IA: {}", e),
+            )
+        })?;
 
     if !response.status().is_success() {
         let err_body = response.text().await.unwrap_or_default();
-        return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Error de la API de IA: {}", err_body)));
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Error de la API de IA: {}", err_body),
+        ));
     }
 
-    let ai_data: serde_json::Value = response.json().await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al analizar la respuesta de la IA: {}", e)))?;
+    let ai_data: serde_json::Value = response.json().await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Error al analizar la respuesta de la IA: {}", e),
+        )
+    })?;
 
     let tutor_response = ai_data["choices"][0]["message"]["content"]
         .as_str()
@@ -1659,16 +1834,15 @@ pub async fn chat_with_tutor(
         .to_string();
 
     // Save assistant response
-    let _ = sqlx::query(
-        "INSERT INTO chat_messages (session_id, role, content) VALUES ($1, $2, $3)"
-    )
-    .bind(session_id)
-    .bind("assistant")
-    .bind(&tutor_response)
-    .execute(&pool)
-    .await;
+    let _ =
+        sqlx::query("INSERT INTO chat_messages (session_id, role, content) VALUES ($1, $2, $3)")
+            .bind(session_id)
+            .bind("assistant")
+            .bind(&tutor_response)
+            .execute(&pool)
+            .await;
 
-    Ok(Json(ChatResponse { 
+    Ok(Json(ChatResponse {
         response: tutor_response,
         session_id,
     }))
@@ -1683,23 +1857,27 @@ pub async fn get_lesson_feedback(
     let user_id = claims.sub;
 
     // 1. Fetch lesson context
-    let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
-        .bind(lesson_id)
-        .bind(org_ctx.id)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| (StatusCode::NOT_FOUND, "Lección no encontrada".into()))?;
+    let lesson =
+        sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
+            .bind(lesson_id)
+            .bind(org_ctx.id)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| (StatusCode::NOT_FOUND, "Lección no encontrada".into()))?;
 
     // 2. Fetch user's grade for this lesson
     let grade = sqlx::query_as::<_, common::models::UserGrade>(
-        "SELECT * FROM user_grades WHERE user_id = $1 AND lesson_id = $2"
+        "SELECT * FROM user_grades WHERE user_id = $1 AND lesson_id = $2",
     )
     .bind(user_id)
     .bind(lesson_id)
     .fetch_optional(&pool)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-    .ok_or((StatusCode::BAD_REQUEST, "No se encontró calificación para esta lección".into()))?;
+    .ok_or((
+        StatusCode::BAD_REQUEST,
+        "No se encontró calificación para esta lección".into(),
+    ))?;
 
     let score_pct = (grade.score * 100.0) as i32;
 
@@ -1720,9 +1898,14 @@ pub async fn get_lesson_feedback(
     let client = reqwest::Client::new();
 
     let (url, auth_header, model) = if provider == "local" {
-        let base_url = env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://ollama:11434".to_string());
+        let base_url =
+            env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://ollama:11434".to_string());
         let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3:8b".to_string());
-        (format!("{}/v1/chat/completions", base_url), "".to_string(), model)
+        (
+            format!("{}/v1/chat/completions", base_url),
+            "".to_string(),
+            model,
+        )
     } else {
         (
             "https://api.openai.com/v1/chat/completions".to_string(),
@@ -1744,8 +1927,7 @@ pub async fn get_lesson_feedback(
         6. Responde en español ya que la plataforma se usa principalmente en ese idioma. \
         \
         CONTEXTO DE LA LECCIÓN:\n{}",
-        score_pct,
-        context
+        score_pct, context
     );
 
     let response = client.post(&url)
@@ -1765,24 +1947,29 @@ pub async fn get_lesson_feedback(
 
     if !response.status().is_success() {
         let err_body = response.text().await.unwrap_or_default();
-        return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Error de la API de IA: {}", err_body)));
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Error de la API de IA: {}", err_body),
+        ));
     }
 
-    let ai_data: serde_json::Value = response.json().await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al analizar la respuesta de la IA: {}", e)))?;
+    let ai_data: serde_json::Value = response.json().await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Error al analizar la respuesta de la IA: {}", e),
+        )
+    })?;
 
     let tutor_response = ai_data["choices"][0]["message"]["content"]
         .as_str()
         .unwrap_or("Buen trabajo completando la lección. Revisa tus resultados arriba.")
         .to_string();
 
-    Ok(Json(ChatResponse { 
+    Ok(Json(ChatResponse {
         response: tutor_response,
         session_id: Uuid::nil(),
     }))
 }
-
-
 
 pub async fn ingest_lesson_knowledge(
     pool: &PgPool,
@@ -1791,17 +1978,20 @@ pub async fn ingest_lesson_knowledge(
     content: &str,
 ) -> Result<(), sqlx::Error> {
     // Split content into chunks of ~1000 characters for better RAG granularity
-    let chunks: Vec<&str> = content.as_bytes()
+    let chunks: Vec<&str> = content
+        .as_bytes()
         .chunks(1000)
         .map(|c| std::str::from_utf8(c).unwrap_or(""))
         .collect();
 
     for chunk in chunks {
-        if chunk.trim().is_empty() { continue; }
-        
+        if chunk.trim().is_empty() {
+            continue;
+        }
+
         sqlx::query(
             "INSERT INTO knowledge_base (organization_id, source_type, source_id, content_chunk) 
-             VALUES ($1, $2, $3, $4)"
+             VALUES ($1, $2, $3, $4)",
         )
         .bind(org_id)
         .bind("lesson_content")
@@ -1820,9 +2010,9 @@ fn extract_block_content(metadata: &Option<serde_json::Value>) -> String {
             for block in blocks {
                 let block_type = block.get("type").and_then(|t| t.as_str()).unwrap_or("");
                 let title = block.get("title").and_then(|t| t.as_str()).unwrap_or("");
-                
+
                 block_content.push_str(&format!("\n--- Block: {} ({}) ---\n", title, block_type));
-                
+
                 match block_type {
                     "description" | "fill-in-the-blanks" => {
                         if let Some(content) = block.get("content").and_then(|c| c.as_str()) {
@@ -1830,9 +2020,14 @@ fn extract_block_content(metadata: &Option<serde_json::Value>) -> String {
                         }
                     }
                     "quiz" => {
-                        if let Some(questions) = block.get("quiz_data").and_then(|q| q.get("questions")).and_then(|qs| qs.as_array()) {
+                        if let Some(questions) = block
+                            .get("quiz_data")
+                            .and_then(|q| q.get("questions"))
+                            .and_then(|qs| qs.as_array())
+                        {
                             for (i, q) in questions.iter().enumerate() {
-                                let question_text = q.get("question").and_then(|qt| qt.as_str()).unwrap_or("");
+                                let question_text =
+                                    q.get("question").and_then(|qt| qt.as_str()).unwrap_or("");
                                 block_content.push_str(&format!("Q{}: {}\n", i + 1, question_text));
                             }
                         }
@@ -1842,12 +2037,17 @@ fn extract_block_content(metadata: &Option<serde_json::Value>) -> String {
                             for (i, p) in pairs.iter().enumerate() {
                                 let left = p.get("left").and_then(|l| l.as_str()).unwrap_or("");
                                 let right = p.get("right").and_then(|r| r.as_str()).unwrap_or("");
-                                block_content.push_str(&format!("Pair {}: {} <-> {}\n", i + 1, left, right));
+                                block_content.push_str(&format!(
+                                    "Pair {}: {} <-> {}\n",
+                                    i + 1,
+                                    left,
+                                    right
+                                ));
                             }
                         }
                     }
                     "ordering" => {
-                         if let Some(items) = block.get("items").and_then(|i| i.as_array()) {
+                        if let Some(items) = block.get("items").and_then(|i| i.as_array()) {
                             for (i, item) in items.iter().enumerate() {
                                 let text = item.as_str().unwrap_or("");
                                 block_content.push_str(&format!("Item {}: {}\n", i + 1, text));
@@ -1860,7 +2060,9 @@ fn extract_block_content(metadata: &Option<serde_json::Value>) -> String {
                         }
                     }
                     "code" => {
-                        if let Some(instructions) = block.get("instructions").and_then(|i| i.as_str()) {
+                        if let Some(instructions) =
+                            block.get("instructions").and_then(|i| i.as_str())
+                        {
                             block_content.push_str(&format!("Instructions: {}\n", instructions));
                         }
                     }
@@ -1870,8 +2072,12 @@ fn extract_block_content(metadata: &Option<serde_json::Value>) -> String {
                         }
                     }
                     "hotspot" => {
-                        if let Some(description) = block.get("description").and_then(|d| d.as_str()) {
-                             block_content.push_str(&format!("Hotspot Activity Description: {}\n", description));
+                        if let Some(description) = block.get("description").and_then(|d| d.as_str())
+                        {
+                            block_content.push_str(&format!(
+                                "Hotspot Activity Description: {}\n",
+                                description
+                            ));
                         }
                     }
                     _ => {}

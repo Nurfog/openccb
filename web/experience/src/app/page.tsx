@@ -58,17 +58,28 @@ export default function CatalogPage() {
     fetchData();
   }, [user]);
 
-  const handleEnroll = async (courseId: string) => {
+  const handleEnrollOrBuy = async (course: Course) => {
     if (!user) {
       router.push("/auth/login");
       return;
     }
 
     try {
-      await lmsApi.enroll(courseId, user.id);
-      setEnrollments(prev => [...prev, courseId]);
-    } catch (err) {
-      console.error("Falló la inscripción", err);
+      await lmsApi.enroll(course.id, user.id);
+      setEnrollments(prev => [...prev, course.id]);
+    } catch (err: any) {
+      // Check for 402 Payment Required
+      if (err.message.includes("Payment Required")) {
+        try {
+          const { init_point } = await lmsApi.createPaymentPreference(course.id);
+          window.location.href = init_point;
+        } catch (pErr) {
+          console.error("Falló la creación de preferencia de pago", pErr);
+          alert("No se pudo iniciar el proceso de pago.");
+        }
+      } else {
+        console.error("Falló la inscripción", err);
+      }
     }
   };
 
@@ -242,11 +253,22 @@ export default function CatalogPage() {
                     </Link>
                   ) : (
                     <button
-                      onClick={() => handleEnroll(course.id)}
+                      onClick={() => handleEnrollOrBuy(course)}
                       className="btn-premium w-full group-hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 group/btn"
                     >
-                      <CheckCircle2 size={18} className="text-white/50 group-hover/btn:text-white transition-colors" />
-                      Inscribirse Gratis
+                      {course.price > 0 ? (
+                        <>
+                          <span className="font-black text-lg mr-2">
+                            {course.currency} {course.price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+                          </span>
+                          Comprar Ahora
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={18} className="text-white/50 group-hover/btn:text-white transition-colors" />
+                          Inscribirse Gratis
+                        </>
+                      )}
                     </button>
                   )}
                 </div>

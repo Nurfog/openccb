@@ -15,6 +15,8 @@ pub struct Course {
     pub end_date: Option<DateTime<Utc>>,
     pub passing_percentage: i32,
     pub certificate_template: Option<String>,
+    pub price: f64,
+    pub currency: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -136,6 +138,20 @@ pub struct Asset {
     pub mimetype: String,
     pub size_bytes: i64,
     pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct Transaction {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub user_id: Uuid,
+    pub course_id: Uuid,
+    pub amount: f64,
+    pub currency: String,
+    pub status: String, // "pending", "success", "failure"
+    pub provider_reference: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
@@ -419,8 +435,6 @@ pub struct AnnouncementWithAuthor {
     pub author_avatar: Option<String>,
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -490,6 +504,8 @@ mod tests {
                 end_date: None,
                 passing_percentage: 70,
                 certificate_template: None,
+                price: 0.0,
+                currency: "USD".to_string(),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
             },
@@ -501,12 +517,33 @@ mod tests {
                 primary_color: None,
                 secondary_color: None,
                 certificate_template: None,
+                platform_name: None,
+                favicon_url: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
             },
             grading_categories: vec![],
             modules: vec![pub_module],
         };
+
+        let course_with_price = Course {
+            id: course_id,
+            organization_id: Uuid::new_v4(),
+            title: "Test Course".to_string(),
+            description: None,
+            instructor_id: Uuid::new_v4(),
+            pacing_mode: "self_paced".to_string(),
+            start_date: None,
+            end_date: None,
+            passing_percentage: 70,
+            certificate_template: None,
+            price: 29.99,
+            currency: "USD".to_string(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        assert_eq!(course_with_price.price, 29.99);
 
         let serialized = serde_json::to_string(&pub_course).unwrap();
         let deserialized: PublishedCourse = serde_json::from_str(&serialized).unwrap();

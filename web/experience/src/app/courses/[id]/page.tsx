@@ -16,6 +16,7 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
     const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
     const [loadingAI, setLoadingAI] = useState(false);
     const [userGrades, setUserGrades] = useState<UserGrade[]>([]);
+    const [isEnrolled, setIsEnrolled] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -27,6 +28,9 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                 if (user) {
                     const grades = await lmsApi.getUserGrades(user.id, params.id);
                     setUserGrades(grades);
+
+                    const enrollmentData = await lmsApi.getEnrollments(user.id);
+                    setIsEnrolled(enrollmentData.some(e => e.course_id === params.id));
                 }
             } catch (err) {
                 console.error(err);
@@ -43,6 +47,30 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
             .catch(console.error)
             .finally(() => setLoadingAI(false));
     }, [params.id, user]);
+
+    const handleEnrollOrBuy = async () => {
+        if (!user) {
+            window.location.href = "/auth/login";
+            return;
+        }
+
+        try {
+            await lmsApi.enroll(params.id, user.id);
+            setIsEnrolled(true);
+        } catch (err: any) {
+            if (err.message.includes("Payment Required")) {
+                try {
+                    const { init_point } = await lmsApi.createPaymentPreference(params.id);
+                    window.location.href = init_point;
+                } catch (pErr) {
+                    console.error("Falló la creación de preferencia de pago", pErr);
+                    alert("No se pudo iniciar el proceso de pago.");
+                }
+            } else {
+                console.error("Falló la inscripción", err);
+            }
+        }
+    };
 
     if (loading) {
         return (
@@ -131,6 +159,23 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                     </div>
 
                     <div className="flex gap-2">
+                        {!isEnrolled && (
+                            <button
+                                onClick={handleEnrollOrBuy}
+                                className="btn-premium px-8 py-3 !bg-blue-600 !text-white shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2"
+                            >
+                                {courseData.price > 0 ? (
+                                    <>
+                                        <span className="font-black">{courseData.currency} {courseData.price.toFixed(0)}</span>
+                                        Comprar Ahora
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 size={16} /> Inscribirse Gratis
+                                    </>
+                                )}
+                            </button>
+                        )}
                         <Link href={`/courses/${params.id}/calendar`}>
                             <button className="px-6 py-3 glass hover:border-blue-500/50 transition-all font-bold text-xs uppercase tracking-widest flex items-center gap-3 active:scale-95">
                                 <Calendar size={16} /> Cronología
@@ -217,41 +262,62 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
 
                         <div className="grid gap-3 pl-14">
                             {module.lessons.map((lesson) => (
-                                <Link key={lesson.id} href={`/courses/${params.id}/lessons/${lesson.id}`}>
-                                    <div className="glass-card !p-4 group hover:bg-white/10 border-white/5 active:scale-[0.99] transition-all">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
-                                                    {lesson.content_type === 'video' ? (
-                                                        <PlayCircle size={18} className="text-gray-400 group-hover:text-blue-400" />
-                                                    ) : (
-                                                        <BookOpen size={18} className="text-gray-400 group-hover:text-blue-400" />
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-sm font-bold text-gray-200 group-hover:text-white transition-colors">{lesson.title}</h3>
-                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                                                        {lesson.content_type === 'activity' ? 'Actividad Interactiva' : 'Lección en Video'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-6">
-                                                {getStatusIcon(lesson.id, lesson.is_graded, lesson.allow_retry)}
-                                                {lesson.due_date && (
-                                                    <div className="text-right hidden sm:block">
-                                                        <div className="text-[9px] font-black uppercase tracking-widest text-gray-600">Vencimiento</div>
-                                                        <div className={`text-[10px] font-bold ${new Date(lesson.due_date) < new Date() ? 'text-red-400' : 'text-blue-400'}`}>
-                                                            {new Date(lesson.due_date).toLocaleDateString()}
-                                                        </div>
+                                isEnrolled ? (
+                                    <Link key={lesson.id} href={`/courses/${params.id}/lessons/${lesson.id}`}>
+                                        <div className="glass-card !p-4 group hover:bg-white/10 border-white/5 active:scale-[0.99] transition-all">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
+                                                        {lesson.content_type === 'video' ? (
+                                                            <PlayCircle size={18} className="text-gray-400 group-hover:text-blue-400" />
+                                                        ) : (
+                                                            <BookOpen size={18} className="text-gray-400 group-hover:text-blue-400" />
+                                                        )}
                                                     </div>
-                                                )}
-                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <ChevronRight size={18} className="text-blue-500" />
+                                                    <div>
+                                                        <h3 className="text-sm font-bold text-gray-200 group-hover:text-white transition-colors">{lesson.title}</h3>
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                                                            {lesson.content_type === 'activity' ? 'Actividad Interactiva' : 'Lección en Video'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-6">
+                                                    {getStatusIcon(lesson.id, lesson.is_graded, lesson.allow_retry)}
+                                                    {lesson.due_date && (
+                                                        <div className="text-right hidden sm:block">
+                                                            <div className="text-[9px] font-black uppercase tracking-widest text-gray-600">Vencimiento</div>
+                                                            <div className={`text-[10px] font-bold ${new Date(lesson.due_date) < new Date() ? 'text-red-400' : 'text-blue-400'}`}>
+                                                                {new Date(lesson.due_date).toLocaleDateString()}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <ChevronRight size={18} className="text-blue-500" />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
+                                    </Link>
+                                ) : (
+                                    <div key={lesson.id} onClick={handleEnrollOrBuy} className="glass-card !p-4 group border-white/5 opacity-60 cursor-pointer hover:bg-white/5 transition-all">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
+                                                    <Clock size={18} className="text-gray-600" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-sm font-bold text-gray-500">{lesson.title}</h3>
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-600 flex items-center gap-1">
+                                                        Contenido Protegido
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-gray-600 font-bold text-[10px] uppercase tracking-widest">
+                                                <span>Bloqueado</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                </Link>
+                                )
                             ))}
                         </div>
                     </div>
@@ -262,6 +328,6 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
             <div className="mt-20">
                 <DiscussionBoard courseId={params.id} />
             </div>
-        </div>
+        </div >
     );
 }
