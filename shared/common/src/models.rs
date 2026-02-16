@@ -451,6 +451,36 @@ pub struct SaveNotePayload {
     pub content: String,
 }
 
+// Cohorts & Groups
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct Cohort {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct UserCohort {
+    pub id: Uuid,
+    pub cohort_id: Uuid,
+    pub user_id: Uuid,
+    pub assigned_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateCohortPayload {
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AddMemberPayload {
+    pub user_id: Uuid,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

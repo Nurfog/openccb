@@ -38,6 +38,7 @@ El proyecto ha sido optimizado para reducir la complejidad de la infraestructura
 - **Discussion Forums**: Sistema completo de foros por curso con hilos de discusión, respuestas anidadas, votación, moderación por instructores y suscripciones.
 - **Split Authentication Flow**: Flujos de autenticación diferenciados para usuarios personales (email/password) y empresas (dominio corporativo).
 - **Course Monetization**: Integración con Mercado Pago para venta de cursos, con inscripciones automáticas y paneles de precios para instructores.
+- **Student Notes**: Sistema de anotaciones personales por lección con auto-guardado inteligente (debounced).
 
 ##  Requisitos del Sistema
 
@@ -116,6 +117,13 @@ cargo run
 cd web/experience
 npm install
 npm run dev
+```
+
+#### 🧹 Mantenimiento de Base de Datos
+Para resetear completamente el entorno de desarrollo y empezar desde cero:
+```bash
+# Borra las bases de datos openccb_cms/lms y las vuelve a migrar
+./scripts/reset_db.sh
 ```
 
 ## 🔌 Manual del Desarrollador (API)
@@ -583,6 +591,7 @@ Obtiene una lista de todas las organizaciones registradas.
 - **Course Announcements**: Instructor-to-student communication system with automatic notifications and pinning functionality.
 - **Split Authentication**: Separate login flows for personal users and enterprise organizations with SSO support.
 - **Mercado Pago Monetization**: Integrated payment gateway with automatic course unlocking and transaction tracking.
+- **Student Notes Panel**: Personal lesson annotations with glassmorphism UI and intelligent auto-save.
 
 ## 📄 Licencia
 Este proyecto es código abierto y está disponible bajo los términos de la licencia especificada en el repositorio.

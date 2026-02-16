@@ -19,6 +19,7 @@ import MemoryPlayer from "@/components/blocks/MemoryPlayer";
 import DocumentPlayer from "@/components/blocks/DocumentPlayer";
 import AudioResponsePlayer from "@/components/blocks/AudioResponsePlayer";
 import InteractiveTranscript from "@/components/InteractiveTranscript";
+import AITutor from "@/components/AITutor";
 import LessonLockedView from "@/components/LessonLockedView";
 import StudentNotes from "@/components/StudentNotes";
 import { ListMusic, StickyNote } from "lucide-react";

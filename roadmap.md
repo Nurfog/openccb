@@ -180,7 +180,7 @@
   - [x] Frontend (componentes React)
   - [x] Integración con notificaciones
 - [x] **Course Announcements**: Sistema de anuncios de instructores con notificaciones.
-- [ ] **Student Notes**: Anotaciones personales por lección con exportación a PDF.
+- [x] **Student Notes**: Anotaciones personales por lección con exportación a PDF.
 - [ ] **Peer Assessment**: Evaluación entre pares con rúbricas configurables.
 - [ ] **Cohorts & Groups**: Segmentación de estudiantes con contenido específico.
 - [ ] **Content Libraries**: Repositorio reutilizable de bloques y lecciones.

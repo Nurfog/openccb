@@ -1,6 +1,7 @@
 mod db_util;
 mod handlers;
 mod handlers_announcements;
+mod handlers_cohorts;
 mod handlers_discussions;
 mod handlers_notes;
 mod handlers_payments;
@@ -150,6 +151,21 @@ async fn main() {
         )
         .route("/lessons/{id}/notes", get(handlers_notes::get_note))
         .route("/lessons/{id}/notes", put(handlers_notes::save_note))
+        // Cohorts
+        .route("/cohorts", get(handlers_cohorts::list_cohorts))
+        .route("/cohorts", post(handlers_cohorts::create_cohort))
+        .route(
+            "/cohorts/{id}/members",
+            post(handlers_cohorts::add_cohort_member),
+        )
+        .route(
+            "/cohorts/{cohort_id}/members/{user_id}",
+            delete(handlers_cohorts::remove_cohort_member),
+        )
+        .route(
+            "/cohorts/{id}/members",
+            get(handlers_cohorts::get_cohort_members),
+        )
         .route_layer(middleware::from_fn(
             common::middleware::org_extractor_middleware,
         ));

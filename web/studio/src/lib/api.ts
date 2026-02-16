@@ -9,6 +9,7 @@ const getApiBaseUrl = (defaultPort: string, envVar?: string) => {
 };
 
 export const API_BASE_URL = getApiBaseUrl("3001", process.env.NEXT_PUBLIC_CMS_API_URL);
+export const LMS_API_BASE_URL = getApiBaseUrl("3002", process.env.NEXT_PUBLIC_LMS_API_URL);
 
 export const getImageUrl = (path?: string) => {
     if (!path) return '';
@@ -265,12 +266,38 @@ export interface Asset {
     created_at: string;
 }
 
+export interface Cohort {
+    id: string;
+    organization_id: string;
+    name: string;
+    description?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface UserCohort {
+    id: string;
+    cohort_id: string;
+    user_id: string;
+    assigned_at: string;
+}
+
+export interface CreateCohortPayload {
+    name: string;
+    description?: string;
+}
+
+export interface AddMemberPayload {
+    user_id: string;
+}
+
 const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('studio_token') : null;
 const getSelectedOrgId = () => typeof window !== 'undefined' ? localStorage.getItem('studio_selected_org_id') : null;
 
-const apiFetch = (url: string, options: RequestInit = {}) => {
+const apiFetch = (url: string, options: RequestInit = {}, isLms: boolean = false) => {
     const token = getToken();
     const selectedOrgId = getSelectedOrgId();
+    const baseUrl = isLms ? LMS_API_BASE_URL : API_BASE_URL;
     const headers = {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -278,7 +305,7 @@ const apiFetch = (url: string, options: RequestInit = {}) => {
         ...(selectedOrgId ? { 'X-Organization-Id': selectedOrgId } : {})
     };
 
-    return fetch(`${API_BASE_URL}${url}`, { ...options, headers }).then(async res => {
+    return fetch(`${baseUrl}${url}`, { ...options, headers }).then(async res => {
         if (!res.ok) {
             const text = await res.text();
             try {
@@ -454,6 +481,14 @@ export const cmsApi = {
     getBackgroundTasks: (): Promise<BackgroundTask[]> => apiFetch('/tasks'),
     retryTask: (id: string): Promise<void> => apiFetch(`/tasks/${id}/retry`, { method: 'POST' }),
     cancelTask: (id: string): Promise<void> => apiFetch(`/tasks/${id}`, { method: 'DELETE' }),
+};
+
+export const lmsApi = {
+    getCohorts: (): Promise<Cohort[]> => apiFetch('/cohorts', {}, true),
+    createCohort: (payload: CreateCohortPayload): Promise<Cohort> => apiFetch('/cohorts', { method: 'POST', body: JSON.stringify(payload) }, true),
+    addMember: (cohortId: string, userId: string): Promise<UserCohort> => apiFetch(`/cohorts/${cohortId}/members`, { method: 'POST', body: JSON.stringify({ user_id: userId }) }, true),
+    removeMember: (cohortId: string, userId: string): Promise<void> => apiFetch(`/cohorts/${cohortId}/members/${userId}`, { method: 'DELETE' }, true),
+    getMembers: (id: string): Promise<string[]> => apiFetch(`/cohorts/${id}/members`, {}, true),
 };
 
 export interface BackgroundTask {
