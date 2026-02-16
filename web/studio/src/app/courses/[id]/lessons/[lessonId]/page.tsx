@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cmsApi, Lesson, Block, GradingCategory } from "@/lib/api";
+import { cmsApi, Lesson, Block, GradingCategory, LibraryBlock, api } from "@/lib/api";
 import Link from "next/link";
 import DescriptionBlock from "@/components/blocks/DescriptionBlock";
 import MediaBlock from "@/components/blocks/MediaBlock";
@@ -16,6 +16,8 @@ import AudioResponseBlock from "@/components/blocks/AudioResponseBlock";
 import HotspotBlock from "@/components/blocks/HotspotBlock";
 import MemoryBlock from "@/components/blocks/MemoryBlock";
 import PeerReviewBlock from "@/components/blocks/PeerReviewBlock";
+import SaveToLibraryModal from "@/components/modals/SaveToLibraryModal";
+import LibraryPanel from "@/components/LibraryPanel";
 import Modal from "@/components/Modal";
 import {
     Save,
@@ -23,7 +25,9 @@ import {
     Pencil,
     ChevronUp,
     ChevronDown,
-    Trash2
+    Trash2,
+    BookMarked,
+    Library
 } from "lucide-react";
 
 export default function LessonEditor({ params }: { params: { id: string; lessonId: string } }) {
@@ -49,6 +53,11 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
     const [isAIQuizModalOpen, setIsAIQuizModalOpen] = useState(false);
     const [aiQuizContext, setAiQuizContext] = useState("");
     const [aiQuizType, setAiQuizType] = useState("multiple-choice");
+
+    // Content Libraries states
+    const [isSaveToLibraryModalOpen, setIsSaveToLibraryModalOpen] = useState(false);
+    const [blockToSave, setBlockToSave] = useState<Block | null>(null);
+    const [isLibraryPanelOpen, setIsLibraryPanelOpen] = useState(false);
 
     const [editValue, setEditValue] = useState("");
 

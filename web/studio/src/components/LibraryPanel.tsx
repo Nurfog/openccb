@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LibraryBlock, api } from '@/lib/api';
+import { LibraryBlock, cmsApi } from '@/lib/api';
 
 interface LibraryPanelProps {
     isOpen: boolean;
