@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { lmsApi, StudentNote } from "@/lib/api";
 import { StickyNote, Save, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import debounce from "lodash/debounce";
+import { debounce } from "lodash";
 
 interface StudentNotesProps {
     lessonId: string;
