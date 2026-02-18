@@ -3,11 +3,11 @@
 import React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Layout, CheckCircle2, Calendar, BarChart2, Settings, Folder, GraduationCap } from "lucide-react";
+import { Layout, CheckCircle2, Calendar, BarChart2, Settings, Folder, GraduationCap, Megaphone } from "lucide-react";
 
 interface CourseEditorLayoutProps {
     children: React.ReactNode;
-    activeTab: "outline" | "grading" | "rubrics" | "calendar" | "analytics" | "settings" | "files" | "grades";
+    activeTab: "outline" | "grading" | "rubrics" | "calendar" | "analytics" | "settings" | "files" | "grades" | "announcements";
 }
 
 export default function CourseEditorLayout({ children, activeTab }: CourseEditorLayoutProps) {
@@ -18,6 +18,7 @@ export default function CourseEditorLayout({ children, activeTab }: CourseEditor
         { key: "grading", label: "Grading Policy", icon: CheckCircle2, href: `/courses/${id}/grading` },
         { key: "rubrics", label: "Rubrics", icon: Layout, href: `/courses/${id}/rubrics` },
         { key: "grades", label: "Gradebook", icon: GraduationCap, href: `/courses/${id}/grades` },
+        { key: "announcements", label: "Announcements", icon: Megaphone, href: `/courses/${id}/announcements` },
         { key: "calendar", label: "Calendar", icon: Calendar, href: `/courses/${id}/calendar` },
         { key: "analytics", label: "Analytics", icon: BarChart2, href: `/courses/${id}/analytics` },
         { key: "files", label: "Files & Uploads", icon: Folder, href: `/courses/${id}/files` },

@@ -39,8 +39,9 @@ El proyecto ha sido optimizado para reducir la complejidad de la infraestructura
 - **Split Authentication Flow**: Flujos de autenticación diferenciados para usuarios personales (email/password) y empresas (dominio corporativo).
 - **Course Monetization**: Integración con Mercado Pago para venta de cursos, con inscripciones automáticas y paneles de precios para instructores.
 - **Student Notes**: Sistema de anotaciones personales por lección con auto-guardado inteligente (debounced).
-- **Cohorts & Groups**: Segmentación de estudiantes en cohortes para gestión de grupos y análisis comparativo.
-- **Interactive Gradebook**: Libro de calificaciones avanzado con filtrado por cohortes y exportación a CSV.
+- **Interactive Gradebook**: Libro de calificaciones avanzado con filtrado por cohortes, exportación masiva a CSV con desgloses por categoría y pertenencia a cohortes.
+- **Bulk Operations**: Herramientas administrativas para inscripción masiva de usuarios vía email y comunicación segmentada.
+- **Segmented Announcements**: Sistema de anuncios con capacidad de dirigirse a cohortes específicas y notificaciones filtradas.
 - **Content Libraries**: Repositorio centralizado de bloques y lecciones reutilizables entre múltiples cursos.
 - **Advanced Grading (Rubrics)**: Sistema de evaluación basado en rúbricas detalladas con indicadores de desempeño por criterio.
 - **Learning Sequences**: Gestión de prerrequisitos entre lecciones con cumplimiento forzado en el LMS.

@@ -454,6 +454,37 @@ export interface BulkEnrollResponse {
     already_enrolled_emails: string[];
 }
 
+export interface CourseAnnouncement {
+    id: string;
+    organization_id: string;
+    course_id: string;
+    author_id: string;
+    title: string;
+    content: string;
+    is_pinned: boolean;
+    created_at: string;
+    updated_at: string;
+    cohort_ids?: string[];
+}
+
+export interface AnnouncementWithAuthor extends CourseAnnouncement {
+    author_name: string;
+    author_avatar?: string;
+}
+
+export interface CreateAnnouncementPayload {
+    title: string;
+    content: string;
+    is_pinned?: boolean;
+    cohort_ids?: string[];
+}
+
+export interface UpdateAnnouncementPayload {
+    title?: string;
+    content?: string;
+    is_pinned?: boolean;
+}
+
 export interface CourseSubmission {
     id: string;
     user_id: string;
@@ -763,6 +794,16 @@ export const lmsApi = {
         apiFetch(`/courses/${courseId}/lessons/${lessonId}/peer-review`, { method: 'POST', body: JSON.stringify({ submission_id: submissionId, score, feedback }) }, true),
     getMySubmissionFeedback: (courseId: string, lessonId: string): Promise<PeerReview[]> =>
         apiFetch(`/courses/${courseId}/lessons/${lessonId}/feedback`, {}, true),
+
+    // Announcements
+    listAnnouncements: (courseId: string): Promise<AnnouncementWithAuthor[]> =>
+        apiFetch(`/courses/${courseId}/announcements`, {}, true),
+    createAnnouncement: (courseId: string, payload: CreateAnnouncementPayload): Promise<CourseAnnouncement> =>
+        apiFetch(`/courses/${courseId}/announcements`, { method: 'POST', body: JSON.stringify(payload) }, true),
+    updateAnnouncement: (announcementId: string, payload: UpdateAnnouncementPayload): Promise<CourseAnnouncement> =>
+        apiFetch(`/announcements/${announcementId}`, { method: 'PUT', body: JSON.stringify(payload) }, true),
+    deleteAnnouncement: (announcementId: string): Promise<void> =>
+        apiFetch(`/announcements/${announcementId}`, { method: 'DELETE' }, true),
 };
 
 export interface BackgroundTask {

@@ -418,6 +418,8 @@ pub struct CourseAnnouncement {
     pub is_pinned: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    #[sqlx(skip)]
+    pub cohort_ids: Option<Vec<Uuid>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
@@ -435,6 +437,8 @@ pub struct AnnouncementWithAuthor {
     // Author info
     pub author_name: String,
     pub author_avatar: Option<String>,
+    #[sqlx(skip)]
+    pub cohort_ids: Option<Vec<Uuid>>,
 }
 
 // Student Notes

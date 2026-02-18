@@ -186,7 +186,7 @@
 - [x] **Content Libraries**: Repositorio reutilizable de bloques y lecciones.
 - [x] **Advanced Grading**: Rúbricas detalladas y workflows de calificación.
 - [x] **Learning Sequences**: Prerequisitos y rutas condicionales entre lecciones.
-- [ ] **Bulk Operations**: Inscripción masiva, exportación de calificaciones, comunicación masiva.
+- [x] **Bulk Operations**: Inscripción masiva, exportación de calificaciones, comunicación masiva. ✅
 - [ ] **Course Teams**: Múltiples instructores con roles y permisos granulares.
 - [ ] **Course Preview**: Vista previa de lecciones sin inscripción.
 - [ ] **Bookmarks**: Sistema de favoritos para lecciones importantes.
@@ -215,9 +215,9 @@
 
 ---
 
-**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados, **sistema de foros de discusión funcional**, **gestión de anuncios**, **monetización integrada con Mercado Pago**, **Librerías de Contenido reutilizables**, **Sistema de Rúbricas Avanzado** y **Secuencias de Aprendizaje (Prerrequisitos)**.
+**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados, **sistema de foros de discusión funcional**, **gestión de anuncios segmentados**, **monetización integrada con Mercado Pago**, **Inscripción Masiva de Usuarios**, **Exportación Avanzada de Calificaciones**, **Librerías de Contenido reutilizables**, **Sistema de Rúbricas Avanzado** y **Secuencias de Aprendizaje**.
 
 **Próximas Prioridades**:
-1. **Bulk Operations**: Inscripción masiva y exportación avanzada de datos.
-2. **Course Teams**: Gestión de múltiples instructores por curso.
-3. **Course Preview**: Vista previa de lecciones sin inscripción.
+1. **Course Teams**: Gestión de múltiples instructores por curso con roles granulares.
+2. **Course Preview**: Vista previa de lecciones sin inscripción para mejorar la conversión.
+3. **Progress Dashboard**: Gráficos de progreso temporal y predicción de finalización.

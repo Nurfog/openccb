@@ -5,7 +5,7 @@ use axum::{
 };
 use common::auth::Claims;
 use common::middleware::Org;
-use common::models::{CourseAnnouncement, AnnouncementWithAuthor};
+use common::models::{AnnouncementWithAuthor, CourseAnnouncement};
 use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -17,6 +17,7 @@ pub struct CreateAnnouncementPayload {
     pub title: String,
     pub content: String,
     pub is_pinned: Option<bool>,
+    pub cohort_ids: Option<Vec<Uuid>>,
 }
 
 #[derive(Deserialize)]
@@ -33,7 +34,7 @@ pub async fn list_announcements(
     Path(course_id): Path<Uuid>,
     State(pool): State<PgPool>,
 ) -> Result<Json<Vec<AnnouncementWithAuthor>>, (StatusCode, String)> {
-    let announcements = sqlx::query_as::<_, AnnouncementWithAuthor>(
+    let mut announcements = sqlx::query_as::<_, AnnouncementWithAuthor>(
         "SELECT 
             a.*,
             u.full_name as author_name,
@@ -41,13 +42,28 @@ pub async fn list_announcements(
         FROM course_announcements a
         LEFT JOIN users u ON a.author_id = u.id
         WHERE a.course_id = $1 AND a.organization_id = $2
-        ORDER BY a.is_pinned DESC, a.created_at DESC"
+        ORDER BY a.is_pinned DESC, a.created_at DESC",
     )
     .bind(course_id)
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // Attach cohort_ids to each announcement
+    for a in &mut announcements {
+        let cohorts = sqlx::query!(
+            "SELECT cohort_id FROM announcement_cohorts WHERE announcement_id = $1",
+            a.id
+        )
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        if !cohorts.is_empty() {
+            a.cohort_ids = Some(cohorts.into_iter().map(|c| c.cohort_id).collect());
+        }
+    }
 
     Ok(Json(announcements))
 }
@@ -67,11 +83,19 @@ pub async fn create_announcement(
         .map_err(|_| (StatusCode::UNAUTHORIZED, "User not found".to_string()))?;
 
     if user.0 != "instructor" && user.0 != "admin" {
-        return Err((StatusCode::FORBIDDEN, "Only instructors can create announcements".to_string()));
+        return Err((
+            StatusCode::FORBIDDEN,
+            "Only instructors can create announcements".to_string(),
+        ));
     }
 
-    // Create announcement
-    let announcement = sqlx::query_as::<_, CourseAnnouncement>(
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // 1. Create announcement
+    let mut announcement = sqlx::query_as::<_, CourseAnnouncement>(
         "INSERT INTO course_announcements (organization_id, course_id, author_id, title, content, is_pinned)
          VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING *"
@@ -82,18 +106,63 @@ pub async fn create_announcement(
     .bind(&payload.title)
     .bind(&payload.content)
     .bind(payload.is_pinned.unwrap_or(false))
-    .fetch_one(&pool)
+    .fetch_one(&mut *tx)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // Get all enrolled students for notifications
-    let enrolled_students = sqlx::query_as::<_, (Uuid,)>(
-        "SELECT user_id FROM enrollments WHERE course_id = $1 AND user_id != $2"
-    )
-    .bind(course_id)
-    .bind(claims.sub) // Exclude the announcement author
-    .fetch_all(&pool)
-    .await
+    // 2. Link cohorts if provided
+    if let Some(ref cohort_ids) = payload.cohort_ids {
+        for cohort_id in cohort_ids {
+            sqlx::query(
+                "INSERT INTO announcement_cohorts (announcement_id, cohort_id) VALUES ($1, $2)",
+            )
+            .bind(announcement.id)
+            .bind(cohort_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        }
+        announcement.cohort_ids = Some(cohort_ids.clone());
+    }
+
+    tx.commit()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // 3. Get target students for notifications
+    let enrolled_students = if let Some(ref cohort_ids) = payload.cohort_ids {
+        if !cohort_ids.is_empty() {
+            sqlx::query_as::<_, (Uuid,)>(
+                "SELECT DISTINCT uc.user_id 
+                 FROM user_cohorts uc 
+                 JOIN enrollments e ON uc.user_id = e.user_id AND e.course_id = $1
+                 WHERE uc.cohort_id = ANY($2) AND uc.user_id != $3",
+            )
+            .bind(course_id)
+            .bind(cohort_ids)
+            .bind(claims.sub)
+            .fetch_all(&pool)
+            .await
+        } else {
+            // Fallback to everyone if empty list provided (though UI should prevent)
+            sqlx::query_as::<_, (Uuid,)>(
+                "SELECT user_id FROM enrollments WHERE course_id = $1 AND user_id != $2",
+            )
+            .bind(course_id)
+            .bind(claims.sub)
+            .fetch_all(&pool)
+            .await
+        }
+    } else {
+        // No segment provided -> everyone in the course
+        sqlx::query_as::<_, (Uuid,)>(
+            "SELECT user_id FROM enrollments WHERE course_id = $1 AND user_id != $2",
+        )
+        .bind(course_id)
+        .bind(claims.sub)
+        .fetch_all(&pool)
+        .await
+    }
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // Create notification for each enrolled student
@@ -137,12 +206,15 @@ pub async fn update_announcement(
         .map_err(|_| (StatusCode::UNAUTHORIZED, "User not found".to_string()))?;
 
     if user.0 != "instructor" && user.0 != "admin" {
-        return Err((StatusCode::FORBIDDEN, "Only instructors can update announcements".to_string()));
+        return Err((
+            StatusCode::FORBIDDEN,
+            "Only instructors can update announcements".to_string(),
+        ));
     }
 
     // Get current announcement to verify ownership
     let current = sqlx::query_as::<_, CourseAnnouncement>(
-        "SELECT * FROM course_announcements WHERE id = $1 AND organization_id = $2"
+        "SELECT * FROM course_announcements WHERE id = $1 AND organization_id = $2",
     )
     .bind(announcement_id)
     .bind(org_ctx.id)
@@ -158,7 +230,7 @@ pub async fn update_announcement(
         "UPDATE course_announcements 
          SET title = $1, content = $2, is_pinned = $3
          WHERE id = $4 AND organization_id = $5
-         RETURNING *"
+         RETURNING *",
     )
     .bind(title)
     .bind(content)
@@ -186,12 +258,15 @@ pub async fn delete_announcement(
         .map_err(|_| (StatusCode::UNAUTHORIZED, "User not found".to_string()))?;
 
     if user.0 != "instructor" && user.0 != "admin" {
-        return Err((StatusCode::FORBIDDEN, "Only instructors can delete announcements".to_string()));
+        return Err((
+            StatusCode::FORBIDDEN,
+            "Only instructors can delete announcements".to_string(),
+        ));
     }
 
     sqlx::query(
         "DELETE FROM course_announcements 
-         WHERE id = $1 AND organization_id = $2"
+         WHERE id = $1 AND organization_id = $2",
     )
     .bind(announcement_id)
     .bind(org_ctx.id)
