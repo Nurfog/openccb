@@ -41,11 +41,14 @@ El proyecto ha sido optimizado para reducir la complejidad de la infraestructura
 - **Student Notes**: Sistema de anotaciones personales por lección con auto-guardado inteligente (debounced).
 - **Interactive Gradebook**: Libro de calificaciones avanzado con filtrado por cohortes, exportación masiva a CSV con desgloses por categoría y pertenencia a cohortes.
 - **Bulk Operations**: Herramientas administrativas para inscripción masiva de usuarios vía email y comunicación segmentada.
-- **Course Teams (Multi-instructor support)**
+- **Course Teams**: Soporte para múltiples instructores por curso con roles granulares (Instructor Principal, Instructor, Asistente).
+- **Course Preview**: Capacidad de marcar lecciones específicas como previsualizables para usuarios no inscritos (freemium).
+- **Student Progress Dashboard**: Visualización avanzada del avance del estudiante con gráficos de actividad diaria y predicción de fecha de finalización basada en el ritmo de aprendizaje.
 - **Segmented Announcements**: Sistema de anuncios con capacidad de dirigirse a cohortes específicas y notificaciones filtradas.
 - **Content Libraries**: Repositorio centralizado de bloques y lecciones reutilizables entre múltiples cursos.
 - **Advanced Grading (Rubrics)**: Sistema de evaluación basado en rúbricas detalladas con indicadores de desempeño por criterio.
 - **Learning Sequences**: Gestión de prerrequisitos entre lecciones con cumplimiento forzado en el LMS.
+- **LTI 1.3 Tool Provider**: Interoperabilidad completa para lanzar cursos de OpenCCB desde LMS externos (Canvas, Moodle) de manera segura y estandarizada.
 
 ##  Requisitos del Sistema
 
@@ -621,6 +624,9 @@ Obtiene una lista de todas las organizaciones registradas.
 - **Cohort Management**: Sistema de gestión de grupos con seguimiento de progreso por cohorte.
 - **Advanced Gradebook**: Seguimiento del desempeño estudiantil con analíticas y filtrado avanzado.
 - **Learning Sequences UI**: Interfaz visual para gestionar dependencias y visualización de bloqueos con iconos de candado.
+- **Student Progress Dashboard**: Panel de control con gráficos interactivos (Recharts) que muestran la actividad de aprendizaje y estiman el tiempo restante del curso.
+- **Course Teams UI**: Panel de gestión para añadir y configurar roles de instructores secundarios y asistentes.
+- **Course Preview Badges**: Indicadores visuales y lógica de acceso para lecciones accesibles sin suscripción.
 
 ## 📄 Licencia
 Este proyecto es código abierto y está disponible bajo los términos de la licencia especificada en el repositorio.

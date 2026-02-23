@@ -50,6 +50,7 @@ pub struct Lesson {
     pub due_date: Option<DateTime<Utc>>,
     pub important_date_type: Option<String>, // "exam", "assignment", "milestone", etc.
     pub transcription_status: Option<String>,
+    pub is_previewable: bool,
     pub created_at: DateTime<Utc>,
 }
 
@@ -128,10 +129,97 @@ pub struct Enrollment {
     pub enrolled_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct UserBookmark {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub user_id: Uuid,
+    pub course_id: Uuid,
+    pub lesson_id: Uuid,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct CourseInstructor {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub course_id: Uuid,
+    pub user_id: Uuid,
+    pub role: String, // "primary", "instructor", "assistant"
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct LtiRegistration {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub issuer: String,
+    pub client_id: String,
+    pub deployment_id: String,
+    pub auth_token_url: String,
+    pub auth_login_url: String,
+    pub jwks_url: String,
+    pub platform_name: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct LtiResourceLink {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub resource_link_id: String,
+    pub course_id: Uuid,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LtiLaunchClaims {
+    #[serde(rename = "iss")]
+    pub issuer: String,
+    #[serde(rename = "sub")]
+    pub subject: String,
+    #[serde(rename = "aud")]
+    pub audience: serde_json::Value, // Can be string or array
+    #[serde(rename = "exp")]
+    pub expires_at: i64,
+    #[serde(rename = "iat")]
+    pub issued_at: i64,
+    pub nonce: String,
+    #[serde(rename = "https://purl.imsglobal.org/spec/lti/claim/message_type")]
+    pub message_type: String,
+    #[serde(rename = "https://purl.imsglobal.org/spec/lti/claim/version")]
+    pub version: String,
+    #[serde(rename = "https://purl.imsglobal.org/spec/lti/claim/deployment_id")]
+    pub deployment_id: String,
+    #[serde(rename = "https://purl.imsglobal.org/spec/lti/claim/resource_link")]
+    pub resource_link: LtiResourceLinkClaim,
+    #[serde(rename = "https://purl.imsglobal.org/spec/lti/claim/context")]
+    pub context: Option<LtiContextClaim>,
+    #[serde(rename = "https://purl.imsglobal.org/spec/lti/claim/roles")]
+    pub roles: Vec<String>,
+    pub name: Option<String>,
+    pub email: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LtiResourceLinkClaim {
+    pub id: String,
+    pub title: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LtiContextClaim {
+    pub id: String,
+    pub label: Option<String>,
+    pub title: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct Asset {
     pub id: Uuid,
     pub organization_id: Uuid,
+    pub uploaded_by: Option<Uuid>,
     pub course_id: Option<Uuid>,
     pub filename: String,
     pub storage_path: String,
@@ -212,6 +300,8 @@ pub struct PublishedCourse {
     pub grading_categories: Vec<GradingCategory>,
     pub modules: Vec<PublishedModule>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub instructors: Option<Vec<CourseInstructor>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dependencies: Option<Vec<LessonDependency>>,
 }
 
@@ -255,6 +345,40 @@ pub struct AdvancedAnalytics {
     pub cohorts: Vec<CohortData>,
     pub retention: Vec<RetentionData>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct DailyProgress {
+    pub date: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AnalyticsFilter {
+    pub cohort_id: Option<Uuid>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Recommendation {
+    pub title: String,
+    pub description: String,
+    pub lesson_id: Option<Uuid>,
+    pub priority: String, // "high", "medium", "low"
+    pub reason: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RecommendationResponse {
+    pub recommendations: Vec<Recommendation>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProgressStats {
+    pub total_lessons: i64,
+    pub completed_lessons: i64,
+    pub progress_percentage: f32,
+    pub daily_completions: Vec<DailyProgress>,
+    pub estimated_completion_date: Option<DateTime<Utc>>,
+}
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct Webhook {
     pub id: Uuid,
@@ -295,19 +419,6 @@ pub struct AuditLog {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Recommendation {
-    pub title: String,
-    pub description: String,
-    pub lesson_id: Option<Uuid>,
-    pub priority: String, // "high", "medium", "low"
-    pub reason: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct RecommendationResponse {
-    pub recommendations: Vec<Recommendation>,
-}
 
 // Discussion Forums Models
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
@@ -668,6 +779,7 @@ mod tests {
             },
             grading_categories: vec![],
             modules: vec![pub_module],
+            instructors: None,
         };
 
         let course_with_price = Course {

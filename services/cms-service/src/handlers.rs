@@ -12,7 +12,7 @@ use common::auth::{Claims, create_jwt, create_preview_token};
 use common::middleware::Org;
 use common::models::{
     AuthResponse, Course, CourseAnalytics, Lesson, Module, Organization, PublishedCourse,
-    PublishedModule, User, UserResponse,
+    PublishedModule, User, UserResponse, CourseInstructor,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -115,11 +115,23 @@ pub async fn publish_course(
     let mut course_for_pub = course.clone();
     course_for_pub.organization_id = target_org_id;
 
+    // 5. Fetch Course Team
+    let instructors = sqlx::query_as::<_, CourseInstructor>(
+        "SELECT ci.*, u.email, u.full_name FROM course_instructors ci 
+         JOIN users u ON ci.user_id = u.id 
+         WHERE ci.course_id = $1"
+    )
+    .bind(id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     let payload = PublishedCourse {
         course: course_for_pub,
         organization,
         grading_categories,
         modules: pub_modules,
+        instructors: Some(instructors),
         dependencies: None,
     };
 
@@ -329,10 +341,10 @@ pub async fn update_course(
             .bind(org_ctx.id)
             .fetch_one(&pool)
             .await
-            .map_err(|_| (StatusCode::NOT_FOUND, "Course not found".into()))?;
+            .map_err(|_| (StatusCode::NOT_FOUND, "Curso no encontrado".into()))?;
 
     if claims.role != "admin" && existing.instructor_id != claims.sub {
-        return Err((StatusCode::FORBIDDEN, "Not authorized".into()));
+        return Err((StatusCode::FORBIDDEN, "No autorizado".into()));
     }
 
     let title = payload
@@ -547,6 +559,11 @@ pub async fn create_lesson(
 
     let important_date_type = payload.get("important_date_type").and_then(|v| v.as_str());
 
+    let is_previewable = payload
+        .get("is_previewable")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
     let mut tx = pool
         .begin()
         .await
@@ -575,7 +592,7 @@ pub async fn create_lesson(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let lesson = sqlx::query_as::<_, Lesson>(
-        "SELECT * FROM fn_create_lesson($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"
+        "SELECT * FROM fn_create_lesson($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"
     )
     .bind(org_ctx.id)
     .bind(module_id)
@@ -591,6 +608,7 @@ pub async fn create_lesson(
     .bind(allow_retry)
     .bind(due_date)
     .bind(important_date_type)
+    .bind(is_previewable)
     .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
@@ -1293,6 +1311,7 @@ pub async fn update_lesson(
     let metadata = payload.get("metadata").cloned();
     let important_date_type = payload.get("important_date_type").and_then(|v| v.as_str());
     let summary = payload.get("summary").and_then(|v| v.as_str());
+    let is_previewable = payload.get("is_previewable").and_then(|v| v.as_bool());
     let content_blocks = payload.get("content_blocks").cloned();
     let transcription = payload.get("transcription").cloned();
 
@@ -1342,7 +1361,7 @@ pub async fn update_lesson(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let lesson = sqlx::query_as::<_, Lesson>(
-        "SELECT * FROM fn_update_lesson($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"
+        "SELECT * FROM fn_update_lesson($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"
     )
     .bind(id)
     .bind(org_ctx.id)
@@ -1360,6 +1379,7 @@ pub async fn update_lesson(
     .bind(due_date)
     .bind(important_date_type)
     .bind(summary)
+    .bind(is_previewable)
     .bind(clear_due_date)
     .bind(clear_grading_category)
     .fetch_one(&mut *tx)
@@ -1642,195 +1662,6 @@ pub async fn reorder_lessons(
     Ok(StatusCode::OK)
 }
 
-#[derive(Debug, Serialize)]
-pub struct UploadResponse {
-    pub id: Uuid,
-    pub filename: String,
-    pub url: String,
-}
-
-pub async fn upload_asset(
-    Org(org_ctx): Org,
-    State(pool): State<PgPool>,
-    mut multipart: axum::extract::Multipart,
-) -> Result<Json<UploadResponse>, (StatusCode, String)> {
-    tracing::info!("Starting upload_asset for org: {}", org_ctx.id);
-    let mut filename = String::new();
-    let mut data = Vec::new();
-    let mut mimetype = String::new();
-    let mut course_id: Option<Uuid> = None;
-
-    while let Some(field) =
-        multipart
-            .next_field()
-            .await
-            .map_err(|e: axum::extract::multipart::MultipartError| {
-                (StatusCode::BAD_REQUEST, e.to_string())
-            })?
-    {
-        let name = field.name().unwrap_or_default().to_string();
-        if name == "file" {
-            filename = field.file_name().unwrap_or("unnamed").to_string();
-            mimetype = field
-                .content_type()
-                .unwrap_or("application/octet-stream")
-                .to_string();
-            data = field
-                .bytes()
-                .await
-                .map_err(|e: axum::extract::multipart::MultipartError| {
-                    (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-                })?
-                .to_vec();
-        } else if name == "course_id" {
-            if let Ok(txt) = field.text().await {
-                if let Ok(id) = Uuid::parse_str(&txt) {
-                    course_id = Some(id);
-                }
-            }
-        }
-    }
-
-    if data.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "No file uploaded".to_string()));
-    }
-
-    let asset_id = Uuid::new_v4();
-    let extension = std::path::Path::new(&filename)
-        .extension()
-        .and_then(|s| s.to_str())
-        .unwrap_or("");
-
-    let storage_filename = format!("{}.{}", asset_id, extension);
-    let storage_path = format!("uploads/{}", storage_filename);
-
-    // Ensure uploads directory exists
-    tokio::fs::create_dir_all("uploads")
-        .await
-        .map_err(|e: std::io::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    // Write file
-    tokio::fs::write(&storage_path, data)
-        .await
-        .map_err(|e: std::io::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    // Record in DB
-    let size_bytes = tokio::fs::metadata(&storage_path)
-        .await
-        .map(|m| m.len() as i64)
-        .unwrap_or(0);
-
-    sqlx::query(
-        "INSERT INTO assets (id, filename, storage_path, mimetype, size_bytes, organization_id, course_id) VALUES ($1, $2, $3, $4, $5, $6, $7)"
-    )
-    .bind(asset_id)
-    .bind(&filename)
-    .bind(storage_path)
-    .bind(mimetype)
-    .bind(size_bytes)
-    .bind(org_ctx.id)
-    .bind(course_id)
-    .execute(&pool)
-    .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let url = format!("/assets/{}", storage_filename);
-
-    tracing::info!("Upload successful: {} -> {}", filename, url);
-    Ok(Json(UploadResponse {
-        id: asset_id,
-        filename,
-        url,
-    }))
-}
-
-pub async fn get_course_assets(
-    Org(org_ctx): Org,
-    State(pool): State<PgPool>,
-    Path(course_id): Path<Uuid>,
-) -> Result<Json<Vec<common::models::Asset>>, StatusCode> {
-    let assets = sqlx::query_as::<_, common::models::Asset>(
-        "SELECT * FROM assets WHERE organization_id = $1 AND course_id = $2 ORDER BY created_at DESC"
-    )
-    .bind(org_ctx.id)
-    .bind(course_id)
-    .fetch_all(&pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to fetch course assets: {}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
-
-    Ok(Json(assets))
-}
-
-pub async fn delete_asset(
-    Org(org_ctx): Org,
-    claims: Claims,
-    State(pool): State<PgPool>,
-    Path(asset_id): Path<Uuid>,
-) -> Result<StatusCode, (StatusCode, String)> {
-    // 1. Fetch asset to verify ownership/org
-    let asset = sqlx::query_as::<_, common::models::Asset>(
-        "SELECT * FROM assets WHERE id = $1 AND organization_id = $2",
-    )
-    .bind(asset_id)
-    .bind(org_ctx.id)
-    .fetch_optional(&pool)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let asset = match asset {
-        Some(a) => a,
-        None => return Err((StatusCode::NOT_FOUND, "Asset not found".to_string())),
-    };
-
-    // 2. Check permissions (only instructor of the course or admin)
-    if claims.role != "admin" {
-        // If linked to a course, check if user owns that course
-        if let Some(cid) = asset.course_id {
-            let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1")
-                .bind(cid)
-                .fetch_optional(&pool)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-            if let Some(c) = course {
-                if c.instructor_id != claims.sub {
-                    return Err((
-                        StatusCode::FORBIDDEN,
-                        "Not authorized to delete this asset".to_string(),
-                    ));
-                }
-            }
-        }
-        // If not linked to a course, only admins might delete? Or maybe uploader?
-        // For now, let's assume if it's orphaned, only admin deletes.
-        if asset.course_id.is_none() {
-            return Err((
-                StatusCode::FORBIDDEN,
-                "Only admins can delete global assets".to_string(),
-            ));
-        }
-    }
-
-    // 3. Delete file
-    // Note: storage_path is relative to working dir usually "uploads/..."
-    if let Err(e) = tokio::fs::remove_file(&asset.storage_path).await {
-        tracing::warn!("Failed to delete file {}: {}", asset.storage_path, e);
-        // We continue to delete from DB even if file specific deletion failed (maybe already gone)
-    }
-
-    // 4. Delete from DB
-    sqlx::query("DELETE FROM assets WHERE id = $1")
-        .bind(asset_id)
-        .execute(&pool)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(StatusCode::NO_CONTENT)
-}
-
 #[derive(Deserialize)]
 pub struct AuthPayload {
     pub email: String,
@@ -1988,7 +1819,7 @@ pub async fn login(
             "Verification failed".into(),
         )
     })? {
-        return Err((StatusCode::UNAUTHORIZED, "Invalid credentials".into()));
+        return Err((StatusCode::UNAUTHORIZED, "Credenciales inválidas".into()));
     }
 
     let token = create_jwt(user.id, user.organization_id, &user.role).map_err(|_| {
@@ -3059,7 +2890,7 @@ pub async fn export_course(
     })?;
 
     if !exists {
-        return Err((StatusCode::NOT_FOUND, "Course not found".to_string()));
+        return Err((StatusCode::NOT_FOUND, "Rúbrica no encontrada".to_string()));
     }
 
     // 2. Generate ZIP
@@ -3143,8 +2974,8 @@ pub async fn import_course(
         let mimetype = mime_guess::from_path(&old_filename).first_or_octet_stream().to_string();
 
         sqlx::query(
-            "INSERT INTO assets (id, filename, storage_path, mimetype, size_bytes, organization_id) 
-             VALUES ($1, $2, $3, $4, $5, $6)"
+            "INSERT INTO assets (id, filename, storage_path, mimetype, size_bytes, organization_id, uploaded_by) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)"
         )
         .bind(new_id)
         .bind(&old_filename) 
@@ -3152,6 +2983,7 @@ pub async fn import_course(
         .bind(&mimetype)
         .bind(content.len() as i64)
         .bind(org_ctx.id)
+        .bind(claims.sub)
         .execute(&pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -3312,7 +3144,7 @@ pub async fn check_course_access(
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct CourseInstructor {
+pub struct CourseInstructorDetail {
     pub id: Uuid,
     pub course_id: Uuid,
     pub user_id: Uuid,
@@ -3326,18 +3158,21 @@ pub async fn get_course_team(
     Org(_org_ctx): Org,
     claims: Claims,
     State(pool): State<PgPool>,
-    Path(id): Path<Uuid>,
-) -> Result<Json<Vec<CourseInstructor>>, (StatusCode, String)> {
-    if !check_course_access(&pool, id, claims.sub, &claims.role).await? {
+    Path(course_id): Path<Uuid>,
+) -> Result<Json<Vec<CourseInstructorDetail>>, (StatusCode, String)> {
+    if !check_course_access(&pool, course_id, claims.sub, &claims.role).await? {
         return Err((StatusCode::FORBIDDEN, "No access to this course team".into()));
     }
 
-    let team = sqlx::query_as::<_, CourseInstructor>(
-        "SELECT ci.*, u.email, u.full_name FROM course_instructors ci 
-         JOIN users u ON ci.user_id = u.id 
-         WHERE ci.course_id = $1"
+    let team = sqlx::query_as::<_, CourseInstructorDetail>(
+        r#"
+        SELECT ci.id, ci.course_id, ci.user_id, ci.role, ci.created_at, u.email, u.full_name
+        FROM course_instructors ci
+        JOIN users u ON ci.user_id = u.id
+        WHERE ci.course_id = $1
+        "#
     )
-    .bind(id)
+    .bind(course_id)
     .fetch_all(&pool)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;

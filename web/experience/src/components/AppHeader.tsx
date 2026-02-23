@@ -48,6 +48,9 @@ export default function AppHeader() {
                     <Link href="/my-learning" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">
                         {t('nav.myLearning')}
                     </Link>
+                    <Link href="/bookmarks" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">
+                        {t('nav.bookmarks')}
+                    </Link>
                 </nav>
 
                 <div className="flex items-center gap-2 md:gap-4">
@@ -116,6 +119,13 @@ export default function AppHeader() {
                                 className="text-sm font-black uppercase tracking-widest text-gray-300 hover:text-white border-l-2 border-transparent hover:border-blue-500 pl-4 transition-all"
                             >
                                 {t('nav.myLearning')}
+                            </Link>
+                            <Link
+                                href="/bookmarks"
+                                onClick={() => setIsMenuOpen(false)}
+                                className="text-sm font-black uppercase tracking-widest text-gray-300 hover:text-white border-l-2 border-transparent hover:border-blue-500 pl-4 transition-all"
+                            >
+                                {t('nav.bookmarks')}
                             </Link>
 
                             <div className="pt-6 mt-6 border-t border-white/5 space-y-4">

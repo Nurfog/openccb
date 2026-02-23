@@ -183,7 +183,7 @@ export default function PeerReviewPlayer({ courseId, lessonId, block }: PeerRevi
                         >
                             <span className="text-2xl mb-2 block group-hover:scale-110 transition-transform">👀</span>
                             <div className="font-bold text-purple-400">Review a Peer</div>
-                            <div className="text-xs text-gray-500 mt-1">Earn credit by reviewing other students' work.</div>
+                            <div className="text-xs text-gray-500 mt-1">Earn credit by reviewing other students&apos; work.</div>
                         </button>
 
                         <button

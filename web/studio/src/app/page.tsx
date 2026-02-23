@@ -171,7 +171,7 @@ export default function StudioDashboard() {
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-bold transition-all cursor-pointer active:scale-95">
               <Upload size={18} />
-              Import
+              Importar
               <input type="file" accept=".json" onChange={handleImport} className="hidden" />
             </label>
             <button
@@ -199,7 +199,7 @@ export default function StudioDashboard() {
           </div>
         ) : courses.length === 0 ? (
           <div className="text-center py-20 glass-card border-dashed border-white/10">
-            <p className="text-gray-500">You haven&apos;t created any courses yet.</p>
+            <p className="text-gray-500">Aún no has creado ningún curso.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -227,10 +227,10 @@ export default function StudioDashboard() {
                       </button>
                     </div>
                     <h3 className="font-bold text-lg mb-2 group-hover:text-blue-400 transition-colors">{course.title}</h3>
-                    <p className="text-sm text-gray-400 line-clamp-2">{course.description || "No description provided."}</p>
+                    <p className="text-sm text-gray-400 line-clamp-2">{course.description || "Sin descripción disponible."}</p>
                   </div>
                   <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/5 text-xs text-gray-500">
-                    <span>Last updated: {new Date(course.updated_at).toLocaleDateString()}</span>
+                    <span>Última actualización: {new Date(course.updated_at).toLocaleDateString()}</span>
                     <span>ID: {course.id.slice(0, 4)}...</span>
                   </div>
                 </div>

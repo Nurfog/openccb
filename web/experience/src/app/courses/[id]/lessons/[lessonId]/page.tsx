@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { lmsApi, Lesson, Course, Module, UserGrade } from "@/lib/api";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Menu, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Menu, CheckCircle2, Bookmark } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 import DescriptionPlayer from "@/components/blocks/DescriptionPlayer";
@@ -35,6 +35,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
     const [currentTime, setCurrentTime] = useState(0);
     const [userGrade, setUserGrade] = useState<UserGrade | null>(null);
     const [allGrades, setAllGrades] = useState<UserGrade[]>([]);
+    const [isBookmarked, setIsBookmarked] = useState(false);
     const { user } = useAuth();
 
     useEffect(() => {
@@ -48,10 +49,14 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                 setCourse({ ...outlineData.course, modules: outlineData.modules });
 
                 if (user) {
-                    const grades = await lmsApi.getUserGrades(user.id, params.id);
+                    const [grades, bookmarks] = await Promise.all([
+                        lmsApi.getUserGrades(user.id, params.id),
+                        lmsApi.getBookmarks(params.id)
+                    ]);
                     setAllGrades(grades);
                     const currentGrade = grades.find((g: UserGrade) => g.lesson_id === params.lessonId);
                     setUserGrade(currentGrade || null);
+                    setIsBookmarked(bookmarks.some(b => b.lesson_id === params.lessonId));
                 }
             } catch (err) {
                 console.error("Error al cargar los datos de la lección", err);
@@ -126,6 +131,15 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
             } catch (err) {
                 console.error(`Failed to submit score for block ${blockId}`, err);
             }
+        }
+    };
+
+    const handleToggleBookmark = async () => {
+        try {
+            await lmsApi.toggleBookmark(params.lessonId);
+            setIsBookmarked(!isBookmarked);
+        } catch (err) {
+            console.error("Error toggling bookmark", err);
         }
     };
 
@@ -214,6 +228,13 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                         title="Alternar Barra Lateral"
                     >
                         <Menu size={20} />
+                    </button>
+                    <button
+                        onClick={handleToggleBookmark}
+                        className={`p-3 rounded-xl glass border-white/10 transition-all bg-black/40 ${isBookmarked ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`}
+                        title={isBookmarked ? "Quitar Marcador" : "Guardar Marcador"}
+                    >
+                        <Bookmark size={20} fill={isBookmarked ? "currentColor" : "none"} />
                     </button>
                     {hasTranscription && (
                         <button

@@ -1,0 +1,518 @@
+    Checking lms-service v0.1.0 (/home/juan/dev/openccb/services/lms-service)
+error: error communicating with database: Connection refused (os error 111)
+   --> services/lms-service/src/handlers.rs:154:22
+    |
+154 |       let categories = sqlx::query!(
+    |  ______________________^
+155 | |         "SELECT id, name FROM grading_categories WHERE course_id = $1 ORDER BY name",
+156 | |         course_id
+157 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/lms-service/src/handlers.rs:163:20
+    |
+163 |       let students = sqlx::query!(
+    |  ____________________^
+164 | |         r#"
+165 | |         SELECT 
+166 | |             u.id, 
+...   |
+180 | |         org_ctx.id
+181 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/lms-service/src/handlers.rs:193:27
+    |
+193 |       let detailed_grades = sqlx::query_as!(
+    |  ___________________________^
+194 | |         UserCategoryGrade,
+195 | |         r#"
+196 | |         SELECT 
+...   |
+205 | |         course_id
+206 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/lms-service/src/handlers.rs:896:24
+    |
+896 |       let dependencies = sqlx::query_as!(
+    |  ________________________^
+897 | |         LessonDependency,
+898 | |         r#"
+899 | |         SELECT ld.* 
+...   |
+905 | |         id
+906 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+    --> services/lms-service/src/handlers.rs:1004:30
+     |
+1004 |       let unmet_dependencies = sqlx::query!(
+     |  ______________________________^
+1005 | |         r#"
+1006 | |         SELECT ld.prerequisite_lesson_id, p.title as prereq_title, ld.min_score_percentage
+1007 | |         FROM lesson_dependencies ld
+...    |
+1020 | |         claims.sub
+1021 | |     )
+     | |_____^
+     |
+     = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+  --> services/lms-service/src/handlers_announcements.rs:55:23
+   |
+55 |           let cohorts = sqlx::query!(
+   |  _______________________^
+56 | |             "SELECT cohort_id FROM announcement_cohorts WHERE announcement_id = $1",
+57 | |             a.id
+58 | |         )
+   | |_________^
+   |
+   = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+  --> services/lms-service/src/handlers_peer_review.rs:21:46
+   |
+21 |       let existing: Option<CourseSubmission> = sqlx::query_as!(
+   |  ______________________________________________^
+22 | |         CourseSubmission,
+23 | |         "SELECT * FROM course_submissions WHERE user_id = $1 AND lesson_id = $2",
+24 | |         claims.sub,
+25 | |         lesson_id
+26 | |     )
+   | |_____^
+   |
+   = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+  --> services/lms-service/src/handlers_peer_review.rs:33:23
+   |
+33 |           let updated = sqlx::query_as!(
+   |  _______________________^
+34 | |             CourseSubmission,
+35 | |             r#"
+36 | |             UPDATE course_submissions 
+...  |
+43 | |             lesson_id
+44 | |         )
+   | |_________^
+   |
+   = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+  --> services/lms-service/src/handlers_peer_review.rs:53:22
+   |
+53 |       let submission = sqlx::query_as!(
+   |  ______________________^
+54 | |         CourseSubmission,
+55 | |         r#"
+56 | |         INSERT INTO course_submissions (user_id, course_id, lesson_id, organization_id, content)
+...  |
+64 | |         payload.content
+65 | |     )
+   | |_____^
+   |
+   = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/lms-service/src/handlers_peer_review.rs:83:22
+    |
+ 83 |       let submission = sqlx::query_as!(
+    |  ______________________^
+ 84 | |         CourseSubmission,
+ 85 | |         r#"
+ 86 | |         SELECT s.* 
+...   |
+105 | |         org_ctx.id
+106 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/lms-service/src/handlers_peer_review.rs:122:22
+    |
+122 |       let submission = sqlx::query!(
+    |  ______________________^
+123 | |         "SELECT user_id FROM course_submissions WHERE id = $1",
+124 | |         payload.submission_id
+125 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/lms-service/src/handlers_peer_review.rs:143:20
+    |
+143 |       let existing = sqlx::query!(
+    |  ____________________^
+144 | |         "SELECT id FROM peer_reviews WHERE submission_id = $1 AND reviewer_id = $2",
+145 | |         payload.submission_id,
+146 | |         claims.sub
+147 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/lms-service/src/handlers_peer_review.rs:160:18
+    |
+160 |       let review = sqlx::query_as!(
+    |  __________________^
+161 | |         PeerReview,
+162 | |         r#"
+163 | |         INSERT INTO peer_reviews (submission_id, reviewer_id, score, feedback, organization_id)
+...   |
+171 | |         org_ctx.id
+172 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/lms-service/src/handlers_peer_review.rs:187:19
+    |
+187 |       let reviews = sqlx::query_as!(
+    |  ___________________^
+188 | |         PeerReview,
+189 | |         r#"
+190 | |         SELECT pr.* 
+...   |
+196 | |         lesson_id
+197 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unused import: `crate::lti`
+  --> services/lms-service/src/handlers.rs:14:5
+   |
+14 | use crate::lti;
+   |     ^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers.rs:154:22
+    |
+154 |       let categories = sqlx::query!(
+    |  ______________________^
+155 | |         "SELECT id, name FROM grading_categories WHERE course_id = $1 ORDER BY name",
+156 | |         course_id
+...   |
+159 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers.rs:160:15
+    |
+160 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+160 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers.rs:163:20
+    |
+163 |       let students = sqlx::query!(
+    |  ____________________^
+164 | |         r#"
+165 | |         SELECT 
+166 | |             u.id, 
+...   |
+182 | |     .fetch_all(&pool)
+183 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers.rs:184:15
+    |
+184 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+184 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers.rs:193:27
+    |
+193 |       let detailed_grades = sqlx::query_as!(
+    |  ___________________________^
+194 | |         UserCategoryGrade,
+195 | |         r#"
+196 | |         SELECT 
+...   |
+207 | |     .fetch_all(&pool)
+208 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers.rs:209:15
+    |
+209 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+209 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers.rs:896:24
+    |
+896 |       let dependencies = sqlx::query_as!(
+    |  ________________________^
+897 | |         LessonDependency,
+898 | |         r#"
+899 | |         SELECT ld.* 
+...   |
+907 | |     .fetch_all(&pool)
+908 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+    --> services/lms-service/src/handlers.rs:1004:30
+     |
+1004 |       let unmet_dependencies = sqlx::query!(
+     |  ______________________________^
+1005 | |         r#"
+1006 | |         SELECT ld.prerequisite_lesson_id, p.title as prereq_title, ld.min_score_percentage
+1007 | |         FROM lesson_dependencies ld
+...    |
+1022 | |     .fetch_all(&pool)
+1023 | |     .await
+     | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> services/lms-service/src/handlers_announcements.rs:55:23
+   |
+55 |           let cohorts = sqlx::query!(
+   |  _______________________^
+56 | |             "SELECT cohort_id FROM announcement_cohorts WHERE announcement_id = $1",
+57 | |             a.id
+...  |
+60 | |         .await
+   | |______________^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> services/lms-service/src/handlers_announcements.rs:61:19
+   |
+61 |         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+   |                   ^                                      - type must be known at this point
+   |
+help: consider giving this closure parameter an explicit type
+   |
+61 |         .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+   |                    ++++++++++++
+
+error[E0282]: type annotations needed
+  --> services/lms-service/src/handlers_peer_review.rs:21:46
+   |
+21 |       let existing: Option<CourseSubmission> = sqlx::query_as!(
+   |  ______________________________________________^
+22 | |         CourseSubmission,
+23 | |         "SELECT * FROM course_submissions WHERE user_id = $1 AND lesson_id = $2",
+24 | |         claims.sub,
+...  |
+27 | |     .fetch_optional(&pool)
+28 | |     .await
+   | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> services/lms-service/src/handlers_peer_review.rs:29:15
+   |
+29 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+   |               ^                                      - type must be known at this point
+   |
+help: consider giving this closure parameter an explicit type
+   |
+29 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+   |                ++++++++++++
+
+error[E0282]: type annotations needed
+  --> services/lms-service/src/handlers_peer_review.rs:33:23
+   |
+33 |           let updated = sqlx::query_as!(
+   |  _______________________^
+34 | |             CourseSubmission,
+35 | |             r#"
+36 | |             UPDATE course_submissions 
+...  |
+45 | |         .fetch_one(&pool)
+46 | |         .await
+   | |______________^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> services/lms-service/src/handlers_peer_review.rs:47:19
+   |
+47 |         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+   |                   ^                                      - type must be known at this point
+   |
+help: consider giving this closure parameter an explicit type
+   |
+47 |         .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+   |                    ++++++++++++
+
+error[E0282]: type annotations needed
+  --> services/lms-service/src/handlers_peer_review.rs:53:22
+   |
+53 |       let submission = sqlx::query_as!(
+   |  ______________________^
+54 | |         CourseSubmission,
+55 | |         r#"
+56 | |         INSERT INTO course_submissions (user_id, course_id, lesson_id, organization_id, content)
+...  |
+66 | |     .fetch_one(&pool)
+67 | |     .await
+   | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> services/lms-service/src/handlers_peer_review.rs:68:15
+   |
+68 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+   |               ^                                      - type must be known at this point
+   |
+help: consider giving this closure parameter an explicit type
+   |
+68 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+   |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers_peer_review.rs:83:22
+    |
+ 83 |       let submission = sqlx::query_as!(
+    |  ______________________^
+ 84 | |         CourseSubmission,
+ 85 | |         r#"
+ 86 | |         SELECT s.* 
+...   |
+107 | |     .fetch_optional(&pool)
+108 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers_peer_review.rs:109:15
+    |
+109 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+109 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers_peer_review.rs:122:22
+    |
+122 |       let submission = sqlx::query!(
+    |  ______________________^
+123 | |         "SELECT user_id FROM course_submissions WHERE id = $1",
+124 | |         payload.submission_id
+...   |
+127 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers_peer_review.rs:128:15
+    |
+128 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+128 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers_peer_review.rs:143:20
+    |
+143 |       let existing = sqlx::query!(
+    |  ____________________^
+144 | |         "SELECT id FROM peer_reviews WHERE submission_id = $1 AND reviewer_id = $2",
+145 | |         payload.submission_id,
+146 | |         claims.sub
+147 | |     )
+148 | |     .fetch_optional(&pool)
+149 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers_peer_review.rs:150:15
+    |
+150 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+150 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers_peer_review.rs:160:18
+    |
+160 |       let review = sqlx::query_as!(
+    |  __________________^
+161 | |         PeerReview,
+162 | |         r#"
+163 | |         INSERT INTO peer_reviews (submission_id, reviewer_id, score, feedback, organization_id)
+...   |
+173 | |     .fetch_one(&pool)
+174 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers_peer_review.rs:175:15
+    |
+175 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+175 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers_peer_review.rs:187:19
+    |
+187 |       let reviews = sqlx::query_as!(
+    |  ___________________^
+188 | |         PeerReview,
+189 | |         r#"
+190 | |         SELECT pr.* 
+...   |
+198 | |     .fetch_all(&pool)
+199 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/lms-service/src/handlers_peer_review.rs:200:15
+    |
+200 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+200 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+For more information about this error, try `rustc --explain E0282`.
+warning: `lms-service` (bin "lms-service") generated 1 warning
+error: could not compile `lms-service` (bin "lms-service") due to 40 previous errors; 1 warning emitted

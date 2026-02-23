@@ -3,6 +3,7 @@ pub mod exporter;
 mod external_handlers;
 mod handlers;
 mod handlers_branding;
+mod handlers_assets;
 mod handlers_dependencies;
 mod handlers_library;
 mod handlers_rubrics;
@@ -161,9 +162,9 @@ async fn main() {
         .route("/users/{id}", axum::routing::put(handlers::update_user))
         .route("/audit-logs", get(handlers::get_audit_logs))
         .route("/api/ai/review-text", post(handlers::review_text))
-        .route("/api/assets/upload", post(handlers::upload_asset))
-        .route("/api/assets/{id}", delete(handlers::delete_asset))
-        .route("/courses/{id}/assets", get(handlers::get_course_assets))
+        .route("/api/assets", get(handlers_assets::list_assets))
+        .route("/api/assets/upload", post(handlers_assets::upload_asset))
+        .route("/api/assets/{id}", delete(handlers_assets::delete_asset))
         .layer(DefaultBodyLimit::disable())
         .route(
             "/organizations",

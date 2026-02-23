@@ -10,6 +10,7 @@
     "nav": {
         "catalog": "Catalog",
         "myLearning": "My Learning",
+        "bookmarks": "Bookmarks",
         "profile": "Profile",
         "signOut": "Sign Out"
     },

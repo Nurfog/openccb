@@ -20,3 +20,5 @@ tower-http.workspace = true
 bcrypt.workspace = true
 jsonwebtoken.workspace = true
 reqwest = { version = "0.12", features = ["json"] }
+urlencoding = "2.1"
+base64 = "0.22"

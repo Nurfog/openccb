@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from '@/context/I18nContext';
-import { LayoutDashboard, ShieldCheck, LogOut, Webhook, Settings, Globe } from 'lucide-react';
+import { LayoutDashboard, ShieldCheck, LogOut, Webhook, Settings, Globe, Library } from 'lucide-react';
 
 export function Navbar() {
     const { t, language, setLanguage } = useTranslation();
@@ -26,6 +26,14 @@ export function Navbar() {
                         >
                             <LayoutDashboard className="w-4 h-4" />
                             {t('nav.courses')}
+                        </Link>
+
+                        <Link
+                            href="/library/assets"
+                            className="text-sm font-medium text-gray-400 hover:text-blue-400 transition-colors flex items-center gap-2"
+                        >
+                            <Library className="w-4 h-4" />
+                            {t('nav.library') || 'Library'}
                         </Link>
 
                         {user?.role === 'admin' && (

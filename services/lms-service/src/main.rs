@@ -6,6 +6,7 @@ mod handlers_discussions;
 mod handlers_notes;
 mod handlers_payments;
 mod handlers_peer_review;
+mod lti;
 
 use axum::{
     Router, middleware,
@@ -50,6 +51,7 @@ async fn main() {
         .allow_headers(Any);
 
     let protected_routes = Router::new()
+        .route("/auth/me", get(handlers::get_me))
         .route("/enroll", post(handlers::enroll_user))
         .route("/bulk-enroll", post(handlers::bulk_enroll_users))
         .route("/enrollments/{id}", get(handlers::get_user_enrollments))
@@ -58,7 +60,10 @@ async fn main() {
             post(handlers_payments::create_payment_preference),
         )
         .route("/courses/{id}/outline", get(handlers::get_course_outline))
+        .route("/courses/{id}/progress-stats", get(handlers::get_student_progress_stats))
         .route("/lessons/{id}", get(handlers::get_lesson_content))
+        .route("/lessons/{id}/bookmark", post(handlers::toggle_bookmark))
+        .route("/bookmarks", get(handlers::get_user_bookmarks))
         .route("/grades", post(handlers::submit_lesson_score))
         .route(
             "/users/{user_id}/courses/{course_id}/grades",
@@ -203,6 +208,8 @@ async fn main() {
             "/payments/mercadopago/webhook",
             post(handlers_payments::mercadopago_webhook),
         )
+        .route("/lti/login", get(lti::lti_login_initiation))
+        .route("/lti/launch", post(lti::lti_launch))
         .merge(protected_routes)
         .layer(cors)
         .with_state(pool);

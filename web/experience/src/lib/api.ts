@@ -105,6 +105,16 @@ export interface Block {
     metadata?: any;
 }
 
+export interface CourseInstructor {
+    id: string;
+    course_id: string;
+    user_id: string;
+    role: 'primary' | 'instructor' | 'assistant';
+    created_at: string;
+    email: string;
+    full_name: string;
+}
+
 export interface Lesson {
     id: string;
     module_id: string;
@@ -127,6 +137,7 @@ export interface Lesson {
     position: number;
     due_date?: string;
     important_date_type?: 'exam' | 'assignment' | 'milestone' | 'live-session';
+    is_previewable: boolean;
     created_at: string;
 }
 
@@ -197,6 +208,28 @@ export interface Notification {
     is_read: boolean;
     link_url?: string;
     created_at: string;
+}
+
+export interface DailyProgress {
+    date: string;
+    count: number;
+}
+
+export interface UserBookmark {
+    id: string;
+    organization_id: string;
+    user_id: string;
+    course_id: string;
+    lesson_id: string;
+    created_at: string;
+}
+
+export interface ProgressStats {
+    total_lessons: number;
+    completed_lessons: number;
+    progress_percentage: number;
+    daily_completions: DailyProgress[];
+    estimated_completion_date?: string;
 }
 
 export interface AuthResponse {
@@ -393,6 +426,7 @@ export const lmsApi = {
         modules: Module[],
         grading_categories: GradingCategory[],
         organization: Organization,
+        instructors?: CourseInstructor[],
         dependencies?: LessonDependency[]
     }> {
         return apiFetch(`/courses/${courseId}/outline`);
@@ -417,7 +451,7 @@ export const lmsApi = {
     },
 
     async getMe(): Promise<User> {
-        return apiFetch('/auth/me', {}, true); // isCMS = true
+        return apiFetch('/auth/me', {}, false);
     },
 
     initSSOLogin(orgId: string): void {
@@ -663,4 +697,14 @@ export const lmsApi = {
     async getMySubmissionFeedback(courseId: string, lessonId: string): Promise<PeerReview[]> {
         return apiFetch(`/courses/${courseId}/lessons/${lessonId}/feedback`);
     },
+    async getProgressStats(courseId: string): Promise<ProgressStats> {
+        return apiFetch(`/courses/${courseId}/progress-stats`);
+    },
+    async toggleBookmark(lessonId: string): Promise<void> {
+        return apiFetch(`/lessons/${lessonId}/bookmark`, { method: 'POST' });
+    },
+    async getBookmarks(courseId?: string): Promise<UserBookmark[]> {
+        const query = courseId ? `?cohort_id=${courseId}` : '';
+        return apiFetch(`/bookmarks${query}`);
+    }
 };

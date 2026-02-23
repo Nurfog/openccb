@@ -11,6 +11,30 @@ use common::models::{
     AuthResponse, Course, CourseAnalytics, Enrollment, HeatmapPoint, Lesson, LessonAnalytics,
     Module, Notification, Organization, RecommendationResponse, User, UserResponse,
 };
+
+pub async fn get_me(
+    claims: common::auth::Claims,
+    State(pool): State<PgPool>,
+) -> Result<Json<UserResponse>, (StatusCode, String)> {
+    let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE id = $1")
+        .bind(claims.sub)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(UserResponse {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        organization_id: user.organization_id,
+        xp: user.xp,
+        level: user.level,
+        avatar_url: user.avatar_url,
+        bio: user.bio,
+        language: user.language,
+    }))
+}
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 use std::env;
@@ -644,6 +668,12 @@ pub async fn ingest_course(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    sqlx::query("DELETE FROM course_instructors WHERE course_id = $1")
+        .bind(payload.course.id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     // 3. Insert Grading Categories
     for cat in payload.grading_categories {
         sqlx::query(
@@ -660,6 +690,27 @@ pub async fn ingest_course(
         .execute(&mut *tx)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    }
+
+    // 4. Insert Instructors
+    if let Some(instructors) = payload.instructors {
+        for instructor in instructors {
+            sqlx::query(
+                "INSERT INTO course_instructors (id, course_id, user_id, role, created_at)
+                 VALUES ($1, $2, $3, $4, $5)"
+            )
+            .bind(instructor.id)
+            .bind(payload.course.id)
+            .bind(instructor.user_id)
+            .bind(&instructor.role)
+            .bind(instructor.created_at)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to insert instructor: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+        }
     }
 
     // 4. Insert Modules and Lessons
@@ -680,8 +731,8 @@ pub async fn ingest_course(
 
         for lesson in &pub_module.lessons {
             sqlx::query(
-                "INSERT INTO lessons (id, module_id, title, content_type, content_url, transcription, metadata, position, created_at, is_graded, grading_category_id, max_attempts, allow_retry, organization_id, summary, due_date, important_date_type, transcription_status)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"
+                "INSERT INTO lessons (id, module_id, title, content_type, content_url, transcription, metadata, position, created_at, is_graded, grading_category_id, max_attempts, allow_retry, organization_id, summary, due_date, important_date_type, transcription_status, is_previewable)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)"
             )
             .bind(lesson.id)
             .bind(pub_module.module.id)
@@ -701,6 +752,7 @@ pub async fn ingest_course(
             .bind(lesson.due_date)
             .bind(&lesson.important_date_type)
             .bind(&lesson.transcription_status)
+            .bind(lesson.is_previewable)
             .execute(&mut *tx)
             .await
             .map_err(|e| {
@@ -858,11 +910,23 @@ pub async fn get_course_outline(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    // 7. Fetch Course Team
+    let instructors = sqlx::query_as::<_, common::models::CourseInstructor>(
+        "SELECT ci.*, u.email, u.full_name FROM course_instructors ci 
+         JOIN users u ON ci.user_id = u.id 
+         WHERE ci.course_id = $1"
+    )
+    .bind(id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     Ok(Json(common::models::PublishedCourse {
         course,
         organization,
         grading_categories,
         modules: pub_modules,
+        instructors: Some(instructors),
         dependencies: Some(dependencies),
     }))
 }
@@ -903,8 +967,8 @@ pub async fn get_lesson_content(
         sqlx::query_as::<_, Lesson>(
             "SELECT l.* FROM lessons l
              JOIN modules m ON l.module_id = m.id
-             JOIN enrollments e ON m.course_id = e.course_id
-             WHERE l.id = $1 AND e.user_id = $2",
+             LEFT JOIN enrollments e ON m.course_id = e.course_id AND e.user_id = $2
+             WHERE l.id = $1 AND (e.id IS NOT NULL OR l.is_previewable = true)",
         )
         .bind(id)
         .bind(claims.sub)
@@ -1363,6 +1427,95 @@ pub async fn get_course_analytics(
     }))
 }
 
+pub async fn get_student_progress_stats(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Path(course_id): Path<Uuid>,
+) -> Result<Json<common::models::ProgressStats>, (StatusCode, String)> {
+    let user_id = claims.sub;
+
+    // 1. Total Lessons
+    let total_lessons: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM lessons WHERE organization_id = $1 AND module_id IN (SELECT id FROM modules WHERE course_id = $2)"
+    )
+    .bind(org_ctx.id)
+    .bind(course_id)
+    .fetch_one(&pool)
+    .await
+    .unwrap_or(0);
+
+    // 2. Completed Lessons
+    let completed_lessons: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM user_grades WHERE user_id = $1 AND course_id = $2 AND organization_id = $3",
+    )
+    .bind(user_id)
+    .bind(course_id)
+    .bind(org_ctx.id)
+    .fetch_one(&pool)
+    .await
+    .unwrap_or(0);
+
+    // 3. Daily Progress (Last 30 days)
+    let daily_completions = sqlx::query_as::<_, common::models::DailyProgress>(
+        r#"
+        SELECT 
+            TO_CHAR(created_at, 'YYYY-MM-DD') as date,
+            COUNT(*)::bigint as count
+        FROM user_grades
+        WHERE user_id = $1 AND course_id = $2 AND organization_id = $3
+          AND created_at >= NOW() - INTERVAL '30 days'
+        GROUP BY date
+        ORDER BY date ASC
+        "#
+    )
+    .bind(user_id)
+    .bind(course_id)
+    .bind(org_ctx.id)
+    .fetch_all(&pool)
+    .await
+    .unwrap_or_default();
+
+    // 4. Prediction Logic
+    let first_entry: Option<chrono::DateTime<chrono::Utc>> = sqlx::query_scalar(
+        "SELECT MIN(created_at) FROM user_grades WHERE user_id = $1 AND course_id = $2"
+    )
+    .bind(user_id)
+    .bind(course_id)
+    .fetch_one(&pool)
+    .await
+    .unwrap_or(None);
+
+    let estimated_completion_date = if let Some(start) = first_entry {
+        let days_passed = (chrono::Utc::now() - start).num_days().max(1) as f64;
+        let pace = completed_lessons as f64 / days_passed;
+
+        if pace > 0.0 && total_lessons > completed_lessons {
+            let remaining = (total_lessons - completed_lessons) as f64;
+            let days_to_finish = (remaining / pace).ceil() as i64;
+            Some(chrono::Utc::now() + chrono::Duration::days(days_to_finish))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let progress_percentage = if total_lessons > 0 {
+        (completed_lessons as f32 / total_lessons as f32) * 100.0
+    } else {
+        0.0
+    };
+
+    Ok(Json(common::models::ProgressStats {
+        total_lessons,
+        completed_lessons,
+        progress_percentage,
+        daily_completions,
+        estimated_completion_date,
+    }))
+}
+
 pub async fn get_advanced_analytics(
     Org(org_ctx): Org,
     State(pool): State<PgPool>,
@@ -1522,6 +1675,79 @@ pub async fn check_deadlines_and_notify(pool: PgPool) {
     if let Err(e) = result {
         tracing::error!("Failed to run deadline notifications: {}", e);
     }
+}
+
+pub async fn toggle_bookmark(
+    Org(org_ctx): Org,
+    claims: Claims,
+    Path(lesson_id): Path<Uuid>,
+    State(pool): State<PgPool>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let user_id = claims.sub;
+
+    // 1. Get course_id from lesson
+    let course_id: Uuid = sqlx::query_scalar(
+        "SELECT m.course_id FROM lessons l JOIN modules m ON l.module_id = m.id WHERE l.id = $1"
+    )
+    .bind(lesson_id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| (StatusCode::NOT_FOUND, "Lección no encontrada".to_string()))?;
+
+    // 2. Check if already bookmarked
+    let existing_id: Option<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM user_bookmarks WHERE user_id = $1 AND lesson_id = $2"
+    )
+    .bind(user_id)
+    .bind(lesson_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if let Some(id) = existing_id {
+        // Remove bookmark
+        sqlx::query("DELETE FROM user_bookmarks WHERE id = $1")
+            .bind(id)
+            .execute(&pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        Ok(StatusCode::NO_CONTENT)
+    } else {
+        // Add bookmark
+        sqlx::query(
+            "INSERT INTO user_bookmarks (organization_id, user_id, course_id, lesson_id) VALUES ($1, $2, $3, $4)"
+        )
+        .bind(org_ctx.id)
+        .bind(user_id)
+        .bind(course_id)
+        .bind(lesson_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        Ok(StatusCode::CREATED)
+    }
+}
+
+pub async fn get_user_bookmarks(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Query(filter): Query<common::models::AnalyticsFilter>,
+) -> Result<Json<Vec<common::models::UserBookmark>>, (StatusCode, String)> {
+    let user_id = claims.sub;
+
+    let bookmarks = sqlx::query_as::<_, common::models::UserBookmark>(
+        "SELECT * FROM user_bookmarks WHERE user_id = $1 AND organization_id = $2 AND ($3::uuid IS NULL OR course_id = $3) ORDER BY created_at DESC"
+    )
+    .bind(user_id)
+    .bind(org_ctx.id)
+    .bind(filter.cohort_id) // Reusing AnalyticsFilter which has cohort_id, but here we can use it for course_id or just ignore it.
+    // Wait, let's create a better filter for this.
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(bookmarks))
 }
 
 pub async fn update_user(

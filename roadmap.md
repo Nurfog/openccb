@@ -114,6 +114,7 @@
 - [x] **Reportes Avanzados**: Constructor de reportes personalizados y exportación a CSV (Implementado)
 - [x] **Ecosistema de Integración**:
   - [x] **SSO (Single Sign-On)**: Soporte completo OIDC (Google, Okta, Azure AD) (Completado)
+  - [x] **LTI 1.3 Tool Provider**: Integración segura con LMS externos como Canvas o Moodle (Completado)
 - [ ] **Apps Móviles**: (Postpuesto por ahora)
 - [ ] **Accesibilidad**: Auditoría y correcciones WCAG 2.1
 
@@ -189,9 +190,9 @@
 - [x] **Learning Sequences**: Prerequisitos y rutas condicionales entre lecciones.
 - [x] **Bulk Operations**: Bulk enrollment, advanced grade export, and segmented announcements.
 - [x] **Course Teams**: Support for multiple instructors per course with granular roles.
-- [ ] **Course Preview**: Vista previa de lecciones sin inscripción.
-- [ ] **Bookmarks**: Sistema de favoritos para lecciones importantes.
-- [ ] **Progress Dashboard**: Gráficos de progreso temporal y predicción de finalización.
+- [x] **Course Preview**: Vista previa de lecciones sin inscripción.
+- [x] **Bookmarks**: Sistema de favoritos para lecciones importantes.
+- [x] **Progress Dashboard**: Gráficos de progreso temporal y predicción de finalización.
 
 ## Fase 18: Monetización y Estandarización ✅
 - [x] **E-Commerce & Monetización**: (Completado)
@@ -216,9 +217,9 @@
 
 ---
 
-**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados, **sistema de foros de discusión funcional**, **gestión de anuncios segmentados**, **monetización integrada con Mercado Pago**, **Inscripción Masiva de Usuarios**, **Exportación Avanzada de Calificaciones**, **Librerías de Contenido reutilizables**, **Sistema de Rúbricas Avanzado** y **Secuencias de Aprendizaje**.
+**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados, **sistema de foros de discusión funcional**, **gestión de anuncios segmentados**, **monetización integrada con Mercado Pago**, **Inscripción Masiva de Usuarios**, **Exportación Avanzada de Calificaciones**, **Librerías de Contenido reutilizables**, **Sistema de Rúbricas Avanzado**, **Secuencias de Aprendizaje**, **Gestión de Equipos Docentes**, **Vista Previa de Cursos**, **Dashboard de Progreso Estudiantil** y **Sistema de Marcadores**.
 
 **Próximas Prioridades**:
-1. **Course Teams**: Gestión de múltiples instructores por curso con roles granulares.
-2. **Course Preview**: Vista previa de lecciones sin inscripción para mejorar la conversión.
-3. **Progress Dashboard**: Gráficos de progreso temporal y predicción de finalización.
+1. **Interoperabilidad**: Implementación de LTI 1.3 para conectividad con otros LMS.
+2. **Apps Móviles**: Desarrollo de versiones nativas para iOS y Android.
+3. **Analíticas Predictivas**: Motor de IA para detección de riesgo de abandono.

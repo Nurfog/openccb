@@ -112,6 +112,7 @@ export interface Lesson {
         cues?: { start: number; end: number; text: string }[];
     } | null;
     transcription_status?: 'idle' | 'queued' | 'processing' | 'completed' | 'failed';
+    is_previewable: boolean;
     created_at: string;
 }
 
@@ -188,6 +189,8 @@ export interface UploadResponse {
     id: string;
     filename: string;
     url: string;
+    mimetype?: string;
+    size_bytes?: number;
     logo_url?: string;
     favicon_url?: string;
 }
@@ -406,12 +409,22 @@ export interface CreateWebhookPayload {
 
 export interface Asset {
     id: string;
+    organization_id: string;
+    uploaded_by: string | null;
     course_id: string | null;
     filename: string;
     storage_path: string;
     mimetype: string;
     size_bytes: number;
     created_at: string;
+}
+
+export interface AssetFilters {
+    mimetype?: string;
+    course_id?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
 }
 
 export interface Cohort {
@@ -568,6 +581,7 @@ export const cmsApi = {
     getCourseTeam: (courseId: string): Promise<CourseInstructor[]> => apiFetch(`/courses/${courseId}/team`),
     addTeamMember: (courseId: string, email: string, role: string): Promise<CourseInstructor> => apiFetch(`/courses/${courseId}/team`, { method: 'POST', body: JSON.stringify({ email, role }) }),
     removeTeamMember: (courseId: string, userId: string): Promise<void> => apiFetch(`/courses/${courseId}/team/${userId}`, { method: 'DELETE' }),
+    getUsers: (): Promise<User[]> => apiFetch('/users'),
 
     // Modules & Lessons
     createModule: (course_id: string, title: string, position: number): Promise<Module> => apiFetch('/modules', { method: 'POST', body: JSON.stringify({ course_id, title, position }) }),
@@ -625,7 +639,19 @@ export const cmsApi = {
     deleteWebhook: (id: string): Promise<void> => apiFetch(`/webhooks/${id}`, { method: 'DELETE' }),
 
     // Assets
-    getCourseAssets: (courseId: string): Promise<Asset[]> => apiFetch(`/courses/${courseId}/assets`),
+    getAssets: (filters?: AssetFilters): Promise<Asset[]> => {
+        const params = new URLSearchParams();
+        if (filters) {
+            if (filters.mimetype) params.append('mimetype', filters.mimetype);
+            if (filters.course_id) params.append('course_id', filters.course_id);
+            if (filters.search) params.append('search', filters.search);
+            if (filters.page) params.append('page', filters.page.toString());
+            if (filters.limit) params.append('limit', filters.limit.toString());
+        }
+        const query = params.toString();
+        return apiFetch(`/api/assets${query ? `?${query}` : ''}`);
+    },
+    getCourseAssets: (courseId: string): Promise<Asset[]> => apiFetch(`/api/assets?course_id=${courseId}`),
     deleteAsset: (id: string): Promise<void> => apiFetch(`/api/assets/${id}`, { method: 'DELETE' }),
     uploadAsset: (file: File, onProgress?: (pct: number) => void, courseId?: string): Promise<UploadResponse> => {
         return new Promise((resolve, reject) => {

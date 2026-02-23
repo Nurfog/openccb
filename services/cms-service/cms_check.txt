@@ -1,0 +1,1388 @@
+    Checking cms-service v0.1.0 (/home/juan/dev/openccb/services/cms-service)
+error[E0255]: the name `CourseInstructor` is defined multiple times
+    --> services/cms-service/src/handlers.rs:3147:1
+     |
+  15 |     PublishedModule, User, UserResponse, CourseInstructor,
+     |                                          ---------------- previous import of the type `CourseInstructor` here
+...
+3147 | pub struct CourseInstructor {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `CourseInstructor` redefined here
+     |
+     = note: `CourseInstructor` must be defined only once in the type namespace of this module
+help: you can use `as` to change the binding name of the import
+     |
+  15 |     PublishedModule, User, UserResponse, CourseInstructor as OtherCourseInstructor,
+     |                                                           ++++++++++++++++++++++++
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_assets.rs:98:5
+    |
+ 98 | /     sqlx::query!(
+ 99 | |         r#"
+100 | |         INSERT INTO assets (id, organization_id, uploaded_by, course_id, filename, storage_path, mimetype, size_bytes)
+101 | |         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+...   |
+110 | |         size_bytes
+111 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_assets.rs:185:17
+    |
+185 |       let asset = sqlx::query_as!(
+    |  _________________^
+186 | |         Asset,
+187 | |         "SELECT * FROM assets WHERE id = $1 AND organization_id = $2",
+188 | |         id,
+189 | |         org_ctx.id
+190 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_assets.rs:197:5
+    |
+197 |     sqlx::query!("DELETE FROM assets WHERE id = $1", id)
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+  --> services/cms-service/src/handlers_dependencies.rs:40:22
+   |
+40 |       let dependency = sqlx::query_as!(
+   |  ______________________^
+41 | |         LessonDependency,
+42 | |         r#"
+43 | |         INSERT INTO lesson_dependencies (organization_id, lesson_id, prerequisite_lesson_id, min_score_percentage)
+...  |
+52 | |         payload.min_score_percentage
+53 | |     )
+   | |_____^
+   |
+   = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+  --> services/cms-service/src/handlers_dependencies.rs:69:18
+   |
+69 |       let result = sqlx::query!(
+   |  __________________^
+70 | |         "DELETE FROM lesson_dependencies WHERE lesson_id = $1 AND prerequisite_lesson_id = $2 AND organization_id = $3",
+71 | |         lesson_id,
+72 | |         prerequisite_id,
+73 | |         org_ctx.id
+74 | |     )
+   | |_____^
+   |
+   = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+  --> services/cms-service/src/handlers_dependencies.rs:91:24
+   |
+91 |       let dependencies = sqlx::query_as!(
+   |  ________________________^
+92 | |         LessonDependency,
+93 | |         "SELECT * FROM lesson_dependencies WHERE lesson_id = $1 AND organization_id = $2",
+94 | |         lesson_id,
+95 | |         org_ctx.id
+96 | |     )
+   | |_____^
+   |
+   = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+  --> services/cms-service/src/handlers_library.rs:27:17
+   |
+27 |       let block = sqlx::query_as!(
+   |  _________________^
+28 | |         LibraryBlock,
+29 | |         r#"
+30 | |         INSERT INTO library_blocks (organization_id, created_by, name, description, block_type, block_data, tags)
+...  |
+40 | |         payload.tags.as_deref()
+41 | |     )
+   | |_____^
+   |
+   = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_library.rs:113:17
+    |
+113 |       let block = sqlx::query_as!(
+    |  _________________^
+114 | |         LibraryBlock,
+115 | |         r#"SELECT id, organization_id, created_by, name, description, block_type, block_data, tags, usage_count as "usage_count!", create...
+116 | |         block_id,
+117 | |         org_ctx.id
+118 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_library.rs:137:20
+    |
+137 |       let existing = sqlx::query!(
+    |  ____________________^
+138 | |         "SELECT id FROM library_blocks WHERE id = $1 AND organization_id = $2",
+139 | |         block_id,
+140 | |         org_ctx.id
+141 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_library.rs:152:9
+    |
+152 | /         sqlx::query_as!(
+153 | |             LibraryBlock,
+154 | |             r#"
+155 | |             UPDATE library_blocks 
+...   |
+167 | |             org_ctx.id
+168 | |         )
+    | |_________^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_library.rs:173:9
+    |
+173 | /         sqlx::query_as!(
+174 | |             LibraryBlock,
+175 | |             r#"
+176 | |             UPDATE library_blocks 
+...   |
+186 | |             org_ctx.id
+187 | |         )
+    | |_________^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_library.rs:202:18
+    |
+202 |       let result = sqlx::query!(
+    |  __________________^
+203 | |         "DELETE FROM library_blocks WHERE id = $1 AND organization_id = $2",
+204 | |         block_id,
+205 | |         org_ctx.id
+206 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_library.rs:224:18
+    |
+224 |       let result = sqlx::query!(
+    |  __________________^
+225 | |         "UPDATE library_blocks SET usage_count = usage_count + 1 WHERE id = $1 AND organization_id = $2",
+226 | |         block_id,
+227 | |         org_ctx.id
+228 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:107:18
+    |
+107 |       let rubric = sqlx::query_as!(
+    |  __________________^
+108 | |         Rubric,
+109 | |         r#"
+110 | |         INSERT INTO rubrics (organization_id, course_id, created_by, name, description)
+...   |
+118 | |         payload.description
+119 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:133:19
+    |
+133 |       let rubrics = sqlx::query_as!(
+    |  ___________________^
+134 | |         Rubric,
+135 | |         r#"
+136 | |         SELECT id, organization_id, course_id, created_by, name, description, total_points, created_at, updated_at
+...   |
+142 | |         course_id
+143 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:158:18
+    |
+158 |       let rubric = sqlx::query_as!(
+    |  __________________^
+159 | |         Rubric,
+160 | |         r#"
+161 | |         SELECT id, organization_id, course_id, created_by, name, description, total_points, created_at, updated_at
+...   |
+166 | |         org_ctx.id
+167 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:174:20
+    |
+174 |       let criteria = sqlx::query_as!(
+    |  ____________________^
+175 | |         RubricCriterion,
+176 | |         r#"
+177 | |         SELECT id, rubric_id, name, description, max_points, position, created_at
+...   |
+182 | |         rubric_id
+183 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:191:22
+    |
+191 |           let levels = sqlx::query_as!(
+    |  ______________________^
+192 | |             RubricLevel,
+193 | |             r#"
+194 | |             SELECT id, criterion_id, name, description, points, position, created_at
+...   |
+199 | |             criterion.id
+200 | |         )
+    | |_________^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:221:18
+    |
+221 |       let rubric = sqlx::query_as!(
+    |  __________________^
+222 | |         Rubric,
+223 | |         r#"
+224 | |         UPDATE rubrics
+...   |
+234 | |         org_ctx.id
+235 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:250:18
+    |
+250 |       let result = sqlx::query!(
+    |  __________________^
+251 | |         "DELETE FROM rubrics WHERE id = $1 AND organization_id = $2",
+252 | |         rubric_id,
+253 | |         org_ctx.id
+254 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:276:19
+    |
+276 |       let _rubric = sqlx::query!(
+    |  ___________________^
+277 | |         "SELECT id FROM rubrics WHERE id = $1 AND organization_id = $2",
+278 | |         rubric_id,
+279 | |         org_ctx.id
+280 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:288:21
+    |
+288 |       let criterion = sqlx::query_as!(
+    |  _____________________^
+289 | |         RubricCriterion,
+290 | |         r#"
+291 | |         INSERT INTO rubric_criteria (rubric_id, name, description, max_points, position)
+...   |
+299 | |         position
+300 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:306:12
+    |
+306 |       let _= sqlx::query!(
+    |  ____________^
+307 | |         r#"
+308 | |         UPDATE rubrics
+309 | |         SET total_points = (SELECT COALESCE(SUM(max_points), 0) FROM rubric_criteria WHERE rubric_id = $1),
+...   |
+313 | |         rubric_id
+314 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:329:21
+    |
+329 |       let criterion = sqlx::query_as!(
+    |  _____________________^
+330 | |         RubricCriterion,
+331 | |         r#"
+332 | |         UPDATE rubric_criteria
+...   |
+346 | |         org_ctx.id
+347 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:355:17
+    |
+355 |           let _ = sqlx::query!(
+    |  _________________^
+356 | |             r#"
+357 | |             UPDATE rubrics
+358 | |             SET total_points = (SELECT COALESCE(SUM(max_points), 0) FROM rubric_criteria WHERE rubric_id = $1),
+...   |
+362 | |             criterion.rubric_id
+363 | |         )
+    | |_________^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:379:21
+    |
+379 |       let criterion = sqlx::query!(
+    |  _____________________^
+380 | |         "SELECT rubric_id FROM rubric_criteria WHERE id = $1",
+381 | |         criterion_id
+382 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:388:18
+    |
+388 |       let result = sqlx::query!(
+    |  __________________^
+389 | |         r#"
+390 | |         DELETE FROM rubric_criteria
+391 | |         WHERE id = $1
+...   |
+395 | |         org_ctx.id
+396 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:406:13
+    |
+406 |       let _ = sqlx::query!(
+    |  _____________^
+407 | |         r#"
+408 | |         UPDATE rubrics
+409 | |         SET total_points = (SELECT COALESCE(SUM(max_points), 0) FROM rubric_criteria WHERE rubric_id = $1),
+...   |
+413 | |         criterion.rubric_id
+414 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:432:22
+    |
+432 |       let _criterion = sqlx::query!(
+    |  ______________________^
+433 | |         "SELECT id FROM rubric_criteria WHERE id = $1 AND rubric_id IN (SELECT id FROM rubrics WHERE organization_id = $2)",
+434 | |         criterion_id,
+435 | |         org_ctx.id
+436 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:444:17
+    |
+444 |       let level = sqlx::query_as!(
+    |  _________________^
+445 | |         RubricLevel,
+446 | |         r#"
+447 | |         INSERT INTO rubric_levels (criterion_id, name, description, points, position)
+...   |
+455 | |         position
+456 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:471:17
+    |
+471 |       let level = sqlx::query_as!(
+    |  _________________^
+472 | |         RubricLevel,
+473 | |         r#"
+474 | |         UPDATE rubric_levels
+...   |
+491 | |         org_ctx.id
+492 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:507:18
+    |
+507 |       let result = sqlx::query!(
+    |  __________________^
+508 | |         r#"
+509 | |         DELETE FROM rubric_levels
+510 | |         WHERE id = $1
+...   |
+517 | |         org_ctx.id
+518 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:538:25
+    |
+538 |       let lesson_rubric = sqlx::query_as!(
+    |  _________________________^
+539 | |         LessonRubric,
+540 | |         r#"
+541 | |         INSERT INTO lesson_rubrics (lesson_id, rubric_id, is_active)
+...   |
+547 | |         rubric_id
+548 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:562:18
+    |
+562 |       let result = sqlx::query!(
+    |  __________________^
+563 | |         "DELETE FROM lesson_rubrics WHERE lesson_id = $1 AND rubric_id = $2",
+564 | |         lesson_id,
+565 | |         rubric_id
+566 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: error communicating with database: Connection refused (os error 111)
+   --> services/cms-service/src/handlers_rubrics.rs:584:19
+    |
+584 |       let rubrics = sqlx::query_as!(
+    |  ___________________^
+585 | |         Rubric,
+586 | |         r#"
+587 | |         SELECT r.id, r.organization_id, r.course_id, r.created_by, r.name, r.description, r.total_points, r.created_at, r.updated_at
+...   |
+594 | |         org_ctx.id
+595 | |     )
+    | |_____^
+    |
+    = note: this error originates in the macro `$crate::sqlx_macros::expand_query` which comes from the expansion of the macro `sqlx::query_as` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0117]: only traits defined in the current crate can be implemented for types defined outside of the crate
+    --> services/cms-service/src/handlers.rs:3146:10
+     |
+3146 | #[derive(Debug, Serialize, sqlx::FromRow)]
+     |          ^^^^^ `common::models::CourseInstructor` is not defined in the current crate
+     |
+     = note: impl doesn't have any local type before any uncovered type parameters
+     = note: for more information see https://doc.rust-lang.org/reference/items/implementations.html#orphan-rules
+     = note: define and implement a trait or new type instead
+
+error[E0117]: only traits defined in the current crate can be implemented for types defined outside of the crate
+    --> services/cms-service/src/handlers.rs:3146:17
+     |
+3146 | #[derive(Debug, Serialize, sqlx::FromRow)]
+     |                 ^^^^^^^^^
+3147 | pub struct CourseInstructor {
+     |            ---------------- `common::models::CourseInstructor` is not defined in the current crate
+     |
+     = note: impl doesn't have any local type before any uncovered type parameters
+     = note: for more information see https://doc.rust-lang.org/reference/items/implementations.html#orphan-rules
+     = note: define and implement a trait or new type instead
+     = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0210]: type parameter `R` must be used as the type parameter for some local type (e.g., `MyStruct<R>`)
+    --> services/cms-service/src/handlers.rs:3146:28
+     |
+3146 | #[derive(Debug, Serialize, sqlx::FromRow)]
+     |                            ^^^^^^^^^^^^^ type parameter `R` must be used as the type parameter for some local type
+     |
+     = note: implementing a foreign trait is only possible if at least one of the types for which it is implemented is local
+     = note: only traits defined in the current crate can be implemented for a type parameter
+     = note: this error originates in the derive macro `sqlx::FromRow` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: `?` couldn't convert the error to `reqwest::StatusCode`
+    --> services/cms-service/src/handlers.rs:3534:97
+     |
+3534 |     if !is_super_admin && !check_course_access(&pool, course.id, claims.sub, &claims.role).await? {
+     |                            ---------------------------------------------------------------------^ the trait `From<(reqwest::StatusCode, std::string::String)>` is not implemented for `reqwest::StatusCode`
+     |                            |
+     |                            this can't be annotated with `?` because it has type `Result<_, (reqwest::StatusCode, std::string::String)>`
+     |
+     = note: the question mark operation (`?`) implicitly performs a conversion on the error value using the `From` trait
+     = help: the trait `From<(reqwest::StatusCode, std::string::String)>` is not implemented for `reqwest::StatusCode`
+             but trait `From<&reqwest::StatusCode>` is implemented for it
+     = help: for that trait implementation, expected `&reqwest::StatusCode`, found `(reqwest::StatusCode, std::string::String)`
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_assets.rs:98:5
+    |
+ 98 | /     sqlx::query!(
+ 99 | |         r#"
+100 | |         INSERT INTO assets (id, organization_id, uploaded_by, course_id, filename, storage_path, mimetype, size_bytes)
+101 | |         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+...   |
+112 | |     .execute(&pool)
+113 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_assets.rs:114:15
+    |
+114 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+114 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_assets.rs:185:17
+    |
+185 |       let asset = sqlx::query_as!(
+    |  _________________^
+186 | |         Asset,
+187 | |         "SELECT * FROM assets WHERE id = $1 AND organization_id = $2",
+188 | |         id,
+...   |
+191 | |     .fetch_optional(&pool)
+192 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_assets.rs:193:15
+    |
+193 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+193 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_assets.rs:197:5
+    |
+197 | /     sqlx::query!("DELETE FROM assets WHERE id = $1", id)
+198 | |         .execute(&pool)
+199 | |         .await
+    | |______________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_assets.rs:200:19
+    |
+200 |         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                   ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+200 |         .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                    ++++++++++++
+
+error[E0282]: type annotations needed
+  --> services/cms-service/src/handlers_dependencies.rs:40:22
+   |
+40 |       let dependency = sqlx::query_as!(
+   |  ______________________^
+41 | |         LessonDependency,
+42 | |         r#"
+43 | |         INSERT INTO lesson_dependencies (organization_id, lesson_id, prerequisite_lesson_id, min_score_percentage)
+...  |
+54 | |     .fetch_one(&pool)
+55 | |     .await
+   | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> services/cms-service/src/handlers_dependencies.rs:69:18
+   |
+69 |       let result = sqlx::query!(
+   |  __________________^
+70 | |         "DELETE FROM lesson_dependencies WHERE lesson_id = $1 AND prerequisite_lesson_id = $2 AND organization_id = $3",
+71 | |         lesson_id,
+72 | |         prerequisite_id,
+...  |
+75 | |     .execute(&pool)
+76 | |     .await
+   | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> services/cms-service/src/handlers_dependencies.rs:91:24
+   |
+91 |       let dependencies = sqlx::query_as!(
+   |  ________________________^
+92 | |         LessonDependency,
+93 | |         "SELECT * FROM lesson_dependencies WHERE lesson_id = $1 AND organization_id = $2",
+94 | |         lesson_id,
+...  |
+97 | |     .fetch_all(&pool)
+98 | |     .await
+   | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> services/cms-service/src/handlers_library.rs:27:17
+   |
+27 |       let block = sqlx::query_as!(
+   |  _________________^
+28 | |         LibraryBlock,
+29 | |         r#"
+30 | |         INSERT INTO library_blocks (organization_id, created_by, name, description, block_type, block_data, tags)
+...  |
+42 | |     .fetch_one(&pool)
+43 | |     .await
+   | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> services/cms-service/src/handlers_library.rs:44:15
+   |
+44 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+   |               ^                                      - type must be known at this point
+   |
+help: consider giving this closure parameter an explicit type
+   |
+44 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+   |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_library.rs:113:17
+    |
+113 |       let block = sqlx::query_as!(
+    |  _________________^
+114 | |         LibraryBlock,
+115 | |         r#"SELECT id, organization_id, created_by, name, description, block_type, block_data, tags, usage_count as "usage_count!", create...
+116 | |         block_id,
+...   |
+119 | |     .fetch_optional(&pool)
+120 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_library.rs:121:15
+    |
+121 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+121 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_library.rs:137:20
+    |
+137 |       let existing = sqlx::query!(
+    |  ____________________^
+138 | |         "SELECT id FROM library_blocks WHERE id = $1 AND organization_id = $2",
+139 | |         block_id,
+140 | |         org_ctx.id
+141 | |     )
+142 | |     .fetch_optional(&pool)
+143 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_library.rs:144:15
+    |
+144 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+144 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_library.rs:152:9
+    |
+152 | /         sqlx::query_as!(
+153 | |             LibraryBlock,
+154 | |             r#"
+155 | |             UPDATE library_blocks 
+...   |
+169 | |         .fetch_one(&pool)
+170 | |         .await
+    | |______________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_library.rs:171:19
+    |
+171 |         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |                   ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+171 |         .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |                    ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_library.rs:173:9
+    |
+173 | /         sqlx::query_as!(
+174 | |             LibraryBlock,
+175 | |             r#"
+176 | |             UPDATE library_blocks 
+...   |
+188 | |         .fetch_one(&pool)
+189 | |         .await
+    | |______________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_library.rs:190:19
+    |
+190 |         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |                   ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+190 |         .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |                    ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_library.rs:202:18
+    |
+202 |       let result = sqlx::query!(
+    |  __________________^
+203 | |         "DELETE FROM library_blocks WHERE id = $1 AND organization_id = $2",
+204 | |         block_id,
+205 | |         org_ctx.id
+206 | |     )
+207 | |     .execute(&pool)
+208 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_library.rs:209:15
+    |
+209 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+209 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_library.rs:224:18
+    |
+224 |       let result = sqlx::query!(
+    |  __________________^
+225 | |         "UPDATE library_blocks SET usage_count = usage_count + 1 WHERE id = $1 AND organization_id = $2",
+226 | |         block_id,
+227 | |         org_ctx.id
+228 | |     )
+229 | |     .execute(&pool)
+230 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_library.rs:231:15
+    |
+231 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+231 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:107:18
+    |
+107 |       let rubric = sqlx::query_as!(
+    |  __________________^
+108 | |         Rubric,
+109 | |         r#"
+110 | |         INSERT INTO rubrics (organization_id, course_id, created_by, name, description)
+...   |
+120 | |     .fetch_one(&pool)
+121 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:122:15
+    |
+122 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+122 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:133:19
+    |
+133 |       let rubrics = sqlx::query_as!(
+    |  ___________________^
+134 | |         Rubric,
+135 | |         r#"
+136 | |         SELECT id, organization_id, course_id, created_by, name, description, total_points, created_at, updated_at
+...   |
+144 | |     .fetch_all(&pool)
+145 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:146:15
+    |
+146 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+146 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:158:18
+    |
+158 |       let rubric = sqlx::query_as!(
+    |  __________________^
+159 | |         Rubric,
+160 | |         r#"
+161 | |         SELECT id, organization_id, course_id, created_by, name, description, total_points, created_at, updated_at
+...   |
+168 | |     .fetch_optional(&pool)
+169 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:170:15
+    |
+170 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+170 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:174:20
+    |
+174 |       let criteria = sqlx::query_as!(
+    |  ____________________^
+175 | |         RubricCriterion,
+176 | |         r#"
+177 | |         SELECT id, rubric_id, name, description, max_points, position, created_at
+...   |
+184 | |     .fetch_all(&pool)
+185 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:186:15
+    |
+186 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+186 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:191:22
+    |
+191 |           let levels = sqlx::query_as!(
+    |  ______________________^
+192 | |             RubricLevel,
+193 | |             r#"
+194 | |             SELECT id, criterion_id, name, description, points, position, created_at
+...   |
+201 | |         .fetch_all(&pool)
+202 | |         .await
+    | |______________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:203:19
+    |
+203 |         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                   ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+203 |         .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                    ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:221:18
+    |
+221 |       let rubric = sqlx::query_as!(
+    |  __________________^
+222 | |         Rubric,
+223 | |         r#"
+224 | |         UPDATE rubrics
+...   |
+236 | |     .fetch_optional(&pool)
+237 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:238:15
+    |
+238 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+238 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:250:18
+    |
+250 |       let result = sqlx::query!(
+    |  __________________^
+251 | |         "DELETE FROM rubrics WHERE id = $1 AND organization_id = $2",
+252 | |         rubric_id,
+253 | |         org_ctx.id
+254 | |     )
+255 | |     .execute(&pool)
+256 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:257:15
+    |
+257 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+257 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:276:19
+    |
+276 |       let _rubric = sqlx::query!(
+    |  ___________________^
+277 | |         "SELECT id FROM rubrics WHERE id = $1 AND organization_id = $2",
+278 | |         rubric_id,
+279 | |         org_ctx.id
+280 | |     )
+281 | |     .fetch_optional(&pool)
+282 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:283:15
+    |
+283 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+283 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:288:21
+    |
+288 |       let criterion = sqlx::query_as!(
+    |  _____________________^
+289 | |         RubricCriterion,
+290 | |         r#"
+291 | |         INSERT INTO rubric_criteria (rubric_id, name, description, max_points, position)
+...   |
+301 | |     .fetch_one(&pool)
+302 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:303:15
+    |
+303 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+303 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:306:12
+    |
+306 |       let _= sqlx::query!(
+    |  ____________^
+307 | |         r#"
+308 | |         UPDATE rubrics
+309 | |         SET total_points = (SELECT COALESCE(SUM(max_points), 0) FROM rubric_criteria WHERE rubric_id = $1),
+...   |
+315 | |     .execute(&pool)
+316 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:317:15
+    |
+317 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+317 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:329:21
+    |
+329 |       let criterion = sqlx::query_as!(
+    |  _____________________^
+330 | |         RubricCriterion,
+331 | |         r#"
+332 | |         UPDATE rubric_criteria
+...   |
+348 | |     .fetch_optional(&pool)
+349 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:350:15
+    |
+350 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+350 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:355:17
+    |
+355 |           let _ = sqlx::query!(
+    |  _________________^
+356 | |             r#"
+357 | |             UPDATE rubrics
+358 | |             SET total_points = (SELECT COALESCE(SUM(max_points), 0) FROM rubric_criteria WHERE rubric_id = $1),
+...   |
+364 | |         .execute(&pool)
+365 | |         .await
+    | |______________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:366:19
+    |
+366 |         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                   ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+366 |         .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                    ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:379:21
+    |
+379 |       let criterion = sqlx::query!(
+    |  _____________________^
+380 | |         "SELECT rubric_id FROM rubric_criteria WHERE id = $1",
+381 | |         criterion_id
+...   |
+384 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:385:15
+    |
+385 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+385 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:388:18
+    |
+388 |       let result = sqlx::query!(
+    |  __________________^
+389 | |         r#"
+390 | |         DELETE FROM rubric_criteria
+391 | |         WHERE id = $1
+...   |
+397 | |     .execute(&pool)
+398 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:399:15
+    |
+399 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+399 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:406:13
+    |
+406 |       let _ = sqlx::query!(
+    |  _____________^
+407 | |         r#"
+408 | |         UPDATE rubrics
+409 | |         SET total_points = (SELECT COALESCE(SUM(max_points), 0) FROM rubric_criteria WHERE rubric_id = $1),
+...   |
+415 | |     .execute(&pool)
+416 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:417:15
+    |
+417 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+417 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:432:22
+    |
+432 |       let _criterion = sqlx::query!(
+    |  ______________________^
+433 | |         "SELECT id FROM rubric_criteria WHERE id = $1 AND rubric_id IN (SELECT id FROM rubrics WHERE organization_id = $2)",
+434 | |         criterion_id,
+435 | |         org_ctx.id
+436 | |     )
+437 | |     .fetch_optional(&pool)
+438 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:439:15
+    |
+439 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+439 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:444:17
+    |
+444 |       let level = sqlx::query_as!(
+    |  _________________^
+445 | |         RubricLevel,
+446 | |         r#"
+447 | |         INSERT INTO rubric_levels (criterion_id, name, description, points, position)
+...   |
+457 | |     .fetch_one(&pool)
+458 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:459:15
+    |
+459 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+459 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:471:17
+    |
+471 |       let level = sqlx::query_as!(
+    |  _________________^
+472 | |         RubricLevel,
+473 | |         r#"
+474 | |         UPDATE rubric_levels
+...   |
+493 | |     .fetch_optional(&pool)
+494 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:495:15
+    |
+495 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+495 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:507:18
+    |
+507 |       let result = sqlx::query!(
+    |  __________________^
+508 | |         r#"
+509 | |         DELETE FROM rubric_levels
+510 | |         WHERE id = $1
+...   |
+519 | |     .execute(&pool)
+520 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:521:15
+    |
+521 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+521 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:538:25
+    |
+538 |       let lesson_rubric = sqlx::query_as!(
+    |  _________________________^
+539 | |         LessonRubric,
+540 | |         r#"
+541 | |         INSERT INTO lesson_rubrics (lesson_id, rubric_id, is_active)
+...   |
+549 | |     .fetch_one(&pool)
+550 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:551:15
+    |
+551 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+551 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:562:18
+    |
+562 |       let result = sqlx::query!(
+    |  __________________^
+563 | |         "DELETE FROM lesson_rubrics WHERE lesson_id = $1 AND rubric_id = $2",
+564 | |         lesson_id,
+565 | |         rubric_id
+566 | |     )
+567 | |     .execute(&pool)
+568 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:569:15
+    |
+569 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+569 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:584:19
+    |
+584 |       let rubrics = sqlx::query_as!(
+    |  ___________________^
+585 | |         Rubric,
+586 | |         r#"
+587 | |         SELECT r.id, r.organization_id, r.course_id, r.created_by, r.name, r.description, r.total_points, r.created_at, r.updated_at
+...   |
+596 | |     .fetch_all(&pool)
+597 | |     .await
+    | |__________^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> services/cms-service/src/handlers_rubrics.rs:598:15
+    |
+598 |     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |               ^                                      - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+598 |     .map_err(|e: /* Type */| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    |                ++++++++++++
+
+error[E0609]: no field `email` on type `&common::models::CourseInstructor`
+    --> services/cms-service/src/handlers.rs:3153:9
+     |
+3153 |     pub email: String,
+     |         ^^^^^ unknown field
+     |
+     = note: available fields are: `id`, `organization_id`, `course_id`, `user_id`, `role`, `created_at`
+
+error[E0609]: no field `full_name` on type `&common::models::CourseInstructor`
+    --> services/cms-service/src/handlers.rs:3154:9
+     |
+3154 |     pub full_name: String,
+     |         ^^^^^^^^^ unknown field
+     |
+     = note: available fields are: `id`, `organization_id`, `course_id`, `user_id`, `role`, `created_at`
+
+error[E0560]: struct `common::models::CourseInstructor` has no field named `email`
+    --> services/cms-service/src/handlers.rs:3153:9
+     |
+3153 |     pub email: String,
+     |         ^^^^^ `common::models::CourseInstructor` does not have this field
+     |
+     = note: all struct fields are already assigned
+
+error[E0560]: struct `common::models::CourseInstructor` has no field named `full_name`
+    --> services/cms-service/src/handlers.rs:3154:9
+     |
+3154 |     pub full_name: String,
+     |         ^^^^^^^^^ `common::models::CourseInstructor` does not have this field
+     |
+     = note: all struct fields are already assigned
+
+Some errors have detailed explanations: E0117, E0210, E0255, E0277, E0282, E0560, E0609.
+For more information about an error, try `rustc --explain E0117`.
+error: could not compile `cms-service` (bin "cms-service") due to 113 previous errors

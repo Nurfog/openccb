@@ -58,6 +58,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
     const [allowRetry, setAllowRetry] = useState(true);
     const [dueDate, setDueDate] = useState<string>("");
     const [importantDateType, setImportantDateType] = useState<string>("");
+    const [isPreviewable, setIsPreviewable] = useState(false);
 
     // Rubric State
     const [courseRubrics, setCourseRubrics] = useState<Rubric[]>([]);
@@ -122,6 +123,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                 setAllowRetry(lessonData.allow_retry);
                 setDueDate(lessonData.due_date ? new Date(lessonData.due_date).toISOString().split('T')[0] : "");
                 setImportantDateType(lessonData.important_date_type || "");
+                setIsPreviewable(lessonData.is_previewable || false);
 
                 if (lessonData.metadata?.blocks) {
                     setBlocks(lessonData.metadata.blocks);
@@ -224,7 +226,8 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                 max_attempts: maxAttempts,
                 allow_retry: allowRetry,
                 due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
-                important_date_type: (importantDateType || undefined) as 'exam' | 'assignment' | 'milestone' | 'live-session' | undefined
+                important_date_type: (importantDateType || undefined) as 'exam' | 'assignment' | 'milestone' | 'live-session' | undefined,
+                is_previewable: isPreviewable
             });
             setLesson(updated);
             setEditMode(false);
@@ -432,6 +435,27 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                             <div className="w-14 h-8 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600 group-hover:after:scale-110 transition-all"></div>
                             <span className="ms-3 text-sm font-bold uppercase tracking-widest text-gray-400 peer-checked:text-blue-400 transition-colors">
                                 {isGraded ? "Graded" : "Not Graded"}
+                            </span>
+                        </label>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                        <div>
+                            <h3 className="text-xl font-bold flex items-center gap-2">
+                                <span className="text-blue-500">🔓</span> Course Preview
+                            </h3>
+                            <p className="text-sm text-gray-500 mt-1">Allow students to view this lesson without being enrolled</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer group">
+                            <input
+                                type="checkbox"
+                                checked={isPreviewable}
+                                onChange={(e) => setIsPreviewable(e.target.checked)}
+                                className="sr-only peer"
+                            />
+                            <div className="w-14 h-8 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600 group-hover:after:scale-110 transition-all"></div>
+                            <span className="ms-3 text-sm font-bold uppercase tracking-widest text-gray-400 peer-checked:text-blue-400 transition-colors">
+                                {isPreviewable ? "Preview Enabled" : "Preview Disabled"}
                             </span>
                         </label>
                     </div>

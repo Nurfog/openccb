@@ -329,10 +329,10 @@ pub async fn create_post(
             .bind(thread_id)
             .fetch_one(&pool)
             .await
-            .map_err(|_| (StatusCode::NOT_FOUND, "Thread not found".to_string()))?;
+            .map_err(|_| (StatusCode::NOT_FOUND, "Cohorte no encontrada".to_string()))?;
 
     if thread.0 {
-        return Err((StatusCode::FORBIDDEN, "Thread is locked".to_string()));
+        return Err((StatusCode::FORBIDDEN, "El hilo está bloqueado".to_string()));
     }
 
     let post = sqlx::query_as::<_, DiscussionPost>(
@@ -392,7 +392,7 @@ pub async fn vote_post(
     Json(payload): Json<VotePayload>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     if payload.vote_type != "upvote" && payload.vote_type != "downvote" {
-        return Err((StatusCode::BAD_REQUEST, "Invalid vote type".to_string()));
+        return Err((StatusCode::BAD_REQUEST, "Tipo de voto inválido".to_string()));
     }
 
     // Upsert vote

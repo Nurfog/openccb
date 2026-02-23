@@ -18,6 +18,7 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
     const [userGrades, setUserGrades] = useState<UserGrade[]>([]);
     const [isEnrolled, setIsEnrolled] = useState(false);
     const [lessonDependencies, setLessonDependencies] = useState<any[]>([]);
+    const [instructors, setInstructors] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -26,6 +27,7 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                 const data = await lmsApi.getCourseOutline(params.id);
                 setCourseData({ ...data.course, modules: data.modules });
                 setLessonDependencies(data.dependencies || []);
+                setInstructors(data.instructors || []);
 
                 if (user) {
                     const grades = await lmsApi.getUserGrades(user.id, params.id);
@@ -171,6 +173,25 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                     )}
                 </div>
 
+                {instructors.length > 0 && (
+                    <div className="mb-10 animate-in fade-in slide-in-from-left-4 duration-700">
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-4 block">Equipo docente</span>
+                        <div className="flex flex-wrap gap-6">
+                            {instructors.map((inst) => (
+                                <div key={inst.id} className="flex items-center gap-3 glass border-white/5 px-4 py-2 rounded-2xl hover:bg-white/5 transition-all">
+                                    <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30 text-blue-400 font-bold text-xs">
+                                        {inst.full_name?.charAt(0) || inst.email?.charAt(0)}
+                                    </div>
+                                    <div>
+                                        <div className="text-xs font-bold text-gray-200">{inst.full_name}</div>
+                                        <div className="text-[8px] font-black uppercase tracking-widest text-blue-500/60">{inst.role === 'primary' ? 'Instructor principal' : inst.role}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-8">
                         <div className="flex flex-col">
@@ -291,7 +312,8 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                         <div className="grid gap-3 pl-14">
                             {module.lessons.map((lesson: any) => {
                                 const locked = isLessonLocked(lesson.id);
-                                return isEnrolled ? (
+                                const isPreviewable = lesson.is_previewable;
+                                return (isEnrolled || isPreviewable) ? (
                                     locked ? (
                                         <div key={lesson.id} className="glass-card !p-4 border-white/5 opacity-60 cursor-not-allowed">
                                             <div className="flex items-center justify-between">
@@ -316,13 +338,18 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                                                     <div className="flex items-center gap-4">
                                                         <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
                                                             {lesson.content_type === 'video' ? (
-                                                                <PlayCircle size={18} className="text-gray-400 group-hover:text-blue-400" />
+                                                                <PlayCircle size={18} className={`${isPreviewable && !isEnrolled ? 'text-green-400' : 'text-gray-400'} group-hover:text-blue-400`} />
                                                             ) : (
-                                                                <BookOpen size={18} className="text-gray-400 group-hover:text-blue-400" />
+                                                                <BookOpen size={18} className={`${isPreviewable && !isEnrolled ? 'text-green-400' : 'text-gray-400'} group-hover:text-blue-400`} />
                                                             )}
                                                         </div>
                                                         <div>
-                                                            <h3 className="text-sm font-bold text-gray-200 group-hover:text-white transition-colors">{lesson.title}</h3>
+                                                            <div className="flex items-center gap-2">
+                                                                <h3 className="text-sm font-bold text-gray-200 group-hover:text-white transition-colors">{lesson.title}</h3>
+                                                                {isPreviewable && !isEnrolled && (
+                                                                    <span className="text-[8px] font-black uppercase px-1.5 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded">Vista previa</span>
+                                                                )}
+                                                            </div>
                                                             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
                                                                 {lesson.content_type === 'activity' ? 'Actividad Interactiva' : 'Lección en Video'}
                                                             </span>
