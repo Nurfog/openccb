@@ -14,8 +14,11 @@ services:
     build:
       context: .
       dockerfile: web/studio/Dockerfile
+      network: host
       args:
         NEXT_PUBLIC_CMS_API_URL: ${NEXT_PUBLIC_CMS_API_URL:-http://localhost:3001}
+    dns:
+      - 8.8.8.8
     ports:
       - "3000:3000"
       - "3001:3001"
@@ -37,9 +40,12 @@ services:
     build:
       context: .
       dockerfile: web/experience/Dockerfile
+      network: host
       args:
         NEXT_PUBLIC_LMS_API_URL: ${NEXT_PUBLIC_LMS_API_URL:-http://localhost:3002}
         NEXT_PUBLIC_CMS_API_URL: ${NEXT_PUBLIC_CMS_API_URL:-http://localhost:3001}
+    dns:
+      - 8.8.8.8
     ports:
       - "3003:3003"
       - "3002:3002"

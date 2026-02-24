@@ -35,7 +35,7 @@ fi
 install_pkg() {
     if ! command -v "$1" &> /dev/null; then
         echo "🔧 Instalando $1..."
-        sudo apt-get update && sudo apt-get install -y "$1"
+        apt-get update && apt-get install -y "$1"
     else
         echo "✅ $1 ya está instalado."
     fi
@@ -93,20 +93,49 @@ update_env() {
     fi
 }
 
-# 5. Configuración de IA Remota
+# 5. Configuración de Entorno (Dev/Prod)
 echo ""
-echo "🔍 Configurando Servicios de IA Remota..."
-read -p "Ingrese la URL de Ollama Remoto [http://t-800:11434]: " REMOTE_OLLAMA_URL
-REMOTE_OLLAMA_URL=${REMOTE_OLLAMA_URL:-http://t-800:11434}
-read -p "Ingrese la URL de Whisper Remoto [http://t-800:9000]: " REMOTE_WHISPER_URL
-REMOTE_WHISPER_URL=${REMOTE_WHISPER_URL:-http://t-800:9000}
+echo "🌍 Selección de Entorno"
+read -p "¿Es un entorno de DESARROLLO o PRODUCCIÓN? [dev/prod]: " ENV_CHOICE
+ENV_CHOICE=$(echo "$ENV_CHOICE" | tr '[:upper:]' '[:lower:]')
+ENV_CHOICE=${ENV_CHOICE:-prod}
+update_env "ENVIRONMENT" "$ENV_CHOICE"
+
+# 6. Configuración de IA Remota
+echo ""
+echo "🔍 Configurando Servicios de IA Remota ($ENV_CHOICE)..."
+
+if [ "$ENV_CHOICE" == "dev" ]; then
+    DEFAULT_OLLAMA="http://t-800:11434"
+    DEFAULT_WHISPER="http://t-800:9000"
+else
+    DEFAULT_OLLAMA="http://t-800.norteamericano.cl:11434"
+    DEFAULT_WHISPER="http://t-800.norteamericano.cl:9000"
+fi
+
+read -p "Ingrese la URL de Ollama Remoto [$DEFAULT_OLLAMA]: " REMOTE_OLLAMA_URL
+REMOTE_OLLAMA_URL=${REMOTE_OLLAMA_URL:-$DEFAULT_OLLAMA}
+read -p "Ingrese la URL de Whisper Remoto [$DEFAULT_WHISPER]: " REMOTE_WHISPER_URL
+REMOTE_WHISPER_URL=${REMOTE_WHISPER_URL:-$DEFAULT_WHISPER}
 read -p "Ingrese el nombre del Modelo (en el servidor remoto) [llama3.2:3b]: " LLM_MODEL
 LLM_MODEL=${LLM_MODEL:-llama3.2:3b}
 
 update_env "AI_PROVIDER" "local"
-update_env "LOCAL_OLLAMA_URL" "$REMOTE_OLLAMA_URL"
-update_env "LOCAL_WHISPER_URL" "$REMOTE_WHISPER_URL"
 update_env "LOCAL_LLM_MODEL" "$LLM_MODEL"
+
+if [ "$ENV_CHOICE" == "dev" ]; then
+    update_env "DEV_OLLAMA_URL" "$REMOTE_OLLAMA_URL"
+    update_env "DEV_WHISPER_URL" "$REMOTE_WHISPER_URL"
+    # Portavilidad: set base URLs too
+    update_env "LOCAL_OLLAMA_URL" "$REMOTE_OLLAMA_URL"
+    update_env "LOCAL_WHISPER_URL" "$REMOTE_WHISPER_URL"
+else
+    update_env "PROD_OLLAMA_URL" "$REMOTE_OLLAMA_URL"
+    update_env "PROD_WHISPER_URL" "$REMOTE_WHISPER_URL"
+    # Portavilidad: set base URLs too
+    update_env "LOCAL_OLLAMA_URL" "$REMOTE_OLLAMA_URL"
+    update_env "LOCAL_WHISPER_URL" "$REMOTE_WHISPER_URL"
+fi
 
 # AI setup is now purely remote. Skipping local container configuration.
 
@@ -130,15 +159,15 @@ echo ""
 read -p "¿Desea una instalación LIMPIA? (Esto ELIMINARÁ todos los datos existentes) [y/N]: " CLEAN_INSTALL
 if [[ "$CLEAN_INSTALL" =~ ^[Yy]$ ]]; then
     echo "🐘 Reseteando la base de datos para una instalación limpia..."
-    sudo docker compose down -v || true
+    docker compose down -v || true
 fi
 
 echo "🐘 Iniciando base de datos con Docker..."
-sudo docker compose up -d db
+docker compose up -d db
 
 echo "⏳ Esperando a que la base de datos esté lista (contenedor)..."
 RETRIES=30
-until sudo docker exec openccb-db-1 pg_isready -U user &> /dev/null || [ $RETRIES -eq 0 ]; do
+until docker exec openccb-db-1 pg_isready -U user &> /dev/null || [ $RETRIES -eq 0 ]; do
   echo -n "."
   sleep 1
   RETRIES=$((RETRIES-1))
@@ -173,7 +202,7 @@ DATABASE_URL=$LMS_URL sqlx migrate run --source services/lms-service/migrations
 # 7. System Initialization (Integrated init-system.sh)
 echo ""
 echo "🔍 Buscando administrador existente..."
-ADMIN_EXISTS=$(sudo docker exec openccb-db-1 psql -U user -d openccb_cms -t -c "SELECT EXISTS (SELECT 1 FROM users WHERE role = 'admin');" | xargs 2>/dev/null || echo "f")
+ADMIN_EXISTS=$(docker exec openccb-db-1 psql -U user -d openccb_cms -t -c "SELECT EXISTS (SELECT 1 FROM users WHERE role = 'admin');" | xargs 2>/dev/null || echo "f")
 
 if [ "$ADMIN_EXISTS" != "t" ]; then
     echo "👤 Configurar Administrador Inicial"
@@ -189,7 +218,7 @@ fi
 
 echo ""
 echo "🚀 Iniciando todos los servicios..."
-sudo docker compose up -d --build
+docker compose up -d --build
 
 if [ "$ADMIN_EXISTS" != "t" ]; then
     echo "⏳ Esperando a que el API CMS esté listo..."
@@ -211,7 +240,7 @@ EOF
     if echo "$RESPONSE" | grep -q "token"; then
         echo "✅ ¡Éxito! Administrador creado."
         # Generate and show initial API Key
-        API_KEY=$(sudo docker exec openccb-db-1 psql -U user -d openccb_cms -t -c "SELECT api_key FROM organizations WHERE name = 'Organización por Defecto' LIMIT 1;" | xargs)
+        API_KEY=$(docker exec openccb-db-1 psql -U user -d openccb_cms -t -c "SELECT api_key FROM organizations WHERE name = 'Organización por Defecto' LIMIT 1;" | xargs)
         echo "🔑 API Key Inicial: $API_KEY"
     else
         echo "⚠️  Fallo al crear el administrador."

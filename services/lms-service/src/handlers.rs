@@ -41,6 +41,19 @@ use sqlx::{PgPool, Row};
 use std::env;
 use uuid::Uuid;
 
+fn get_ai_url(var_base: &str, default: &str) -> String {
+    let env = env::var("ENVIRONMENT").unwrap_or_else(|_| "prod".to_string());
+    if env == "dev" {
+        env::var(format!("DEV_{}", var_base))
+            .or_else(|_| env::var(format!("LOCAL_{}", var_base)))
+            .unwrap_or_else(|_| default.to_string())
+    } else {
+        env::var(format!("PROD_{}", var_base))
+            .or_else(|_| env::var(format!("LOCAL_{}", var_base)))
+            .unwrap_or_else(|_| default.to_string())
+    }
+}
+
 #[derive(Deserialize)]
 pub struct BulkEnrollPayload {
     pub course_id: Uuid,
@@ -1899,8 +1912,7 @@ pub async fn get_recommendations(
     let client = reqwest::Client::new();
 
     let (url, auth_header, model) = if provider == "local" {
-        let base_url =
-            env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://ollama:11434".to_string());
+        let base_url = get_ai_url("OLLAMA_URL", "http://ollama:11434");
         let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3:8b".to_string());
         (
             format!("{}/v1/chat/completions", base_url),
@@ -1959,8 +1971,7 @@ pub async fn evaluate_audio_response(
 
     let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
     let (url, auth_header, model) = if provider == "local" {
-        let base_url =
-            env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://ollama:11434".to_string());
+        let base_url = get_ai_url("OLLAMA_URL", "http://ollama:11434");
         let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3:8b".to_string());
         (
             format!("{}/v1/chat/completions", base_url),

@@ -142,7 +142,7 @@ export default function StudentPortfolioPage() {
 
                         {profile.badges.length === 0 && (
                             <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
-                                <p className="text-gray-600">This student hasn't collected any badges yet.</p>
+                                <p className="text-gray-600">This student hasn&apos;t collected any badges yet.</p>
                             </div>
                         )}
                     </section>

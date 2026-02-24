@@ -38,6 +38,19 @@ pub struct PublishPayload {
     pub target_organization_id: Option<Uuid>,
 }
 
+fn get_ai_url(var_base: &str, default: &str) -> String {
+    let env = env::var("ENVIRONMENT").unwrap_or_else(|_| "prod".to_string());
+    if env == "dev" {
+        env::var(format!("DEV_{}", var_base))
+            .or_else(|_| env::var(format!("LOCAL_{}", var_base)))
+            .unwrap_or_else(|_| default.to_string())
+    } else {
+        env::var(format!("PROD_{}", var_base))
+            .or_else(|_| env::var(format!("LOCAL_{}", var_base)))
+            .unwrap_or_else(|_| default.to_string())
+    }
+}
+
 pub async fn publish_course(
     Org(org_ctx): Org,
     claims: Claims,
@@ -715,8 +728,7 @@ async fn translate_text(text: &str, target_lang: &str) -> Result<String, String>
     let client = reqwest::Client::new();
 
     let (url, auth_header, model) = if provider == "local" {
-        let base_url =
-            env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
+        let base_url = get_ai_url("OLLAMA_URL", "http://localhost:11434");
         let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3".to_string());
         (
             format!("{}/v1/chat/completions", base_url),
@@ -813,7 +825,7 @@ pub async fn run_transcription_task(pool: PgPool, lesson_id: Uuid) -> Result<(),
     tracing::info!("File read successfully ({} bytes). Sending to Whisper...", file_data.len());
 
     // 4. Send to Whisper
-    let whisper_url = env::var("LOCAL_WHISPER_URL").unwrap_or_else(|_| "http://localhost:8000".to_string());
+    let whisper_url = get_ai_url("WHISPER_URL", "http://localhost:8000");
     let client = reqwest::Client::new();
     
     // We assume a standard Whisper API (like faster-whisper-server or openai-compatible)
@@ -891,7 +903,7 @@ pub async fn run_transcription_task(pool: PgPool, lesson_id: Uuid) -> Result<(),
 }
 
 async fn generate_summary_with_ollama(text: &str) -> Result<String, String> {
-    let base_url = env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
+    let base_url = get_ai_url("OLLAMA_URL", "http://localhost:11434");
     let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3.2:3b".to_string());
     let client = reqwest::Client::new();
 
@@ -1149,8 +1161,7 @@ pub async fn generate_quiz(
     let client = reqwest::Client::new();
 
     let (url, auth_header, model) = if provider == "local" {
-        let base_url =
-            env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
+        let base_url = get_ai_url("OLLAMA_URL", "http://localhost:11434");
         let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3".to_string());
         (
             format!("{}/v1/chat/completions", base_url),
