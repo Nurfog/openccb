@@ -7,11 +7,16 @@ mod handlers_notes;
 mod handlers_payments;
 mod handlers_peer_review;
 mod lti;
+mod jwks;
+mod predictive;
+mod live;
+mod portfolio;
 
 use axum::{
     Router, middleware,
     routing::{delete, get, post, put},
 };
+use axum::Json; // Added based on instruction
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
@@ -86,6 +91,17 @@ async fn main() {
             "/courses/{id}/recommendations",
             get(handlers::get_recommendations),
         )
+        .route(
+            "/courses/{id}/dropout-risks",
+            get(predictive::get_course_dropout_risks),
+        )
+        // Live Learning
+        .route("/courses/{id}/meetings", get(live::get_course_meetings).post(live::create_meeting))
+        .route("/courses/{id}/meetings/{meeting_id}", delete(live::delete_meeting))
+        // Portfolio & Badges
+        .route("/profile/{user_id}", get(portfolio::get_public_profile))
+        .route("/my/badges", get(portfolio::get_my_badges))
+        .route("/badges/award", post(portfolio::award_badge))
         .route(
             "/users/{id}/gamification",
             get(handlers::get_user_gamification),
@@ -210,6 +226,8 @@ async fn main() {
         )
         .route("/lti/login", get(lti::lti_login_initiation))
         .route("/lti/launch", post(lti::lti_launch))
+        .route("/lti/jwks", get(jwks::lti_jwks_handler))
+        .route("/lti/deep-linking/response", post(lti::lti_deep_linking_response))
         .merge(protected_routes)
         .layer(cors)
         .with_state(pool);

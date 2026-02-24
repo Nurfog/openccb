@@ -390,6 +390,19 @@ export interface AdvancedAnalytics {
     retention: RetentionData[];
 }
 
+export interface DropoutRisk {
+    id: string;
+    organization_id: string;
+    course_id: string;
+    user_id: string;
+    risk_level: 'low' | 'medium' | 'high' | 'critical';
+    score: number;
+    reasons?: { metric: string, value: number, description: string }[];
+    last_calculated_at: string;
+    user_full_name?: string; // Optional for UI display
+    user_email?: string;
+}
+
 export interface Webhook {
     id: string;
     organization_id: string;
@@ -818,11 +831,7 @@ export const lmsApi = {
         return apiFetch(`/courses/${id}/grades${query}`, {}, true);
     },
     exportGradesUrl: (courseId: string): string => {
-        const token = getToken();
-        // Since we are downloading via <a> tag, we might need a token in the query if headers are not possible,
-        // but let's assume the user is authenticated in the session or we use a temporary download link logic.
-        // For simplicity with standard anchor tags, we'll suggest using a blob fetch if headers are strictly required.
-        // However, standard API calls use headers.
+        // Since we are downloading via <a> tag...
         return `${LMS_API_BASE_URL}/courses/${courseId}/export-grades`;
     },
     bulkEnroll: (courseId: string, emails: string[]): Promise<BulkEnrollResponse> =>
@@ -846,7 +855,72 @@ export const lmsApi = {
         apiFetch(`/announcements/${announcementId}`, { method: 'PUT', body: JSON.stringify(payload) }, true),
     deleteAnnouncement: (announcementId: string): Promise<void> =>
         apiFetch(`/announcements/${announcementId}`, { method: 'DELETE' }, true),
+    async getDeepLinkingResponse(payload: { dl_token: string, items: LtiDeepLinkingContentItem[] }): Promise<{ jwt: string, return_url: string }> {
+        return apiFetch('/lti/deep-linking/response', { method: 'POST', body: JSON.stringify(payload) }, true);
+    },
+    getDropoutRisks: (courseId: string): Promise<DropoutRisk[]> =>
+        apiFetch(`/courses/${courseId}/dropout-risks`, {}, true),
+
+    // Live Learning
+    getMeetings: (courseId: string): Promise<Meeting[]> =>
+        apiFetch(`/courses/${courseId}/meetings`, {}, true),
+
+    createMeeting: (courseId: string, payload: Partial<Meeting>): Promise<Meeting> =>
+        apiFetch(`/courses/${courseId}/meetings`, { method: 'POST', body: JSON.stringify(payload) }, true),
+
+    deleteMeeting: (courseId: string, meetingId: string): Promise<void> =>
+        apiFetch(`/courses/${courseId}/meetings/${meetingId}`, { method: 'DELETE' }, true),
+
+    // Portfolio & Badges
+    getPublicProfile: (userId: string): Promise<PublicProfile> =>
+        apiFetch(`/profile/${userId}`, {}, true),
+
+    getMyBadges: (): Promise<Badge[]> =>
+        apiFetch(`/my/badges`, {}, true),
 };
+
+export interface Meeting {
+    id: string;
+    course_id: string;
+    title: string;
+    description?: string;
+    provider: string;
+    meeting_id: string;
+    start_at: string;
+    duration_minutes: number;
+    join_url?: string;
+    is_active: boolean;
+}
+
+export interface Badge {
+    id: string;
+    name: string;
+    description: string;
+    icon_url: string;
+    criteria: any;
+    created_at: string;
+}
+
+export interface PublicProfile {
+    user_id: string;
+    full_name: string;
+    avatar_url?: string;
+    bio?: string;
+    badges: Badge[];
+    level: number;
+    xp: number;
+    completed_courses_count: number;
+}
+
+export interface LtiDeepLinkingContentItem {
+    type: 'ltiResourceLink';
+    title?: string;
+    text?: string;
+    url?: string;
+    icon?: { url: string; width?: number; height?: number };
+    thumbnail?: { url: string; width?: number; height?: number };
+    [key: string]: string | number | boolean | object | undefined | null;
+}
 
 export interface BackgroundTask {
     id: string;

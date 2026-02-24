@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT \n            u.id, \n            u.full_name, \n            u.email, \n            0.0::float4 as progress,\n            (SELECT name FROM cohorts c JOIN user_cohorts uc ON c.id = uc.cohort_id WHERE uc.user_id = u.id LIMIT 1) as cohort_name,\n            AVG(g.score)::float4 as average_score\n        FROM users u\n        JOIN enrollments e ON u.id = e.user_id AND e.course_id = $1\n        LEFT JOIN user_grades g ON u.id = g.user_id AND g.course_id = $1\n        WHERE e.organization_id = $2\n        GROUP BY u.id, u.full_name, u.email\n        ORDER BY u.full_name\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "full_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "progress",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 4,
+        "name": "cohort_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "average_score",
+        "type_info": "Float4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "17f05eb41a9b8c4fd37f1c47495546709658ff09ac8be7ad1c611039e55394da"
+}

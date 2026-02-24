@@ -6,7 +6,7 @@ CREATE TABLE lesson_dependencies (
     lesson_id UUID NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
     prerequisite_lesson_id UUID NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
     min_score_percentage DOUBLE PRECISION,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(lesson_id, prerequisite_lesson_id),
     CHECK (lesson_id != prerequisite_lesson_id)
 );

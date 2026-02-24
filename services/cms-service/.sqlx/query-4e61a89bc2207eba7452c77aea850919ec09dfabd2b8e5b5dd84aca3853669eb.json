@@ -1,0 +1,55 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO lesson_dependencies (organization_id, lesson_id, prerequisite_lesson_id, min_score_percentage)\n        VALUES ($1, $2, $3, $4)\n        ON CONFLICT (lesson_id, prerequisite_lesson_id) \n        DO UPDATE SET min_score_percentage = EXCLUDED.min_score_percentage\n        RETURNING id, organization_id, lesson_id, prerequisite_lesson_id, min_score_percentage, created_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "organization_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "lesson_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "prerequisite_lesson_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "min_score_percentage",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "4e61a89bc2207eba7452c77aea850919ec09dfabd2b8e5b5dd84aca3853669eb"
+}

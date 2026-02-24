@@ -1,0 +1,67 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT s.* \n        FROM course_submissions s\n        LEFT JOIN peer_reviews pr ON s.id = pr.submission_id\n        WHERE s.course_id = $1 \n          AND s.lesson_id = $2\n          AND s.user_id != $3\n          AND s.organization_id = $4\n          AND NOT EXISTS (\n              SELECT 1 FROM peer_reviews my_pr \n              WHERE my_pr.submission_id = s.id AND my_pr.reviewer_id = $3\n          )\n        GROUP BY s.id\n        HAVING COUNT(pr.id) < 2\n        ORDER BY s.submitted_at ASC\n        LIMIT 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "course_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "lesson_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "content",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "submitted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "organization_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "60ddd0622ba9bdb70c661f9b8f755f4336017efa585e1f93ac848b1fed4835a1"
+}

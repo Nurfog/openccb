@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT ld.prerequisite_lesson_id, p.title as prereq_title, ld.min_score_percentage\n        FROM lesson_dependencies ld\n        JOIN lessons p ON ld.prerequisite_lesson_id = p.id\n        LEFT JOIN user_grades ug ON ld.prerequisite_lesson_id = ug.lesson_id AND ug.user_id = $2\n        LEFT JOIN lesson_interactions li ON ld.prerequisite_lesson_id = li.lesson_id \n            AND li.user_id = $2 AND li.event_type = 'complete'\n        WHERE ld.lesson_id = $1\n        AND (\n            (p.is_graded = true AND (ug.score IS NULL OR (ug.score * 100.0) < COALESCE(ld.min_score_percentage, 0.0)))\n            OR\n            (p.is_graded = false AND li.id IS NULL)\n        )\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "prerequisite_lesson_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "prereq_title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "min_score_percentage",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "6744490d98f0f7b1d753e89dfe2cddef4e580c62954847940e5fa0d1ad6a7fcf"
+}

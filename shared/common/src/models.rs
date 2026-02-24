@@ -193,7 +193,9 @@ pub struct LtiLaunchClaims {
     #[serde(rename = "https://purl.imsglobal.org/spec/lti/claim/deployment_id")]
     pub deployment_id: String,
     #[serde(rename = "https://purl.imsglobal.org/spec/lti/claim/resource_link")]
-    pub resource_link: LtiResourceLinkClaim,
+    pub resource_link: Option<LtiResourceLinkClaim>,
+    #[serde(rename = "https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings")]
+    pub deep_linking_settings: Option<LtiDeepLinkingSettings>,
     #[serde(rename = "https://purl.imsglobal.org/spec/lti/claim/context")]
     pub context: Option<LtiContextClaim>,
     #[serde(rename = "https://purl.imsglobal.org/spec/lti/claim/roles")]
@@ -213,6 +215,65 @@ pub struct LtiContextClaim {
     pub id: String,
     pub label: Option<String>,
     pub title: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LtiDeepLinkingSettings {
+    pub deep_link_return_url: String,
+    pub accept_types: Vec<String>,
+    pub accept_presentation_document_targets: Vec<String>,
+    pub accept_media_types: Option<String>,
+    pub accept_multiple: Option<bool>,
+    pub accept_copy_advice: Option<bool>,
+    pub auto_create: Option<bool>,
+    pub title: Option<String>,
+    pub text: Option<String>,
+    pub data: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LtiDeepLinkingResponseClaims {
+    #[serde(rename = "iss")]
+    pub issuer: String,
+    #[serde(rename = "sub")]
+    pub subject: String,
+    #[serde(rename = "aud")]
+    pub audience: String,
+    #[serde(rename = "exp")]
+    pub expires_at: i64,
+    #[serde(rename = "iat")]
+    pub issued_at: i64,
+    pub nonce: String,
+    #[serde(rename = "https://purl.imsglobal.org/spec/lti/claim/message_type")]
+    pub message_type: String, // "LtiDeepLinkingResponse"
+    #[serde(rename = "https://purl.imsglobal.org/spec/lti/claim/version")]
+    pub version: String, // "1.3.0"
+    #[serde(rename = "https://purl.imsglobal.org/spec/lti/claim/deployment_id")]
+    pub deployment_id: String,
+    #[serde(rename = "https://purl.imsglobal.org/spec/lti-dl/claim/content_items")]
+    pub content_items: Vec<LtiDeepLinkingContentItem>,
+    #[serde(rename = "https://purl.imsglobal.org/spec/lti-dl/claim/data")]
+    pub data: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LtiDeepLinkingContentItem {
+    #[serde(rename = "type")]
+    pub item_type: String, // "ltiResourceLink"
+    pub title: Option<String>,
+    pub text: Option<String>,
+    pub url: Option<String>,
+    pub icon: Option<LtiImage>,
+    pub thumbnail: Option<LtiImage>,
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LtiImage {
+    pub url: String,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
@@ -642,6 +703,7 @@ pub struct SubmitAssignmentPayload {
 pub struct SubmitPeerReviewPayload {
     pub submission_id: Uuid,
     pub score: i32,
+    pub feedback: String,
 }
 
 // Content Libraries
@@ -688,6 +750,36 @@ pub struct LibraryTemplate {
     pub usage_count: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::Type, Clone, Copy, PartialEq)]
+#[sqlx(type_name = "dropout_risk_level", rename_all = "lowercase")]
+pub enum DropoutRiskLevel {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct DropoutRisk {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub course_id: Uuid,
+    pub user_id: Uuid,
+    pub risk_level: DropoutRiskLevel,
+    pub score: f32, // 0.0 to 1.0 (Higher means higher risk)
+    pub reasons: Option<serde_json::Value>, // e.g., ["low_grades", "inactivity"]
+    pub last_calculated_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DropoutRiskReason {
+    pub metric: String,
+    pub value: f32,
+    pub description: String,
 }
 
 #[cfg(test)]
@@ -892,4 +984,57 @@ pub struct LessonDependency {
     pub prerequisite_lesson_id: Uuid,
     pub min_score_percentage: Option<f64>,
     pub created_at: DateTime<Utc>,
+}
+
+// ==================== Live Learning (Meetings) ====================
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct Meeting {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub course_id: Uuid,
+    pub title: String,
+    pub description: Option<String>,
+    pub provider: String, // "jitsi" | "bbb"
+    pub meeting_id: String, // Room name or external ID
+    pub start_at: DateTime<Utc>,
+    pub duration_minutes: i32,
+    pub join_url: Option<String>,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+// ==================== Student portfolio & Badges ====================
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct Badge {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub name: String,
+    pub description: String,
+    pub icon_url: String,
+    pub criteria: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct UserBadge {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub badge_id: Uuid,
+    pub awarded_at: DateTime<Utc>,
+    pub evidence_url: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PublicProfile {
+    pub user_id: Uuid,
+    pub full_name: String,
+    pub avatar_url: Option<String>,
+    pub bio: Option<String>,
+    pub badges: Vec<Badge>,
+    pub level: i32,
+    pub xp: i32,
+    pub completed_courses_count: i64,
 }

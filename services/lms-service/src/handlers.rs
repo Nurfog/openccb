@@ -10,6 +10,7 @@ use common::middleware::Org;
 use common::models::{
     AuthResponse, Course, CourseAnalytics, Enrollment, HeatmapPoint, Lesson, LessonAnalytics,
     Module, Notification, Organization, RecommendationResponse, User, UserResponse,
+    LessonDependency,
 };
 
 pub async fn get_me(
@@ -20,7 +21,7 @@ pub async fn get_me(
         .bind(claims.sub)
         .fetch_one(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(UserResponse {
         id: user.id,
@@ -156,7 +157,7 @@ pub async fn export_course_grades(
     )
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // 2. Get Student general data
     let students = sqlx::query!(
@@ -165,14 +166,14 @@ pub async fn export_course_grades(
             u.id, 
             u.full_name, 
             u.email, 
-            COALESCE(e.progress, 0)::float4 as progress,
+            0.0::float4 as progress,
             (SELECT name FROM cohorts c JOIN user_cohorts uc ON c.id = uc.cohort_id WHERE uc.user_id = u.id LIMIT 1) as cohort_name,
             AVG(g.score)::float4 as average_score
         FROM users u
         JOIN enrollments e ON u.id = e.user_id AND e.course_id = $1
         LEFT JOIN user_grades g ON u.id = g.user_id AND g.course_id = $1
         WHERE e.organization_id = $2
-        GROUP BY u.id, u.full_name, u.email, e.progress
+        GROUP BY u.id, u.full_name, u.email
         ORDER BY u.full_name
         "#,
         course_id,
@@ -180,7 +181,7 @@ pub async fn export_course_grades(
     )
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // 3. Get detailed grades per user/category
     struct UserCategoryGrade {
@@ -205,7 +206,7 @@ pub async fn export_course_grades(
     )
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // 4. Build CSV
     let mut csv = "Name,Email,Cohort,Progress,Overall Score".to_string();
@@ -216,7 +217,7 @@ pub async fn export_course_grades(
 
     for s in students {
         let cohort = s.cohort_name.unwrap_or_else(|| "N/A".to_string());
-        let progress = format!("{:.1}%", s.progress * 100.0);
+        let progress = format!("{:.1}%", s.progress.unwrap_or(0.0) * 100.0);
         let overall = s
             .average_score
             .map(|v| format!("{:.1}%", v * 100.0))
@@ -327,7 +328,7 @@ pub async fn enroll_user(
         .bind(course_id)
         .fetch_one(&mut *tx)
         .await
-        .map_err(|e| {
+        .map_err(|e: sqlx::Error| {
             tracing::error!("Enrollment failed: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
@@ -415,7 +416,7 @@ pub async fn register(
     let mut tx = pool
         .begin()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let organization = if let Some(org_name) = payload.organization_name {
         sqlx::query_as::<_, Organization>(
@@ -424,7 +425,7 @@ pub async fn register(
         .bind(&org_name)
         .fetch_one(&mut *tx)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al buscar o crear la organización: {}", e)))?
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al buscar o crear la organización: {}", e)))?
     } else {
         sqlx::query_as::<_, Organization>(
             "SELECT * FROM organizations WHERE id = '00000000-0000-0000-0000-000000000001'",
@@ -448,11 +449,11 @@ pub async fn register(
     .bind(organization.id)
     .fetch_one(&mut *tx)
     .await
-    .map_err(|e| (StatusCode::CONFLICT, format!("El usuario ya existe o error en la BD: {}", e)))?;
+    .map_err(|e: sqlx::Error| (StatusCode::CONFLICT, format!("El usuario ya existe o error en la BD: {}", e)))?;
 
     tx.commit()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let token = create_jwt(user.id, user.organization_id, "student").map_err(|_| {
         (
@@ -570,7 +571,7 @@ pub async fn get_course_catalog(
                 .await
         }
     }
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Catalog fetch failed: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -612,7 +613,7 @@ pub async fn ingest_course(
     .bind(payload.organization.updated_at)
     .execute(&mut *tx)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Failed to upsert organization during ingestion: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -650,7 +651,7 @@ pub async fn ingest_course(
     .bind(&payload.course.currency)
     .execute(&mut *tx)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Failed to upsert course during ingestion: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -706,7 +707,7 @@ pub async fn ingest_course(
             .bind(instructor.created_at)
             .execute(&mut *tx)
             .await
-            .map_err(|e| {
+            .map_err(|e: sqlx::Error| {
                 tracing::error!("Failed to insert instructor: {}", e);
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
@@ -755,7 +756,7 @@ pub async fn ingest_course(
             .bind(lesson.is_previewable)
             .execute(&mut *tx)
             .await
-            .map_err(|e| {
+            .map_err(|e: sqlx::Error| {
                 tracing::error!("Failed to insert lesson: {}", e);
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
@@ -817,7 +818,7 @@ pub async fn get_course_outline(
         .bind(id)
         .fetch_one(&pool)
         .await
-        .map_err(|e| {
+        .map_err(|e: sqlx::Error| {
             tracing::error!("get_course_outline: course fetch failed for {}: {}", id, e);
             StatusCode::NOT_FOUND
         })?;
@@ -830,7 +831,7 @@ pub async fn get_course_outline(
             .bind(id)
             .fetch_all(&pool)
             .await
-            .map_err(|e| {
+            .map_err(|e: sqlx::Error| {
                 tracing::error!("get_course_outline: modules fetch failed: {}", e);
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
@@ -844,7 +845,7 @@ pub async fn get_course_outline(
     .bind(course.organization_id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!(
             "get_course_outline: organization fetch failed for {}: {}",
             course.organization_id,
@@ -865,7 +866,7 @@ pub async fn get_course_outline(
     .bind(id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("get_course_outline: grading categories fetch failed: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -879,7 +880,7 @@ pub async fn get_course_outline(
         .bind(module.id)
         .fetch_all(&pool)
         .await
-        .map_err(|e| {
+        .map_err(|e: sqlx::Error| {
             tracing::error!(
                 "get_course_outline: lessons fetch failed for module {}: {}",
                 module.id,
@@ -905,7 +906,7 @@ pub async fn get_course_outline(
     )
     .fetch_all(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("get_course_outline: dependencies fetch failed: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -959,7 +960,7 @@ pub async fn get_lesson_content(
         .bind(claims.org)
         .fetch_optional(&pool)
         .await
-        .map_err(|e| {
+        .map_err(|e: sqlx::Error| {
             tracing::error!("get_lesson_content: DB error (preview): {}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?
@@ -974,7 +975,7 @@ pub async fn get_lesson_content(
         .bind(claims.sub)
         .fetch_optional(&pool)
         .await
-        .map_err(|e| {
+        .map_err(|e: sqlx::Error| {
             tracing::error!("get_lesson_content: DB error: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?
@@ -1020,7 +1021,7 @@ pub async fn get_lesson_content(
     )
     .fetch_all(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("get_lesson_content: failed to check dependencies: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -1073,7 +1074,7 @@ pub async fn submit_lesson_score(
     let mut tx = pool
         .begin()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let ip = headers
         .get("x-forwarded-for")
@@ -1095,7 +1096,7 @@ pub async fn submit_lesson_score(
         Some("SYSTEM_EVENT".to_string()),
     )
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // 1. Get lesson attempt rules
     let max_attempts: Option<Option<i32>> =
@@ -1103,7 +1104,7 @@ pub async fn submit_lesson_score(
             .bind(payload.lesson_id)
             .fetch_optional(&mut *tx)
             .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     if max_attempts.is_none() {
         return Err((StatusCode::NOT_FOUND, "Lección no encontrada".into()));
@@ -1117,7 +1118,7 @@ pub async fn submit_lesson_score(
         .bind(org_ctx.id)
         .fetch_optional(&mut *tx)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     if let Some(count) = existing_attempts {
         if let Some(max) = max_attempts {
@@ -1142,11 +1143,11 @@ pub async fn submit_lesson_score(
     .bind(payload.metadata)
     .fetch_one(&mut *tx)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     tx.commit()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // 4. Dispatch Webhooks
     let webhook_service = common::webhooks::WebhookService::new(pool.clone());
@@ -1254,7 +1255,7 @@ pub async fn get_leaderboard(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Failed to fetch leaderboard: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -1310,7 +1311,7 @@ pub async fn get_course_grades(
     .bind(filter.cohort_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Failed to fetch course grades: {}", e);
         (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
     })?;
@@ -1362,7 +1363,7 @@ pub async fn get_course_analytics(
     .bind(filter.cohort_id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // 2. Average Course Score (Overall)
     let average_score: Option<f32> = sqlx::query_scalar(
@@ -1381,7 +1382,7 @@ pub async fn get_course_analytics(
     .bind(filter.cohort_id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // 3. Per-Lesson Analytics
     // Note: We cast AVG to float4 for PostgreSQL compatibility
@@ -1407,7 +1408,7 @@ pub async fn get_course_analytics(
     .bind(filter.cohort_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let lessons = rows
         .into_iter()
@@ -1529,7 +1530,7 @@ pub async fn get_advanced_analytics(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Cohort query failed: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -1542,7 +1543,7 @@ pub async fn get_advanced_analytics(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Retention query failed: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -1572,7 +1573,7 @@ pub async fn record_interaction(
     .bind(payload.metadata)
     .execute(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Failed to record interaction: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -1596,7 +1597,7 @@ pub async fn get_lesson_heatmap(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Failed to fetch heatmap: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -1616,7 +1617,7 @@ pub async fn get_notifications(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Failed to fetch notifications: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -1638,7 +1639,7 @@ pub async fn mark_notification_as_read(
     .bind(org_ctx.id)
     .execute(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Failed to mark notification as read: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -1702,7 +1703,7 @@ pub async fn toggle_bookmark(
     .bind(lesson_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     if let Some(id) = existing_id {
         // Remove bookmark
@@ -1710,7 +1711,7 @@ pub async fn toggle_bookmark(
             .bind(id)
             .execute(&pool)
             .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         Ok(StatusCode::NO_CONTENT)
     } else {
         // Add bookmark
@@ -1723,7 +1724,7 @@ pub async fn toggle_bookmark(
         .bind(lesson_id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         Ok(StatusCode::CREATED)
     }
 }
@@ -1745,7 +1746,7 @@ pub async fn get_user_bookmarks(
     // Wait, let's create a better filter for this.
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(bookmarks))
 }
@@ -1777,7 +1778,7 @@ pub async fn update_user(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(UserResponse {
         id: user.id,
@@ -1809,7 +1810,7 @@ pub async fn get_recommendations(
     .bind(course_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // 2. Fetch lesson metadata (titles and tags) for context
     #[derive(sqlx::FromRow)]

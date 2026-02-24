@@ -232,6 +232,39 @@ export interface ProgressStats {
     estimated_completion_date?: string;
 }
 
+export interface Meeting {
+    id: string;
+    course_id: string;
+    title: string;
+    description?: string;
+    provider: string;
+    meeting_id: string;
+    start_at: string;
+    duration_minutes: number;
+    join_url?: string;
+    is_active: boolean;
+}
+
+export interface Badge {
+    id: string;
+    name: string;
+    description: string;
+    icon_url: string;
+    criteria: any;
+    created_at: string;
+}
+
+export interface PublicProfile {
+    user_id: string;
+    full_name: string;
+    avatar_url?: string;
+    bio?: string;
+    level: number;
+    xp: number;
+    badges: Badge[];
+    completed_courses_count: number;
+}
+
 export interface AuthResponse {
     user: User;
     token: string;
@@ -706,5 +739,18 @@ export const lmsApi = {
     async getBookmarks(courseId?: string): Promise<UserBookmark[]> {
         const query = courseId ? `?cohort_id=${courseId}` : '';
         return apiFetch(`/bookmarks${query}`);
+    },
+
+    // Live Learning & Portfolio
+    async getMeetings(courseId: string): Promise<Meeting[]> {
+        return apiFetch(`/courses/${courseId}/meetings`, {}, false);
+    },
+
+    async getPublicProfile(userId: string): Promise<PublicProfile> {
+        return apiFetch(`/profile/${userId}`, {}, false);
+    },
+
+    async getMyBadges(): Promise<Badge[]> {
+        return apiFetch(`/my/badges`, {}, false);
     }
 };

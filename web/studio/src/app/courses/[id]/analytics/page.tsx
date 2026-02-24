@@ -12,9 +12,13 @@ import {
     ArrowLeft,
     CheckCircle2,
     BookOpen,
-    Layers
+    Layers,
+    ShieldAlert
 } from "lucide-react";
 import CourseEditorLayout from "@/components/CourseEditorLayout";
+import DropoutRiskDashboard from "@/components/Analytics/DropoutRiskDashboard";
+import LiveSessions from "@/components/Courses/LiveSessions";
+import { Video } from "lucide-react";
 
 export default function AnalyticsPage() {
     const { id } = useParams() as { id: string };
@@ -26,6 +30,7 @@ export default function AnalyticsPage() {
     const [authError, setAuthError] = useState<string | null>(null);
     const [cohorts, setCohorts] = useState<Cohort[]>([]);
     const [selectedCohortId, setSelectedCohortId] = useState<string>("");
+    const [activeAnalyticsTab, setActiveAnalyticsTab] = useState<"overview" | "risks" | "live">("overview");
 
     useEffect(() => {
         const fetchData = async () => {
@@ -129,114 +134,142 @@ export default function AnalyticsPage() {
                 </div>
 
                 <CourseEditorLayout activeTab="analytics">
-                    <div className="p-8 space-y-12">
-                        {/* Stats Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 group hover:bg-white/[0.07] transition-all">
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400">
-                                        <Users size={24} />
-                                    </div>
-                                    <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Enrollments</span>
-                                </div>
-                                <div className="text-4xl font-black">{analytics.total_enrollments}</div>
-                                <div className="text-xs text-green-400 font-bold mt-2">Active Learners</div>
-                            </div>
-
-                            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 group hover:bg-white/[0.07] transition-all">
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400">
-                                        <TrendingUp size={24} />
-                                    </div>
-                                    <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Average Score</span>
-                                </div>
-                                <div className="text-4xl font-black">{Math.round(analytics.average_score * 100)}%</div>
-                                <div className="text-xs text-gray-500 font-bold mt-2">Across all assessments</div>
-                            </div>
-
-                            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 group hover:bg-white/[0.07] transition-all">
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-400">
-                                        <AlertTriangle size={24} />
-                                    </div>
-                                    <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Attention Needed</span>
-                                </div>
-                                <div className="text-4xl font-black">{difficultLessons.length}</div>
-                                <div className="text-xs text-orange-400 font-bold mt-2">Struggling Lessons</div>
-                            </div>
+                    <div className="p-8">
+                        {/* Tab Selector */}
+                        <div className="flex items-center gap-1 mb-10 p-1 bg-white/5 rounded-2xl w-fit">
+                            <button
+                                onClick={() => setActiveAnalyticsTab("overview")}
+                                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeAnalyticsTab === "overview" ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                            >
+                                <BarChart3 size={16} /> Overview
+                            </button>
+                            <button
+                                onClick={() => setActiveAnalyticsTab("risks")}
+                                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeAnalyticsTab === "risks" ? 'bg-red-600 text-white shadow-lg shadow-red-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                            >
+                                <ShieldAlert size={16} /> Predictive Risks
+                            </button>
+                            <button
+                                onClick={() => setActiveAnalyticsTab("live")}
+                                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeAnalyticsTab === "live" ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                            >
+                                <Video size={16} /> Live Sessions
+                            </button>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                            {/* Lesson Breakdown */}
-                            <section>
-                                <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
-                                    <BarChart3 className="text-blue-500" />
-                                    Lesson Performance
-                                </h2>
-                                <div className="space-y-4">
-                                    {analytics.lessons.map((lesson) => (
-                                        <div key={lesson.lesson_id} className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all">
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div>
-                                                    <h3 className="font-bold">{lesson.lesson_title}</h3>
-                                                    <p className="text-xs text-gray-500 mt-1">{lesson.submission_count} submissions</p>
-                                                </div>
-                                                <div className={`text-xl font-black ${lesson.average_score < 0.6 ? 'text-red-400' : lesson.average_score < 0.8 ? 'text-orange-400' : 'text-green-400'}`}>
-                                                    {Math.round(lesson.average_score * 100)}%
-                                                </div>
+                        {activeAnalyticsTab === "overview" ? (
+                            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                                {/* Stats Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="bg-white/5 border border-white/10 rounded-3xl p-8 group hover:bg-white/[0.07] transition-all">
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                                                <Users size={24} />
                                             </div>
-                                            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full rounded-full transition-all duration-1000 ${lesson.average_score < 0.6 ? 'bg-red-500' : lesson.average_score < 0.8 ? 'bg-orange-500' : 'bg-green-500'}`}
-                                                    style={{ width: `${lesson.average_score * 100}%` }}
-                                                />
-                                            </div>
+                                            <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Enrollments</span>
                                         </div>
-                                    ))}
-                                </div>
-                            </section>
+                                        <div className="text-4xl font-black">{analytics.total_enrollments}</div>
+                                        <div className="text-xs text-green-400 font-bold mt-2">Active Learners</div>
+                                    </div>
 
-                            {/* Actionable Insights */}
-                            <section className="space-y-8">
-                                <div>
-                                    <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
-                                        <AlertTriangle className="text-orange-500" />
-                                        Struggling Lessons
-                                    </h2>
-                                    {difficultLessons.length > 0 ? (
+                                    <div className="bg-white/5 border border-white/10 rounded-3xl p-8 group hover:bg-white/[0.07] transition-all">
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400">
+                                                <TrendingUp size={24} />
+                                            </div>
+                                            <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Average Score</span>
+                                        </div>
+                                        <div className="text-4xl font-black">{Math.round(analytics.average_score * 100)}%</div>
+                                        <div className="text-xs text-gray-500 font-bold mt-2">Across all assessments</div>
+                                    </div>
+
+                                    <div className="bg-white/5 border border-white/10 rounded-3xl p-8 group hover:bg-white/[0.07] transition-all">
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-400">
+                                                <AlertTriangle size={24} />
+                                            </div>
+                                            <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Attention Needed</span>
+                                        </div>
+                                        <div className="text-4xl font-black">{difficultLessons.length}</div>
+                                        <div className="text-xs text-orange-400 font-bold mt-2">Struggling Lessons</div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                                    {/* Lesson Breakdown */}
+                                    <section>
+                                        <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
+                                            <BarChart3 className="text-blue-500" />
+                                            Lesson Performance
+                                        </h2>
                                         <div className="space-y-4">
-                                            {difficultLessons.map(l => (
-                                                <div key={l.lesson_id} className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 flex items-center justify-between">
-                                                    <div>
-                                                        <h4 className="font-bold text-red-400">{l.lesson_title}</h4>
-                                                        <p className="text-xs text-red-300/60 mt-1 text-balance max-w-xs">
-                                                            Average score is below 70%. Consider reviewing the material or difficulty of questions.
-                                                        </p>
+                                            {analytics.lessons.map((lesson) => (
+                                                <div key={lesson.lesson_id} className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all">
+                                                    <div className="flex items-start justify-between mb-4">
+                                                        <div>
+                                                            <h3 className="font-bold">{lesson.lesson_title}</h3>
+                                                            <p className="text-xs text-gray-500 mt-1">{lesson.submission_count} submissions</p>
+                                                        </div>
+                                                        <div className={`text-xl font-black ${lesson.average_score < 0.6 ? 'text-red-400' : lesson.average_score < 0.8 ? 'text-orange-400' : 'text-green-400'}`}>
+                                                            {Math.round(lesson.average_score * 100)}%
+                                                        </div>
                                                     </div>
-                                                    <div className="text-2xl font-black text-red-500">{Math.round(l.average_score * 100)}%</div>
+                                                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                                        <div
+                                                            className={`h-full rounded-full transition-all duration-1000 ${lesson.average_score < 0.6 ? 'bg-red-500' : lesson.average_score < 0.8 ? 'bg-orange-500' : 'bg-green-500'}`}
+                                                            style={{ width: `${lesson.average_score * 100}%` }}
+                                                        />
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
-                                    ) : (
-                                        <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-8 text-center">
-                                            <CheckCircle2 size={40} className="text-green-500 mx-auto mb-4" />
-                                            <h4 className="font-bold text-green-400">All set!</h4>
-                                            <p className="text-sm text-green-300/60 mt-2">No lessons currently fall below the difficulty threshold.</p>
-                                        </div>
-                                    )}
-                                </div>
+                                    </section>
 
-                                <div className="bg-blue-600/10 border border-blue-500/20 rounded-3xl p-8">
-                                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                                        <BookOpen className="text-blue-400" />
-                                        Content Strategy Tip
-                                    </h3>
-                                    <p className="text-sm text-blue-200/70 leading-relaxed">
-                                        High submission counts with low average scores often indicate that the assessment might be misleading or the prerequisites aren&apos;t clearly explained in previous lessons.
-                                    </p>
+                                    {/* Actionable Insights */}
+                                    <section className="space-y-8">
+                                        <div>
+                                            <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
+                                                <AlertTriangle className="text-orange-500" />
+                                                Struggling Lessons
+                                            </h2>
+                                            {difficultLessons.length > 0 ? (
+                                                <div className="space-y-4">
+                                                    {difficultLessons.map(l => (
+                                                        <div key={l.lesson_id} className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 flex items-center justify-between">
+                                                            <div>
+                                                                <h4 className="font-bold text-red-400">{l.lesson_title}</h4>
+                                                                <p className="text-xs text-red-300/60 mt-1 text-balance max-w-xs">
+                                                                    Average score is below 70%. Consider reviewing the material or difficulty of questions.
+                                                                </p>
+                                                            </div>
+                                                            <div className="text-2xl font-black text-red-500">{Math.round(l.average_score * 100)}%</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-8 text-center">
+                                                    <CheckCircle2 size={40} className="text-green-500 mx-auto mb-4" />
+                                                    <h4 className="font-bold text-green-400">All set!</h4>
+                                                    <p className="text-sm text-green-300/60 mt-2">No lessons currently fall below the difficulty threshold.</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="bg-blue-600/10 border border-blue-500/20 rounded-3xl p-8">
+                                            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                                <BookOpen className="text-blue-400" />
+                                                Content Strategy Tip
+                                            </h3>
+                                            <p className="text-sm text-blue-200/70 leading-relaxed">
+                                                High submission counts with low average scores often indicate that the assessment might be misleading or the prerequisites aren&apos;t clearly explained in previous lessons.
+                                            </p>
+                                        </div>
+                                    </section>
                                 </div>
-                            </section>
-                        </div>
+                            </div>
+                        ) : (
+                            <DropoutRiskDashboard courseId={id} />
+                        )}
                     </div>
                 </CourseEditorLayout>
             </div>

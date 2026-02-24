@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM lesson_dependencies WHERE lesson_id = $1 AND organization_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "organization_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "lesson_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "prerequisite_lesson_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "min_score_percentage",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "f531c2478ba9634cf935aa615c9320fb99006f6e5e66501a93520af637f8f1a5"
+}

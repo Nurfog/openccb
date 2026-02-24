@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM lesson_rubrics WHERE lesson_id = $1 AND rubric_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3747c2088f23d32d110971afcdf8271678069e981fa98749ff7ec26c358a139f"
+}

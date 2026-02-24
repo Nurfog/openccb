@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE library_blocks SET usage_count = usage_count + 1 WHERE id = $1 AND organization_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "82e4c85bf3aaa45506e3245c3d7b9e8ab224a8e10f2666e69ef212fb0c000ac0"
+}

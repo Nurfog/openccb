@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { lmsApi, Course, Module, Recommendation, UserGrade } from "@/lib/api";
-import { Sparkles, AlertTriangle, ArrowRight, CheckCircle2, XCircle, Circle } from "lucide-react";
+import { lmsApi, Course, Module, Recommendation, UserGrade, Meeting } from "@/lib/api";
+import { Sparkles, AlertTriangle, ArrowRight, CheckCircle2, XCircle, Circle, Video, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { BookOpen, ChevronRight, PlayCircle, Calendar, Clock, Info, Lock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -19,6 +19,7 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
     const [isEnrolled, setIsEnrolled] = useState(false);
     const [lessonDependencies, setLessonDependencies] = useState<any[]>([]);
     const [instructors, setInstructors] = useState<any[]>([]);
+    const [meetings, setMeetings] = useState<Meeting[]>([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -58,6 +59,10 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
             .then(res => setRecommendations(res.recommendations))
             .catch(console.error)
             .finally(() => setLoadingAI(false));
+
+        lmsApi.getMeetings(params.id)
+            .then(setMeetings)
+            .catch(console.error);
     }, [params.id, user]);
 
     const handleEnrollOrBuy = async () => {
@@ -290,6 +295,47 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                                 </div>
                             ))
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Live Sessions Section */}
+            {meetings.length > 0 && (
+                <div className="mb-20">
+                    <div className="flex items-center gap-3 mb-8">
+                        <div className="w-10 h-10 rounded-xl glass border-blue-500/20 bg-blue-500/10 flex items-center justify-center">
+                            <Video size={18} className="text-blue-400" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-white tracking-tight">Sesiones en Vivo</h2>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Únete a las clases sincrónicas programadas</p>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-3">
+                        {meetings.map((m) => (
+                            <div key={m.id} className="glass-card border-white/5 hover:border-blue-500/30 transition-all p-5 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+                                        <Calendar size={18} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-sm">{m.title}</h3>
+                                        <p className="text-[10px] text-gray-500 uppercase mt-1">
+                                            {new Date(m.start_at).toLocaleString()} • {m.duration_minutes} min
+                                        </p>
+                                    </div>
+                                </div>
+                                <a
+                                    href={m.join_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all"
+                                >
+                                    Unirse <ExternalLink size={12} />
+                                </a>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}

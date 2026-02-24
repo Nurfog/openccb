@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE rubrics\n        SET total_points = (SELECT COALESCE(SUM(max_points), 0) FROM rubric_criteria WHERE rubric_id = $1),\n            updated_at = NOW()\n        WHERE id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "42dfabb9428c4d090242fc98e43eb3a8236333ca2305b6ab852dcc90d232ac89"
+}

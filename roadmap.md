@@ -201,25 +201,25 @@
   - [x] Inscripción automática tras pago exitoso.
   - [x] Verificación de seguridad de acceso a lecciones basada en inscripción.
   - [x] Dashboard de transacciones básico en base de datos.
-- [ ] **Interoperabilidad**:
-  - [ ] Implementación de LTI 1.3 (Tool Provider).
-  - [ ] Conectividad con LMS externos (Moodle/Canvas).
-- [ ] **Analíticas Predictivas**:
-  - [ ] Motor de IA para detección de riesgo de abandono.
-  - [ ] Notificaciones proactivas para instructores.
-- [ ] **Gestión de Activos**:
-  - [ ] Biblioteca de medios global (Global Asset Manager).
-  - [ ] Reutilización de recursos multi-curso.
+- [x] **Interoperabilidad**: ✅
+  - [x] Implementación de LTI 1.3 (Tool Provider) con soporte para Deep Linking.
+  - [x] Conectividad segura con LMS externos (Moodle/Canvas) via OIDC y JWKS.
+- [x] **Analíticas Predictivas**: ✅
+  - [x] Motor de IA para detección de riesgo de abandono.
+  - [x] Notificaciones proactivas para instructores.
+- [x] **Gestión de Activos**: ✅
+  - [x] Biblioteca de medios global (Global Asset Manager).
+  - [x] Reutilización de recursos multi-curso.
 - [ ] **Aprendizaje en Vivo**:
-  - [ ] Integración con BigBlueButton/Jitsi.
+  - [ ] Integración con BigBlueButton.
 - [ ] **Portafolio del Estudiante**:
   - [ ] Perfil profesional público con Open Badges.
 
 ---
 
-**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados, **sistema de foros de discusión funcional**, **gestión de anuncios segmentados**, **monetización integrada con Mercado Pago**, **Inscripción Masiva de Usuarios**, **Exportación Avanzada de Calificaciones**, **Librerías de Contenido reutilizables**, **Sistema de Rúbricas Avanzado**, **Secuencias de Aprendizaje**, **Gestión de Equipos Docentes**, **Vista Previa de Cursos**, **Dashboard de Progreso Estudiantil** y **Sistema de Marcadores**.
+**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados, **sistema de foros de discusión funcional**, **gestión de anuncios segmentados**, **monetización integrada con Mercado Pago**, **Inscripción Masiva de Usuarios**, **Exportación Avanzada de Calificaciones**, **Librerías de Contenido reutilizables**, **Sistema de Rúbricas Avanzado**, **Secuencias de Aprendizaje**, **Gestión de Equipos Docentes**, **Vista Previa de Cursos**, **Dashboard de Progreso Estudiantil**, **Sistema de Marcadores**, **Biblioteca Global de Activos**, **Interoperabilidad LTI 1.3 con soporte para Deep Linking** y **Analíticas Predictivas de Riesgo de Abandono**.
 
 **Próximas Prioridades**:
-1. **Interoperabilidad**: Implementación de LTI 1.3 para conectividad con otros LMS.
-2. **Apps Móviles**: Desarrollo de versiones nativas para iOS y Android.
-3. **Analíticas Predictivas**: Motor de IA para detección de riesgo de abandono.
+1. **Apps Móviles**: Desarrollo de versiones nativas para iOS y Android.
+2. **Aprendizaje en Vivo**: Integración con plataformas de videoconferencia (BigBlueButton/Jitsi).
+3. **Portafolio del Estudiante**: Perfiles profesionales públicos y Open Badges.

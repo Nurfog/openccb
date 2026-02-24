@@ -3534,7 +3534,7 @@ pub async fn delete_course(
     .map_err(|_| StatusCode::NOT_FOUND)?;
 
     // 2. Additional permission check for instructors
-    if !is_super_admin && !check_course_access(&pool, course.id, claims.sub, &claims.role).await? {
+    if !is_super_admin && !check_course_access(&pool, course.id, claims.sub, &claims.role).await.map_err(|(status, _)| status)? {
         return Err(StatusCode::FORBIDDEN);
     }
 

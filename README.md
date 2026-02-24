@@ -48,7 +48,9 @@ El proyecto ha sido optimizado para reducir la complejidad de la infraestructura
 - **Content Libraries**: Repositorio centralizado de bloques y lecciones reutilizables entre múltiples cursos.
 - **Advanced Grading (Rubrics)**: Sistema de evaluación basado en rúbricas detalladas con indicadores de desempeño por criterio.
 - **Learning Sequences**: Gestión de prerrequisitos entre lecciones con cumplimiento forzado en el LMS.
-- **LTI 1.3 Tool Provider**: Interoperabilidad completa para lanzar cursos de OpenCCB desde LMS externos (Canvas, Moodle) de manera segura y estandarizada.
+- **LTI 1.3 Tool Provider**: Interoperabilidad completa para lanzar cursos de OpenCCB desde LMS externos (Canvas, Moodle) de manera segura y estandarizada, con soporte para **Deep Linking** (Content Picking).
+- **Global Asset Library**: Repositorio centralizado de medios para toda la organización, permitiendo la reutilización de archivos en múltiples cursos con gestión de cuotas e integridad de datos.
+- **Predictive Analytics (Dropout Risk)**: Motor de IA que analiza el desempeño, actividad y compromiso social del estudiante para detectar riesgos de abandono de forma proactiva, con alertas accionables para instructores.
 
 ##  Requisitos del Sistema
 
@@ -160,7 +162,11 @@ Crea una nueva organización y el usuario administrador inicial.
 OpenCCB soporta integración con proveedores de identidad (IdP) externos como Google, Okta y Azure AD.
 - **Configuración**: Los administradores de la organización pueden configurar sus credenciales OIDC en el panel de configuración de Studio.
 - **Autoprovisionamiento**: Los nuevos usuarios se crean automáticamente en la plataforma tras una autenticación exitosa.
-- **Flujo**: `/auth/sso/login/{org_id}` -> IdP -> `/auth/sso/callback` -> Redirección a Studio/Experience con JWT.
+#### LTI 1.3 e Interoperabilidad
+OpenCCB actúa como un Tool Provider LTI 1.3 moderno, utilizando OIDC y JWKS para máxima seguridad.
+- **JWKS Endpoint**: `/lti/jwks` expone las claves públicas para verificación de firmas.
+- **Deep Linking**: Permite que instructores seleccionen cursos o lecciones específicas desde el LMS externo mediante una interfaz de Studio embebida.
+- **Autoprovisionamiento**: Los usuarios lanzados vía LTI se crean automáticamente con los roles correspondientes.
 
 ```bash
 # Registrar un nuevo administrador y empresa
@@ -241,10 +247,10 @@ Agrega contenido multimedia o evaluaciones a un módulo.
     }
     ```
 
-#### POST /assets
-Sube un archivo multimedia o documento al servidor y devuelve sus metadatos.
+#### POST /assets/upload
+Sube un archivo multimedia o documento a la biblioteca global de la organización.
 
-- **Lógica de Almacenamiento**: Genera un UUID único para el archivo, extrae el mimetype y lo almacena físicamente en el volumen de `uploads`, registrando la entrada en la base de datos de activos.
+- **Lógica de Reutilización**: Los activos se asocian a la organización y pueden vincularse opcionalmente a un curso específico. El motor de búsqueda permite localizar rápidamente recursos existentes para evitar duplicados.
 - **Cuerpo de la Petición ( MultipartForm ):**
   - `file`: Archivo binario (PDF, Video, Imagen, Docx).
 - **Respuesta ( UploadResponse ):**
@@ -422,6 +428,13 @@ Generador de reportes personalizados para exportación.
 
 - **Flexibilidad Administrativa**: Permite filtrar el desempeño por cohortes específicas y devuelve la estructura necesaria para generar archivos CSV profesionales.
 - **Respuesta**: Stream de datos o estructura de reporte.
+
+#### GET /courses/{id}/dropout-risks
+Obtiene el reporte de riesgo de abandono para todos los estudiantes del curso.
+
+- **Inteligencia Predictiva**: Calcula en tiempo real (o consulta caché) el nivel de riesgo (Critical, High, Medium, Low) basándose en promedios, frecuencia de actividad y participación en foros.
+- **Seguridad**: Solo accesible para usuarios con rol `instructor` o `admin`.
+- **Respuesta**: Array de objetos `DropoutRisk`.
 
 ---
 
@@ -627,6 +640,8 @@ Obtiene una lista de todas las organizaciones registradas.
 - **Student Progress Dashboard**: Panel de control con gráficos interactivos (Recharts) que muestran la actividad de aprendizaje y estiman el tiempo restante del curso.
 - **Course Teams UI**: Panel de gestión para añadir y configurar roles de instructores secundarios y asistentes.
 - **Course Preview Badges**: Indicadores visuales y lógica de acceso para lecciones accesibles sin suscripción.
+- **Global Asset Manager**: Interfaz avanzada para la administración masiva de archivos con previsualización inteligente y filtros por curso o tipo.
+- **Predictive Risk Dashboard**: Panel de control para instructores que visualiza el riesgo de deserción escolar mediante semáforos de color y motivos detallados del riesgo.
 
 ## 📄 Licencia
 Este proyecto es código abierto y está disponible bajo los términos de la licencia especificada en el repositorio.

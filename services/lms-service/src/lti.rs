@@ -205,51 +205,108 @@ pub async fn lti_launch(
 
     let user = user.unwrap();
 
-    // 6. Map resource link to course
-    let resource_link = sqlx::query_as::<_, LtiResourceLink>(
-        "SELECT * FROM lti_resource_links WHERE organization_id = $1 AND resource_link_id = $2"
-    )
-    .bind(registration.organization_id)
-    .bind(&lti_claims.resource_link.id)
-    .fetch_optional(&pool)
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    // 8. Redirect based on message type
+    let experience_url = std::env::var("NEXT_PUBLIC_EXPERIENCE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+    let studio_url = std::env::var("NEXT_PUBLIC_STUDIO_URL").unwrap_or_else(|_| "http://localhost:3001".to_string());
 
-    let redirect_target = if let Some(link) = resource_link {
+    let token = common::auth::create_jwt(user.id, user.organization_id, &user.role)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to create token: {}", e)))?;
+    let redirect_target = lti_claims.resource_link.as_ref().map(|rl| rl.id.clone()).unwrap_or_default();
+
+    if lti_claims.message_type == "LtiDeepLinkingRequest" {
+        let settings = lti_claims.deep_linking_settings.ok_or((StatusCode::BAD_REQUEST, "Missing deep_linking_settings".to_string()))?;
+        
+        let dl_request_id = Uuid::new_v4();
         sqlx::query(
-            "INSERT INTO enrollments (user_id, organization_id, course_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING"
+            "INSERT INTO lti_deep_linking_requests (id, registration_id, deployment_id, return_url, data) VALUES ($1, $2, $3, $4, $5)"
         )
-        .bind(user.id)
-        .bind(registration.organization_id)
-        .bind(link.course_id)
+        .bind(dl_request_id)
+        .bind(registration.id)
+        .bind(&lti_claims.deployment_id)
+        .bind(&settings.deep_link_return_url)
+        .bind(&settings.data)
         .execute(&pool)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-        format!("/courses/{}", link.course_id)
+        Ok(Redirect::to(&format!("{}/lti/deep-linking?token={}&dl_token={}", studio_url, token, dl_request_id)))
     } else {
-        "/dashboard".to_string()
+        Ok(Redirect::to(&format!("{}/lti/launch?token={}&target={}", experience_url, token, urlencoding::encode(&redirect_target))))
+    }
+}
+
+use serde_json::json;
+
+#[derive(Deserialize)]
+pub struct LtiDeepLinkingResponsePayload {
+    pub dl_token: String,
+    pub items: Vec<common::models::LtiDeepLinkingContentItem>,
+}
+
+pub async fn lti_deep_linking_response(
+    State(pool): State<PgPool>,
+    claims: Claims, 
+    Json(payload): Json<LtiDeepLinkingResponsePayload>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    // 1. Retrieve and delete DL request
+    let dl_id = Uuid::parse_str(&payload.dl_token).map_err(|_| (StatusCode::BAD_REQUEST, "Invalid DL token".to_string()))?;
+    
+    let dl_request = sqlx::query(
+        "DELETE FROM lti_deep_linking_requests WHERE id = $1 RETURNING registration_id, deployment_id, return_url, data"
+    )
+    .bind(dl_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::UNAUTHORIZED, "Invalid or expired DL request".to_string()))?;
+
+    // Manual mapping since we can't use query!/query_as! easily for RETURNING without a struct
+    let registration_id: Uuid = dl_request.get("registration_id");
+    let deployment_id: String = dl_request.get("deployment_id");
+    let _return_url: String = dl_request.get::<String, _>("return_url");
+    let dl_data: Option<String> = dl_request.get("data");
+
+    // 2. Find registration
+    let registration = sqlx::query_as::<_, LtiRegistration>(
+        "SELECT * FROM lti_registrations WHERE id = $1",
+    )
+    .bind(registration_id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let now = chrono::Utc::now().timestamp();
+    let response_claims = common::models::LtiDeepLinkingResponseClaims {
+        issuer: registration.client_id, 
+        subject: claims.sub.to_string(),
+        audience: registration.issuer, 
+        expires_at: now + 3600,
+        issued_at: now,
+        nonce: Uuid::new_v4().to_string(),
+        message_type: "LtiDeepLinkingResponse".to_string(),
+        version: "1.3.0".to_string(),
+        deployment_id,
+        content_items: payload.items,
+        data: dl_data,
     };
 
-    // 7. Generate JWT
-    let claims = Claims {
-        sub: user.id,
-        role: user.role,
-        org: user.organization_id,
-        exp: (chrono::Utc::now() + chrono::Duration::hours(24)).timestamp(),
-        course_id: None,
-        token_type: Some("access".to_string()),
-    };
-
-    let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "secret".to_string());
-    let token = jsonwebtoken::encode(
-        &jsonwebtoken::Header::default(),
-        &claims,
-        &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes()),
+    let private_key = crate::jwks::get_lti_private_key();
+    let response_jwt = jsonwebtoken::encode(
+        &jsonwebtoken::Header {
+            kid: Some("openccb-lti-key-1".to_string()),
+            alg: jsonwebtoken::Algorithm::RS256,
+            ..Default::default()
+        },
+        &response_claims,
+        &private_key,
     )
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // 8. Redirect to Experience app launch page
-    let experience_url = std::env::var("NEXT_PUBLIC_EXPERIENCE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
-    Ok(Redirect::to(&format!("{}/lti/launch?token={}&target={}", experience_url, token, urlencoding::encode(&redirect_target))))
+    Ok(Json(json!({
+        "jwt": response_jwt,
+        "return_url": dl_request.get::<String, _>("return_url")
+    })))
 }
+
+use axum::Json;
+use sqlx::Row;

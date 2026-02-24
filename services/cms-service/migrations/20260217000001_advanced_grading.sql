@@ -11,8 +11,8 @@ CREATE TABLE IF NOT EXISTS rubrics (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     total_points INTEGER NOT NULL DEFAULT 100,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_rubrics_org ON rubrics(organization_id);
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS rubric_criteria (
     description TEXT,
     max_points INTEGER NOT NULL,
     position INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_criteria_rubric ON rubric_criteria(rubric_id);
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS rubric_levels (
     description TEXT,
     points INTEGER NOT NULL,
     position INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_levels_criterion ON rubric_levels(criterion_id);
@@ -49,8 +49,8 @@ CREATE TABLE IF NOT EXISTS lesson_rubrics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     lesson_id UUID NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
     rubric_id UUID NOT NULL REFERENCES rubrics(id) ON DELETE CASCADE,
-    is_active BOOLEAN DEFAULT TRUE,
-    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    assigned_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     UNIQUE(lesson_id, rubric_id)
 );
 
@@ -68,9 +68,9 @@ CREATE TABLE IF NOT EXISTS rubric_assessments (
     total_score DECIMAL(5,2) NOT NULL,
     max_score INTEGER NOT NULL,
     feedback TEXT,
-    status VARCHAR(50) DEFAULT 'draft',  -- draft, submitted, published
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    status VARCHAR(50) NOT NULL DEFAULT 'draft',  -- draft, submitted, published
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_assessments_lesson ON rubric_assessments(lesson_id);
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS assessment_scores (
     level_id UUID REFERENCES rubric_levels(id),  -- selected performance level
     points DECIMAL(5,2) NOT NULL,
     feedback TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_scores_assessment ON assessment_scores(assessment_id);

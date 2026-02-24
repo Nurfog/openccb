@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        DELETE FROM rubric_criteria\n        WHERE id = $1\n        AND rubric_id IN (SELECT id FROM rubrics WHERE organization_id = $2)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d06f83e2b566ac9a49c63bdfcce03912f6ae1ef00a96fd345d89f22f218aaf1c"
+}
