@@ -13,9 +13,10 @@ interface ComboboxProps {
     value: string;
     onChange: (value: string) => void;
     placeholder?: string;
+    id?: string;
 }
 
-export default function Combobox({ options, value, onChange, placeholder = "Search..." }: ComboboxProps) {
+export default function Combobox({ options, value, onChange, placeholder = "Search...", id }: ComboboxProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
     const containerRef = useRef<HTMLDivElement>(null);
@@ -39,6 +40,7 @@ export default function Combobox({ options, value, onChange, placeholder = "Sear
     return (
         <div className="relative" ref={containerRef}>
             <button
+                id={id}
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 aria-haspopup="listbox"

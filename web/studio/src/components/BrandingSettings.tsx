@@ -58,16 +58,17 @@ export default function BrandingSettings() {
 
     return (
         <div className="space-y-8 max-w-4xl mx-auto">
-            <div className="border border-white/10 rounded-2xl p-6 bg-white/5 backdrop-blur-sm">
-                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                    <span>🎨</span> Brand Identity
-                </h3>
+            <fieldset className="border border-white/10 rounded-2xl p-6 bg-white/5 backdrop-blur-sm">
+                <legend className="px-2 text-xl font-bold flex items-center gap-2">
+                    <span aria-hidden="true">🎨</span> Brand Identity
+                </legend>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Platform Name */}
                     <div className="col-span-full">
-                        <label className="block text-sm font-medium text-gray-400 mb-2">Platform Name</label>
+                        <label htmlFor="platform-name" className="block text-sm font-medium text-gray-400 mb-2">Platform Name</label>
                         <input
+                            id="platform-name"
                             type="text"
                             value={formData.platform_name || ""}
                             onChange={(e) => setFormData({ ...formData, platform_name: e.target.value })}
@@ -94,6 +95,7 @@ export default function BrandingSettings() {
                             )}
                         </div>
                         <FileUpload
+                            id="logo-upload"
                             accept="image/png,image/jpeg,image/svg+xml"
                             currentUrl={org.logo_url}
                             customUploadFn={async (file) => {
@@ -127,6 +129,7 @@ export default function BrandingSettings() {
                             )}
                         </div>
                         <FileUpload
+                            id="favicon-upload"
                             accept="image/png,image/x-icon,image/svg+xml,image/jpeg"
                             currentUrl={org.favicon_url}
                             customUploadFn={async (file) => {
@@ -141,7 +144,7 @@ export default function BrandingSettings() {
                         <p className="text-xs text-gray-500">Recommended: ICO or PNG, 32x32px.</p>
                     </div>
                 </div>
-            </div>
+            </fieldset>
 
             <fieldset className="border border-white/10 rounded-2xl p-6 bg-white/5 backdrop-blur-sm">
                 <legend className="px-2 text-xl font-bold flex items-center gap-2">
@@ -211,6 +214,6 @@ export default function BrandingSettings() {
                     {saving ? "Saving Changes..." : "Save Branding Settings"}
                 </button>
             </div>
-        </div>
+        </div >
     );
 }

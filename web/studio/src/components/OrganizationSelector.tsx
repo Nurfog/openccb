@@ -32,20 +32,23 @@ export default function OrganizationSelector({
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={title}>
             <div className="space-y-6">
-                <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                <fieldset>
+                    <legend className="sr-only">Organization Selection</legend>
+                    <label htmlFor="organization-select" className="block text-sm font-medium text-gray-400 mb-2">
                         Target Organization
                     </label>
                     <Combobox
+                        id="organization-select"
                         options={organizations}
                         value={selectedId}
                         onChange={setSelectedId}
                         placeholder="Search or Select Organization..."
                     />
-                    <p className="mt-3 text-xs text-gray-500 italic">
-                        Leave empty to use the Default Organization.
-                    </p>
-                </div>
+                </fieldset>
+
+                <p className="mt-3 text-xs text-gray-500 italic">
+                    Leave empty to use the Default Organization.
+                </p>
 
                 <div className="flex gap-3 pt-2">
                     <button

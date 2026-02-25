@@ -8,9 +8,10 @@ interface FileUploadProps {
     currentUrl?: string;
     accept?: string;
     customUploadFn?: (file: File, onProgress: (pct: number) => void) => Promise<{ url: string }>;
+    id?: string;
 }
 
-export default function FileUpload({ onUploadComplete, currentUrl, accept = "video/*,audio/*", customUploadFn }: FileUploadProps) {
+export default function FileUpload({ onUploadComplete, currentUrl, accept = "video/*,audio/*", customUploadFn, id }: FileUploadProps) {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadingFileName, setUploadingFileName] = useState("");
@@ -69,25 +70,36 @@ export default function FileUpload({ onUploadComplete, currentUrl, accept = "vid
         <div className="space-y-4">
             {/* Upload Progress Modal Overlay */}
             {isUploading && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="upload-progress-title"
+                >
                     <div className="w-full max-w-md bg-gray-900 border border-white/10 p-8 rounded-3xl shadow-2xl space-y-6 text-center">
                         <div className="w-20 h-20 bg-blue-500/10 border border-blue-500/20 rounded-full flex items-center justify-center mx-auto animate-pulse">
-                            <span className="text-3xl">📤</span>
+                            <span className="text-3xl" aria-hidden="true">📤</span>
                         </div>
 
                         <div className="space-y-2">
-                            <h3 className="text-xl font-bold text-white tracking-tight">Uploading Asset</h3>
+                            <h3 id="upload-progress-title" className="text-xl font-bold text-white tracking-tight">Uploading Asset</h3>
                             <p className="text-xs text-gray-400 font-medium truncate px-4">{uploadingFileName}</p>
                         </div>
 
                         <div className="space-y-4">
-                            <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 shadow-inner">
+                            <div
+                                className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 shadow-inner"
+                                role="progressbar"
+                                aria-valuenow={uploadProgress}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                            >
                                 <div
                                     className="h-full bg-gradient-to-r from-blue-600 to-indigo-500 transition-all duration-300 ease-out shadow-[0_0_15px_rgba(59,130,246,0.5)]"
                                     style={{ width: `${uploadProgress}%` }}
                                 />
                             </div>
-                            <div className="flex justify-between items-center px-1">
+                            <div className="flex justify-between items-center px-1" aria-live="polite">
                                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Processing...</span>
                                 <span className="text-lg font-black italic text-white">{uploadProgress}%</span>
                             </div>
@@ -101,6 +113,10 @@ export default function FileUpload({ onUploadComplete, currentUrl, accept = "vid
             )}
 
             <div
+                id={id}
+                role="button"
+                tabIndex={0}
+                aria-label="Upload file - Drag and drop or click to browse"
                 className={`relative group cursor-pointer border-2 border-dashed rounded-xl p-8 transition-all flex flex-col items-center justify-center gap-4 ${dragActive ? "border-blue-500 bg-blue-500/10 scale-[1.02]" : "border-white/10 hover:border-white/20 bg-white/5"
                     } ${isUploading ? "opacity-30 pointer-events-none" : ""}`}
                 onDragEnter={handleDrag}
@@ -108,6 +124,11 @@ export default function FileUpload({ onUploadComplete, currentUrl, accept = "vid
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
                 onClick={() => !isUploading && fileInputRef.current?.click()}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        !isUploading && fileInputRef.current?.click();
+                    }
+                }}
             >
                 <input
                     ref={fileInputRef}
@@ -119,7 +140,7 @@ export default function FileUpload({ onUploadComplete, currentUrl, accept = "vid
                 />
 
                 <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
-                    <span className="text-2xl group-hover:scale-110 transition-transform">📁</span>
+                    <span className="text-2xl group-hover:scale-110 transition-transform" aria-hidden="true">📁</span>
                 </div>
                 <div className="text-center">
                     <p className="text-sm font-bold text-gray-300">Drag & drop or <span className="text-blue-400 underline decoration-blue-500/30">browse</span></p>

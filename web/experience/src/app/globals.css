@@ -13,7 +13,8 @@
 
   --accent-primary: var(--primary-color);
   --accent-secondary: var(--secondary-color);
-  --glass-bg: rgba(255, 255, 255, 0.05); /* Increased slightly for contrast */
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  /* Increased slightly for contrast */
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-blur: blur(16px);
 }
@@ -48,6 +49,7 @@ body {
 
 .gradient-text {
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
