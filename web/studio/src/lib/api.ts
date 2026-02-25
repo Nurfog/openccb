@@ -480,6 +480,16 @@ export interface BulkEnrollResponse {
     already_enrolled_emails: string[];
 }
 
+export interface SubmissionWithReviews {
+    id: string;
+    user_id: string;
+    full_name: string;
+    email: string;
+    submitted_at: string;
+    review_count: number;
+    average_score: number | null;
+}
+
 export interface CourseAnnouncement {
     id: string;
     organization_id: string;
@@ -845,6 +855,10 @@ export const lmsApi = {
         apiFetch(`/courses/${courseId}/lessons/${lessonId}/peer-review`, { method: 'POST', body: JSON.stringify({ submission_id: submissionId, score, feedback }) }, true),
     getMySubmissionFeedback: (courseId: string, lessonId: string): Promise<PeerReview[]> =>
         apiFetch(`/courses/${courseId}/lessons/${lessonId}/feedback`, {}, true),
+    listLessonSubmissions: (courseId: string, lessonId: string): Promise<SubmissionWithReviews[]> =>
+        apiFetch(`/courses/${courseId}/lessons/${lessonId}/submissions`, {}, true),
+    getSubmissionReviews: (submissionId: string): Promise<PeerReview[]> =>
+        apiFetch(`/peer-reviews/submissions/${submissionId}/reviews`, {}, true),
 
     // Announcements
     listAnnouncements: (courseId: string): Promise<AnnouncementWithAuthor[]> =>

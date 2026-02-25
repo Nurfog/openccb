@@ -3,11 +3,11 @@
 import React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Layout, CheckCircle2, Calendar, BarChart2, Settings, Folder, GraduationCap, Megaphone } from "lucide-react";
+import { Layout, CheckCircle2, Calendar, BarChart2, Settings, Folder, GraduationCap, Megaphone, Users, Award, Video } from "lucide-react";
 
 interface CourseEditorLayoutProps {
     children: React.ReactNode;
-    activeTab: "outline" | "grading" | "rubrics" | "calendar" | "analytics" | "settings" | "files" | "grades" | "announcements" | "team";
+    activeTab: "outline" | "grading" | "rubrics" | "calendar" | "analytics" | "settings" | "files" | "grades" | "announcements" | "team" | "peer-reviews" | "students" | "sessions";
 }
 
 export default function CourseEditorLayout({ children, activeTab }: CourseEditorLayoutProps) {
@@ -18,7 +18,10 @@ export default function CourseEditorLayout({ children, activeTab }: CourseEditor
         { key: "grading", label: "Grading Policy", icon: CheckCircle2, href: `/courses/${id}/grading` },
         { key: "rubrics", label: "Rubrics", icon: Layout, href: `/courses/${id}/rubrics` },
         { key: "team", label: "Team", icon: GraduationCap, href: `/courses/${id}/team` },
+        { key: "students", label: "Students & Groups", icon: Users, href: `/courses/${id}/students` },
         { key: "grades", label: "Gradebook", icon: GraduationCap, href: `/courses/${id}/grades` },
+        { key: "peer-reviews", label: "Peer Reviews", icon: Award, href: `/courses/${id}/peer-reviews` },
+        { key: "sessions", label: "Live Sessions", icon: Video, href: `/courses/${id}/sessions` },
         { key: "announcements", label: "Announcements", icon: Megaphone, href: `/courses/${id}/announcements` },
         { key: "calendar", label: "Calendar", icon: Calendar, href: `/courses/${id}/calendar` },
         { key: "analytics", label: "Analytics", icon: BarChart2, href: `/courses/${id}/analytics` },

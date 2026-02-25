@@ -4,7 +4,8 @@ use axum::{
     http::StatusCode,
 };
 use common::models::{
-    CourseSubmission, PeerReview, SubmitAssignmentPayload, SubmitPeerReviewPayload,
+    CourseSubmission, PeerReview, SubmissionWithReviews, SubmitAssignmentPayload,
+    SubmitPeerReviewPayload,
 };
 use common::{auth::Claims, middleware::Org};
 use sqlx::PgPool;
@@ -194,6 +195,54 @@ pub async fn get_my_submission_feedback(
         "#,
         claims.sub,
         lesson_id
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(reviews))
+}
+
+pub async fn list_lesson_submissions(
+    Org(org_ctx): Org,
+    _claims: Claims,
+    State(pool): State<PgPool>,
+    Path((_course_id, lesson_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<Vec<SubmissionWithReviews>>, (StatusCode, String)> {
+    let submissions = sqlx::query_as!(
+        SubmissionWithReviews,
+        r#"
+        SELECT 
+            s.id, s.user_id, u.full_name, u.email, s.submitted_at,
+            COUNT(pr.id) as "review_count!",
+            AVG(pr.score)::float8 as average_score
+        FROM course_submissions s
+        JOIN users u ON s.user_id = u.id
+        LEFT JOIN peer_reviews pr ON s.id = pr.submission_id
+        WHERE s.lesson_id = $1 AND s.organization_id = $2
+        GROUP BY s.id, u.full_name, u.email
+        ORDER BY s.submitted_at DESC
+        "#,
+        lesson_id,
+        org_ctx.id
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(submissions))
+}
+
+pub async fn get_submission_reviews(
+    Org(_org_ctx): Org,
+    _claims: Claims,
+    State(pool): State<PgPool>,
+    Path(submission_id): Path<Uuid>,
+) -> Result<Json<Vec<PeerReview>>, (StatusCode, String)> {
+    let reviews = sqlx::query_as!(
+        PeerReview,
+        "SELECT * FROM peer_reviews WHERE submission_id = $1",
+        submission_id
     )
     .fetch_all(&pool)
     .await

@@ -210,6 +210,14 @@ async fn main() {
             "/courses/{id}/lessons/{lesson_id}/feedback",
             get(handlers_peer_review::get_my_submission_feedback),
         )
+        .route(
+            "/courses/{id}/lessons/{lesson_id}/submissions",
+            get(handlers_peer_review::list_lesson_submissions),
+        )
+        .route(
+            "/peer-reviews/submissions/{id}/reviews",
+            get(handlers_peer_review::get_submission_reviews),
+        )
         .route_layer(middleware::from_fn(
             common::middleware::org_extractor_middleware,
         ));

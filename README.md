@@ -51,6 +51,8 @@ El proyecto ha sido optimizado para reducir la complejidad de la infraestructura
 - **LTI 1.3 Tool Provider**: Interoperabilidad completa para lanzar cursos de OpenCCB desde LMS externos (Canvas, Moodle) de manera segura y estandarizada, con soporte para **Deep Linking** (Content Picking).
 - **Global Asset Library**: Repositorio centralizado de medios para toda la organización, permitiendo la reutilización de archivos en múltiples cursos con gestión de cuotas e integridad de datos.
 - **Predictive Analytics (Dropout Risk)**: Motor de IA que analiza el desempeño, actividad y compromiso social del estudiante para detectar riesgos de abandono de forma proactiva, con alertas accionables para instructores.
+- **Live Learning (Videoconference)**: Integración nativa con Jitsi para clases virtuales síncronas, con programación desde Studio y acceso integrado en Experience.
+- **Student Portfolio & Badges**: Sistema de reconocimiento con Open Badges y perfiles públicos profesionales para mostrar logros y progreso verificado.
 
 ##  Requisitos del Sistema
 

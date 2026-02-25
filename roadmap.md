@@ -210,16 +210,20 @@
 - [x] **Gestión de Activos**: ✅
   - [x] Biblioteca de medios global (Global Asset Manager).
   - [x] Reutilización de recursos multi-curso.
-- [ ] **Aprendizaje en Vivo**:
-  - [ ] Integración con BigBlueButton.
-- [ ] **Portafolio del Estudiante**:
-  - [ ] Perfil profesional público con Open Badges.
+- [x] **Aprendizaje en Vivo**: ✅
+  - [x] Integración con Jitsi para aulas virtuales en tiempo real.
+  - [x] Gestión de reuniones y programación desde Studio.
+  - [x] Acceso directo para estudiantes desde Experience.
+- [x] **Portafolio del Estudiante**: ✅
+  - [x] Sistema de medallas y logros (Open Badges).
+  - [x] Perfiles profesionales públicos con control de privacidad.
+  - [x] Visualización de progreso y nivel de XP.
 
 ---
 
-**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados, **sistema de foros de discusión funcional**, **gestión de anuncios segmentados**, **monetización integrada con Mercado Pago**, **Inscripción Masiva de Usuarios**, **Exportación Avanzada de Calificaciones**, **Librerías de Contenido reutilizables**, **Sistema de Rúbricas Avanzado**, **Secuencias de Aprendizaje**, **Gestión de Equipos Docentes**, **Vista Previa de Cursos**, **Dashboard de Progreso Estudiantil**, **Sistema de Marcadores**, **Biblioteca Global de Activos**, **Interoperabilidad LTI 1.3 con soporte para Deep Linking** y **Analíticas Predictivas de Riesgo de Abandono**.
+**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados, **sistema de foros de discusión funcional**, **gestión de anuncios segmentados**, **monetización integrada con Mercado Pago**, **Inscripción Masiva de Usuarios**, **Exportación Avanzada de Calificaciones**, **Librerías de Contenido reutilizables**, **Sistema de Rúbricas Avanzado**, **Secuencias de Aprendizaje**, **Gestión de Equipos Docentes**, **Vista Previa de Cursos**, **Dashboard de Progreso Estudiantil**, **Sistema de Marcadores**, **Biblioteca Global de Activos**, **Interoperabilidad LTI 1.3 con soporte para Deep Linking**, **Analíticas Predictivas de Riesgo de Abandono**, **Integración de Videoconferencia (Jitsi)** y **Portafolios con Perfiles Públicos**.
 
 **Próximas Prioridades**:
 1. **Apps Móviles**: Desarrollo de versiones nativas para iOS y Android.
-2. **Aprendizaje en Vivo**: Integración con plataformas de videoconferencia (BigBlueButton/Jitsi).
-3. **Portafolio del Estudiante**: Perfiles profesionales públicos y Open Badges.
+2. **Integraciones Empresariales**: Conectividad con HRIS y ERPs externos.
+3. **IA Generativa Avanzada**: Generación automática de contenido de video a partir de guiones.

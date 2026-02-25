@@ -707,6 +707,17 @@ pub struct SubmitPeerReviewPayload {
     pub feedback: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
+pub struct SubmissionWithReviews {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub full_name: String,
+    pub email: String,
+    pub submitted_at: DateTime<Utc>,
+    pub review_count: i64,
+    pub average_score: Option<f64>,
+}
+
 // Content Libraries
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, Clone)]
 pub struct LibraryBlock {
