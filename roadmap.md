@@ -115,7 +115,6 @@
 - [x] **Ecosistema de Integración**:
   - [x] **SSO (Single Sign-On)**: Soporte completo OIDC (Google, Okta, Azure AD) (Completado)
   - [x] **LTI 1.3 Tool Provider**: Integración segura con LMS externos como Canvas o Moodle (Completado)
-- [ ] **Apps Móviles**: (Postpuesto por ahora)
 - [ ] **Accesibilidad**: Auditoría y correcciones WCAG 2.1
 
 ## Fase 9: Portabilidad de Cursos ✅
@@ -224,6 +223,6 @@
 **Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados, **sistema de foros de discusión funcional**, **gestión de anuncios segmentados**, **monetización integrada con Mercado Pago**, **Inscripción Masiva de Usuarios**, **Exportación Avanzada de Calificaciones**, **Librerías de Contenido reutilizables**, **Sistema de Rúbricas Avanzado**, **Secuencias de Aprendizaje**, **Gestión de Equipos Docentes**, **Vista Previa de Cursos**, **Dashboard de Progreso Estudiantil**, **Sistema de Marcadores**, **Biblioteca Global de Activos**, **Interoperabilidad LTI 1.3 con soporte para Deep Linking**, **Analíticas Predictivas de Riesgo de Abandono**, **Integración de Videoconferencia (Jitsi)** y **Portafolios con Perfiles Públicos**.
 
 **Próximas Prioridades**:
-1. **Apps Móviles**: Desarrollo de versiones nativas para iOS y Android.
+1. **Accesibilidad Universal**: Auditoría y ajustes de contraste para cumplimiento WCAG 2.1.
 2. **Integraciones Empresariales**: Conectividad con HRIS y ERPs externos.
 3. **IA Generativa Avanzada**: Generación automática de contenido de video a partir de guiones.

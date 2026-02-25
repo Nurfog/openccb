@@ -22,12 +22,12 @@ export default function AppHeader() {
 
     return (
         <header className="h-16 glass sticky top-0 z-[100] px-4 md:px-6 flex items-center justify-between backdrop-blur-xl bg-black/40 border-b border-white/5">
-            <Link href="/" className="flex items-center gap-2 md:gap-3 group">
+            <Link href="/" className="flex items-center gap-2 md:gap-3 group" aria-label={`${platformName} - Dashboard`}>
                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-blue-600 flex items-center justify-center font-black text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-all overflow-hidden relative">
                     {branding?.logo_url ? (
                         <Image src={getImageUrl(branding.logo_url)} alt={branding.name} fill className="object-contain" sizes="40px" />
                     ) : (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700">
+                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700" aria-hidden="true">
                             {platformName.charAt(0).toUpperCase()}
                         </div>
                     )}
@@ -62,10 +62,12 @@ export default function AppHeader() {
                     <NotificationCenter />
 
                     <div className="hidden sm:flex items-center gap-2 border-l border-white/10 pl-4">
-                        <Globe size={14} className="text-gray-500" />
+                        <Globe size={14} className="text-gray-500" aria-hidden="true" />
                         <select
+                            id="language-selector"
                             value={language}
                             onChange={(e) => setLanguage(e.target.value)}
+                            aria-label={t('nav.selectLanguage') || 'Select Language'}
                             className="bg-transparent text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors focus:outline-none cursor-pointer"
                         >
                             <option value="en" className="bg-[#0f1115]">EN</option>
@@ -84,6 +86,7 @@ export default function AppHeader() {
                             onClick={logout}
                             className="p-2 hover:bg-red-500/10 rounded-full text-gray-400 hover:text-red-400 transition-colors"
                             title={t('nav.signOut')}
+                            aria-label={t('nav.signOut')}
                         >
                             <LogOut size={16} />
                         </button>
@@ -93,6 +96,8 @@ export default function AppHeader() {
                     <button
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
                         className="md:hidden p-2 hover:bg-white/5 rounded-lg text-gray-400 transition-colors"
+                        aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+                        aria-expanded={isMenuOpen}
                     >
                         {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
                     </button>
@@ -105,7 +110,11 @@ export default function AppHeader() {
                     <div className="absolute right-0 top-0 bottom-0 w-64 glass border-l border-white/10 p-6 flex flex-col animate-in slide-in-from-right duration-300">
                         <div className="flex justify-between items-center mb-8">
                             <span className="font-black text-xs uppercase tracking-[0.2em] text-gray-500">Menú</span>
-                            <button onClick={() => setIsMenuOpen(false)} className="p-2 hover:bg-white/5 rounded-lg">
+                            <button
+                                onClick={() => setIsMenuOpen(false)}
+                                className="p-2 hover:bg-white/5 rounded-lg"
+                                aria-label="Close menu"
+                            >
                                 <X size={20} />
                             </button>
                         </div>
@@ -144,10 +153,12 @@ export default function AppHeader() {
 
                             <div className="pt-6 mt-6 border-t border-white/5 space-y-4">
                                 <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5">
-                                    <Globe size={16} className="text-gray-500" />
+                                    <Globe size={16} className="text-gray-500" aria-hidden="true" />
                                     <select
+                                        id="mobile-language-selector"
                                         value={language}
                                         onChange={(e) => setLanguage(e.target.value)}
+                                        aria-label={t('nav.selectLanguage') || 'Select Language'}
                                         className="bg-transparent text-xs font-bold uppercase tracking-widest text-gray-300 focus:outline-none flex-1"
                                     >
                                         <option value="en" className="bg-[#0f1115]">English</option>

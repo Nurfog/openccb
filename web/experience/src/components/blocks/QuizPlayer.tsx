@@ -76,9 +76,13 @@ export default function QuizPlayer({ id, title, quizData, allowRetry = true, max
 
             <div className="space-y-8">
                 {questions.map((q) => (
-                    <div key={q.id} className="space-y-4 p-8 glass border-white/5 rounded-3xl">
-                        <h4 className="font-bold text-xl text-gray-100 leading-tight">{q.question}</h4>
-                        <div className="grid gap-3">
+                    <fieldset key={q.id} className="space-y-4 p-8 glass border-white/5 rounded-3xl" aria-labelledby={`q-${q.id}-text`}>
+                        <legend id={`q-${q.id}-text`} className="font-bold text-xl text-gray-100 leading-tight mb-4">{q.question}</legend>
+                        <div
+                            className="grid gap-3"
+                            role={q.type === 'multiple-select' ? 'group' : 'radiogroup'}
+                            aria-label="Opciones de respuesta"
+                        >
                             {q.options.map((opt, oIdx) => {
                                 const isSelected = userAnswers[q.id]?.includes(oIdx);
                                 const isCorrect = q.correct?.includes(oIdx);
@@ -99,20 +103,27 @@ export default function QuizPlayer({ id, title, quizData, allowRetry = true, max
                                 return (
                                     <button
                                         key={oIdx}
+                                        role={q.type === 'multiple-select' ? 'checkbox' : 'radio'}
+                                        aria-checked={isSelected}
+                                        aria-disabled={submitted}
                                         onClick={() => handleAnswer(q.id, oIdx, q.type === 'multiple-select')}
-                                        className={`p-5 rounded-xl border transition-all text-left text-sm font-bold ${style}`}
+                                        className={`p-5 rounded-xl border transition-all text-left text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/50 ${style}`}
                                     >
                                         <div className="flex items-center justify-between">
                                             <span>{opt}</span>
-                                            {submitted && isActuallyCorrect && <span>✅</span>}
-                                            {submitted && isWrongSelection && <span>❌</span>}
-                                            {submitted && missedCorrect && <span className="text-[10px] uppercase font-black tracking-tighter">Respuesta Correcta</span>}
+                                            {submitted && (
+                                                <div className="flex items-center gap-2">
+                                                    {isActuallyCorrect && <span role="img" aria-label="Correcto">✅</span>}
+                                                    {isWrongSelection && <span role="img" aria-label="Incorrecto">❌</span>}
+                                                    {missedCorrect && <span className="text-[10px] uppercase font-black tracking-tighter text-orange-400">Respuesta Correcta</span>}
+                                                </div>
+                                            )}
                                         </div>
                                     </button>
                                 );
                             })}
                         </div>
-                    </div>
+                    </fieldset>
                 ))}
 
                 {allowRetry && (
