@@ -1023,13 +1023,11 @@ pub async fn get_lesson_content(
     // We check if there are any prerequisites that the user hasn't completed yet.
     #[derive(sqlx::FromRow)]
     struct UnmetDep { 
-        prerequisite_lesson_id: Uuid, 
         prereq_title: String, 
-        min_score_percentage: Option<f32> 
     }
     let unmet_dependencies: Vec<UnmetDep> = sqlx::query_as(
         r#"
-        SELECT ld.prerequisite_lesson_id, p.title as prereq_title, ld.min_score_percentage::float4 as min_score_percentage
+        SELECT p.title as prereq_title
         FROM lesson_dependencies ld
         JOIN lessons p ON ld.prerequisite_lesson_id = p.id
         LEFT JOIN user_grades ug ON ld.prerequisite_lesson_id = ug.lesson_id AND ug.user_id = $2

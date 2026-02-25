@@ -19,7 +19,6 @@ pub struct LtiLoginParams {
     pub target_link_uri: String,
     pub lti_message_hint: Option<String>,
     pub client_id: Option<String>,
-    pub lti_deployment_id: Option<String>,
 }
 
 pub async fn lti_login_initiation(
@@ -69,7 +68,6 @@ pub async fn lti_login_initiation(
 #[derive(Deserialize)]
 pub struct LtiLaunchParams {
     pub id_token: String,
-    pub state: String,
 }
 
 pub async fn validate_lti_jwt(
