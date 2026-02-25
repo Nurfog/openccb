@@ -38,24 +38,31 @@ export default function Combobox({ options, value, onChange, placeholder = "Sear
 
     return (
         <div className="relative" ref={containerRef}>
-            <div
+            <button
+                type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center justify-between w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 cursor-pointer hover:border-white/20 transition-all focus-within:ring-2 focus-within:ring-blue-500/50"
+                aria-haspopup="listbox"
+                aria-expanded={isOpen}
+                className="flex items-center justify-between w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 cursor-pointer hover:border-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
                 <span className={selectedOption ? "text-white" : "text-gray-500"}>
                     {selectedOption ? selectedOption.name : placeholder}
                 </span>
-                <ChevronDown size={18} className={`text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-            </div>
+                <ChevronDown size={18} className={`text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+            </button>
 
             {isOpen && (
                 <div className="absolute top-full left-0 right-0 mt-2 z-[110] bg-[#1a1d23] border border-white/10 rounded-lg shadow-2xl overflow-hidden glass-card animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-2 border-b border-white/5 bg-white/5">
                         <div className="relative">
-                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true" />
                             <input
                                 autoFocus
                                 type="text"
+                                role="combobox"
+                                aria-autocomplete="list"
+                                aria-expanded="true"
+                                aria-controls="combobox-options"
                                 className="w-full bg-black/20 border-none rounded-md pl-9 pr-4 py-2 text-sm focus:ring-0 placeholder:text-gray-600"
                                 placeholder="Search..."
                                 value={search}
@@ -63,23 +70,37 @@ export default function Combobox({ options, value, onChange, placeholder = "Sear
                             />
                         </div>
                     </div>
-                    <div className="max-h-60 overflow-y-auto p-1 custom-scrollbar">
+                    <div
+                        id="combobox-options"
+                        role="listbox"
+                        className="max-h-60 overflow-y-auto p-1 custom-scrollbar"
+                    >
                         {filteredOptions.length === 0 ? (
-                            <div className="px-4 py-3 text-sm text-gray-500 text-center">No results found</div>
+                            <div className="px-4 py-3 text-sm text-gray-500 text-center" role="option" aria-disabled="true">No results found</div>
                         ) : (
                             filteredOptions.map(option => (
                                 <div
                                     key={option.id}
+                                    role="option"
+                                    aria-selected={value === option.id}
+                                    tabIndex={0}
                                     onClick={() => {
                                         onChange(option.id);
                                         setIsOpen(false);
                                         setSearch("");
                                     }}
-                                    className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer transition-colors ${value === option.id ? "bg-blue-600 text-white" : "hover:bg-white/5 text-gray-300"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            onChange(option.id);
+                                            setIsOpen(false);
+                                            setSearch("");
+                                        }
+                                    }}
+                                    className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer transition-colors outline-none focus:bg-blue-600 focus:text-white ${value === option.id ? "bg-blue-600 text-white" : "hover:bg-white/5 text-gray-300"
                                         }`}
                                 >
                                     <span className="text-sm font-medium">{option.name}</span>
-                                    {value === option.id && <Check size={14} />}
+                                    {value === option.id && <Check size={14} aria-hidden="true" />}
                                 </div>
                             ))
                         )}

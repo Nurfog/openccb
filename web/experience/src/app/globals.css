@@ -13,8 +13,8 @@
 
   --accent-primary: var(--primary-color);
   --accent-secondary: var(--secondary-color);
-  --glass-bg: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.05); /* Increased slightly for contrast */
+  --glass-border: rgba(255, 255, 255, 0.1);
   --glass-blur: blur(16px);
 }
 
@@ -30,6 +30,12 @@ body {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
+}
+
+/* Ensure focus states are visible for keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 4px;
 }
 
 .glass-card {

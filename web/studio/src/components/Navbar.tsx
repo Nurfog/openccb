@@ -12,7 +12,7 @@ export function Navbar() {
     return (
         <nav className="fixed top-0 w-full z-50 glass border-b border-white/10 bg-black/20">
             <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-                <Link href="/" className="flex items-center gap-2">
+                <Link href="/" className="flex items-center gap-2" aria-label="OpenCCB Studio - Inicio">
                     <h1 className="text-xl font-bold tracking-tight">
                         Open<span className="gradient-text">CCB</span> Studio
                     </h1>
@@ -32,7 +32,7 @@ export function Navbar() {
                             href="/library/assets"
                             className="text-sm font-medium text-gray-400 hover:text-blue-400 transition-colors flex items-center gap-2"
                         >
-                            <Library className="w-4 h-4" />
+                            <Library className="w-4 h-4" aria-hidden="true" />
                             {t('nav.library') || 'Library'}
                         </Link>
 
@@ -43,7 +43,7 @@ export function Navbar() {
                                         href="/admin"
                                         className="text-sm font-black text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-2 bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-500/20 shadow-glow-sm"
                                     >
-                                        <ShieldCheck className="w-4 h-4" />
+                                        <ShieldCheck className="w-4 h-4" aria-hidden="true" />
                                         {t('nav.globalControl')}
                                     </Link>
                                 )}
@@ -77,10 +77,12 @@ export function Navbar() {
 
                     {/* Language Switcher */}
                     <div className="flex items-center gap-2">
-                        <Globe className="w-4 h-4 text-gray-500" />
+                        <Globe className="w-4 h-4 text-gray-500" aria-hidden="true" />
                         <select
+                            id="studio-language-selector"
                             value={language}
                             onChange={(e) => setLanguage(e.target.value)}
+                            aria-label={t('nav.selectLanguage') || 'Select Language'}
                             className="bg-transparent text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-colors focus:outline-none cursor-pointer"
                         >
                             <option value="en" className="bg-gray-900">EN</option>
@@ -100,9 +102,10 @@ export function Navbar() {
                             <button
                                 onClick={logout}
                                 className="p-2 hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-all text-gray-500"
-                                title="Sign Out"
+                                title={t('nav.signOut') || "Sign Out"}
+                                aria-label={t('nav.signOut') || "Sign Out"}
                             >
-                                <LogOut className="w-4 h-4" />
+                                <LogOut className="w-4 h-4" aria-hidden="true" />
                             </button>
                         </div>
                     ) : (

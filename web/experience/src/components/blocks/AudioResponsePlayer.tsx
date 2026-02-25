@@ -183,7 +183,7 @@ export default function AudioResponsePlayer({
                         <Mic className="w-6 h-6 text-purple-400" />
                     </div>
                     <div className="flex-1">
-                        <p className="text-xl font-bold text-gray-100">{prompt}</p>
+                        <h3 id={`audio-prompt-${id}`} className="text-xl font-bold text-gray-100">{prompt}</h3>
                         {keywords.length > 0 && !submitted && (
                             <div className="flex flex-wrap gap-2 mt-3">
                                 <span className="text-xs text-gray-500 uppercase tracking-wider">Expected topics:</span>
@@ -205,16 +205,23 @@ export default function AudioResponsePlayer({
                                 <button
                                     onClick={startRecording}
                                     className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-2xl font-bold text-white shadow-lg shadow-purple-500/30 transition-all"
+                                    aria-label="Start Recording"
+                                    aria-describedby={`audio-prompt-${id}`}
                                 >
-                                    <Mic className="w-5 h-5" />
+                                    <Mic className="w-5 h-5" aria-hidden="true" />
                                     Start Recording
                                 </button>
                             )}
 
                             {isRecording && (
                                 <div className="flex flex-col items-center gap-4">
-                                    <div className="flex items-center gap-3 px-6 py-3 bg-red-500/20 border-2 border-red-500 rounded-2xl animate-pulse">
-                                        <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                                    <div
+                                        className="flex items-center gap-3 px-6 py-3 bg-red-500/20 border-2 border-red-500 rounded-2xl animate-pulse"
+                                        role="timer"
+                                        aria-live="polite"
+                                        aria-label={`Recording time: ${formatTime(recordingTime)}`}
+                                    >
+                                        <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" aria-hidden="true" />
                                         <span className="font-mono text-xl font-bold text-red-400">{formatTime(recordingTime)}</span>
                                         {timeLimit && (
                                             <span className="text-sm text-gray-400">/ {formatTime(timeLimit)}</span>
@@ -222,9 +229,10 @@ export default function AudioResponsePlayer({
                                     </div>
                                     <button
                                         onClick={stopRecording}
-                                        className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 rounded-xl font-bold text-white transition-all"
+                                        className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 rounded-xl font-bold text-white transition-all outline-none focus:ring-2 focus:ring-red-500"
+                                        aria-label="Stop Recording"
                                     >
-                                        <Square className="w-4 h-4" />
+                                        <Square className="w-4 h-4" aria-hidden="true" />
                                         Stop Recording
                                     </button>
                                 </div>
@@ -234,16 +242,18 @@ export default function AudioResponsePlayer({
                                 <div className="flex gap-3">
                                     <button
                                         onClick={playRecording}
-                                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-white transition-all"
+                                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-white transition-all outline-none focus:ring-2 focus:ring-blue-500"
+                                        aria-label="Play back your recording"
                                     >
-                                        <Play className="w-4 h-4" />
+                                        <Play className="w-4 h-4" aria-hidden="true" />
                                         Play Recording
                                     </button>
                                     <button
                                         onClick={reset}
-                                        className="flex items-center gap-2 px-6 py-3 glass hover:bg-white/10 rounded-xl font-bold text-gray-300 transition-all"
+                                        className="flex items-center gap-2 px-6 py-3 glass hover:bg-white/10 rounded-xl font-bold text-gray-300 transition-all outline-none focus:ring-2 focus:ring-white/20"
+                                        aria-label="Delete and re-record"
                                     >
-                                        <RotateCcw className="w-4 h-4" />
+                                        <RotateCcw className="w-4 h-4" aria-hidden="true" />
                                         Re-record
                                     </button>
                                 </div>
@@ -258,11 +268,11 @@ export default function AudioResponsePlayer({
                             </div>
                         )}
 
-                        {/* Submit Button */}
                         {audioBlob && transcript && (
                             <button
                                 onClick={evaluateResponse}
-                                className="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-xl font-bold text-white shadow-lg shadow-green-500/30 transition-all"
+                                className="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-xl font-bold text-white shadow-lg shadow-green-500/30 transition-all outline-none focus:ring-2 focus:ring-green-500"
+                                aria-label="Submit recording for AI evaluation"
                             >
                                 Submit Response
                             </button>
@@ -273,12 +283,15 @@ export default function AudioResponsePlayer({
                 {/* Evaluation Results */}
                 {submitted && evaluation && (
                     <div className="space-y-4">
-                        <div className={`p-6 rounded-2xl border-2 ${evaluation.score >= 70
-                            ? 'bg-green-500/10 border-green-500'
-                            : evaluation.score >= 40
-                                ? 'bg-yellow-500/10 border-yellow-500'
-                                : 'bg-red-500/10 border-red-500'
-                            }`}>
+                        <div
+                            className={`p-6 rounded-2xl border-2 ${evaluation.score >= 70
+                                ? 'bg-green-500/10 border-green-500'
+                                : evaluation.score >= 40
+                                    ? 'bg-yellow-500/10 border-yellow-500'
+                                    : 'bg-red-500/10 border-red-500'
+                                }`}
+                            aria-live="assertive"
+                        >
                             <div className="flex items-center justify-between mb-4">
                                 <span className="text-sm font-bold uppercase tracking-wider text-gray-400">Your Score</span>
                                 <span className="text-3xl font-black">{evaluation.score}%</span>

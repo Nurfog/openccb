@@ -13,9 +13,15 @@
   /* blue-500 */
   --accent-secondary: #6366f1;
   /* indigo-500 */
-  --glass-bg: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
   --glass-blur: blur(16px);
+}
+
+/* Ensure focus states are visible for keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 4px;
 }
 
 body {

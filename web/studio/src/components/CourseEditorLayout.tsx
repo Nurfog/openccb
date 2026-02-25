@@ -32,27 +32,29 @@ export default function CourseEditorLayout({ children, activeTab }: CourseEditor
     return (
         <div className="space-y-8">
             {/* Tabs Navigation */}
-            <div className="glass p-1">
-                <div className="flex border-b border-white/10 overflow-x-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            <nav className="glass p-1" aria-label="Course editor tabs">
+                <ul className="flex border-b border-white/10 overflow-x-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                     {tabs.map((tab) => {
                         const Icon = tab.icon;
                         const isActive = tab.key === activeTab;
                         return (
-                            <Link
-                                key={tab.key}
-                                href={tab.href}
-                                className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${isActive
-                                    ? "border-b-2 border-blue-500 bg-white/5 text-white"
-                                    : "text-gray-500 hover:text-white"
-                                    }`}
-                            >
-                                <Icon className="w-4 h-4 flex-shrink-0" />
-                                {tab.label}
-                            </Link>
+                            <li key={tab.key} className="flex-shrink-0">
+                                <Link
+                                    href={tab.href}
+                                    aria-current={isActive ? "page" : undefined}
+                                    className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${isActive
+                                        ? "border-b-2 border-blue-500 bg-white/5 text-white"
+                                        : "text-gray-500 hover:text-white"
+                                        }`}
+                                >
+                                    <Icon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                                    {tab.label}
+                                </Link>
+                            </li>
                         );
                     })}
-                </div>
-            </div>
+                </ul>
+            </nav>
 
             {/* Content */}
             <div className="space-y-6">
