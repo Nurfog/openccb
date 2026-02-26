@@ -45,13 +45,13 @@ export default function FillInTheBlanksPlayer({ id, title, content, allowRetry =
     return (
         <div className="space-y-8" id={id}>
             <div className="space-y-2">
-                <h3 className="text-xl font-bold border-l-4 border-blue-500 pl-4 py-1 tracking-tight text-white uppercase tracking-widest text-[10px]">
+                <h3 className="text-xl font-bold border-l-4 border-blue-600 dark:border-blue-500 pl-4 py-1 tracking-tight text-gray-900 dark:text-white uppercase tracking-widest text-[10px]">
                     {title || "Rellena los Espacios en Blanco"}
                 </h3>
             </div>
 
-            <div className="p-8 glass border-white/5 rounded-3xl space-y-8">
-                <div className="text-lg leading-loose text-gray-100">
+            <div className="p-8 glass border-black/5 dark:border-white/5 rounded-3xl space-y-8 bg-black/[0.02] dark:bg-black/20">
+                <div className="text-lg leading-loose text-gray-800 dark:text-gray-100">
                     {parsed.parts.map((part, i) => (
                         part.type === 'text' ? (
                             <span key={i}>{part.value}</span>
@@ -67,8 +67,8 @@ export default function FillInTheBlanksPlayer({ id, title, content, allowRetry =
                                 }}
                                 disabled={submitted}
                                 className={`mx-1 px-2 py-0 border-b-2 bg-transparent transition-all focus:outline-none text-center rounded-t-sm ${submitted
-                                    ? (isCorrect(part.index!) ? "border-green-500 text-green-400 bg-green-500/10" : "border-red-500 text-red-100 bg-red-500/10")
-                                    : "border-blue-500/30 focus:border-blue-500 text-blue-400 focus:bg-blue-500/5"
+                                    ? (isCorrect(part.index!) ? "border-green-600 dark:border-green-500 text-green-700 dark:text-green-400 bg-green-500/10" : "border-red-600 dark:border-red-500 text-red-700 dark:text-red-100 bg-red-500/10")
+                                    : "border-blue-600/30 dark:border-blue-500/30 focus:border-blue-600 dark:focus:border-blue-500 text-blue-700 dark:text-blue-400 focus:bg-blue-600/5 dark:focus:bg-blue-500/5"
                                     }`}
                                 style={{ width: `${Math.max((part.answer?.length || 5) * 12, 60)}px` }}
                                 placeholder="..."
@@ -91,7 +91,7 @@ export default function FillInTheBlanksPlayer({ id, title, content, allowRetry =
                         {submitted && (
                             <button
                                 onClick={handleReset}
-                                className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-3xl border-white/5"
+                                className="w-full py-5 glass text-blue-600 dark:text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-black/5 dark:hover:bg-white/5 transition-all rounded-3xl border-black/5 dark:border-white/5"
                             >
                                 Intentar de Nuevo
                             </button>

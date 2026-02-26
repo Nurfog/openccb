@@ -25,9 +25,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     ];
 
     return (
-        <div className="flex min-h-screen bg-[#0f1115] text-white">
+        <div className="flex min-h-screen bg-transparent text-gray-900 dark:text-white transition-colors duration-300">
             {/* Sidebar */}
-            <aside className="w-64 border-r border-white/5 bg-black/20 backdrop-blur-xl p-6 flex flex-col gap-8">
+            <aside className="w-64 border-r border-black/5 dark:border-white/5 bg-gray-50/50 dark:bg-black/20 backdrop-blur-xl p-6 flex flex-col gap-8">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                         <ShieldCheck className="text-white" size={24} />
@@ -44,8 +44,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             key={item.href}
                             href={item.href}
                             className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${pathname === item.href
-                                    ? "bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 shadow-glow-sm"
-                                    : "text-gray-500 hover:text-white hover:bg-white/5 border border-transparent"
+                                ? "bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 shadow-glow-sm"
+                                : "text-gray-500 hover:text-white hover:bg-white/5 border border-transparent"
                                 }`}
                         >
                             <item.icon size={18} />

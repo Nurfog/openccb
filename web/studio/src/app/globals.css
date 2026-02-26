@@ -3,19 +3,26 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 229, 231, 235;
-  /* text-gray-200 */
-  --background-start-rgb: 15, 17, 21;
-  /* #0f1115 */
-  --background-end-rgb: 0, 0, 0;
+  --background: 249, 250, 251;
+  --foreground: 17, 24, 39;
+  /* gray-900 */
 
   --accent-primary: #3b82f6;
-  /* blue-500 */
   --accent-secondary: #6366f1;
-  /* indigo-500 */
+
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-blur: blur(16px);
+}
+
+.dark {
+  --background: 3, 7, 18;
+  /* gray-950 */
+  --foreground: 229, 231, 235;
+  /* gray-200 */
+
   --glass-bg: rgba(255, 255, 255, 0.05);
   --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-blur: blur(16px);
 }
 
 /* Ensure focus states are visible for keyboard navigation */
@@ -25,8 +32,8 @@
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: var(--background-start-rgb);
+  color: rgb(var(--foreground));
+  background: rgb(var(--background));
 }
 
 .glass {

@@ -177,18 +177,18 @@ export default function AudioResponsePlayer({
 
     return (
         <div className="space-y-6" id={id}>
-            <div className="p-8 glass border-white/5 rounded-3xl space-y-6">
+            <div className="p-8 glass border-black/5 dark:border-white/5 rounded-3xl space-y-6 bg-black/[0.02] dark:bg-black/20">
                 <div className="flex items-start gap-4">
-                    <div className="p-3 bg-purple-500/20 rounded-xl">
-                        <Mic className="w-6 h-6 text-purple-400" />
+                    <div className="p-3 bg-purple-600/10 dark:bg-purple-500/20 rounded-xl">
+                        <Mic className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div className="flex-1">
-                        <h3 id={`audio-prompt-${id}`} className="text-xl font-bold text-gray-100">{prompt}</h3>
+                        <h3 id={`audio-prompt-${id}`} className="text-xl font-bold text-gray-900 dark:text-gray-100">{prompt}</h3>
                         {keywords.length > 0 && !submitted && (
                             <div className="flex flex-wrap gap-2 mt-3">
-                                <span className="text-xs text-gray-500 uppercase tracking-wider">Expected topics:</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-500 uppercase tracking-wider">Expected topics:</span>
                                 {keywords.map((kw, i) => (
-                                    <span key={i} className="px-2 py-1 bg-purple-500/10 border border-purple-500/20 rounded text-xs text-purple-300">
+                                    <span key={i} className="px-2 py-1 bg-purple-600/10 dark:bg-purple-500/10 border border-purple-600/20 dark:border-purple-500/20 rounded text-xs text-purple-700 dark:text-purple-300">
                                         {kw}
                                     </span>
                                 ))}
@@ -222,9 +222,9 @@ export default function AudioResponsePlayer({
                                         aria-label={`Recording time: ${formatTime(recordingTime)}`}
                                     >
                                         <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" aria-hidden="true" />
-                                        <span className="font-mono text-xl font-bold text-red-400">{formatTime(recordingTime)}</span>
+                                        <span className="font-mono text-xl font-bold text-red-600 dark:text-red-400">{formatTime(recordingTime)}</span>
                                         {timeLimit && (
-                                            <span className="text-sm text-gray-400">/ {formatTime(timeLimit)}</span>
+                                            <span className="text-sm text-gray-500 dark:text-gray-400">/ {formatTime(timeLimit)}</span>
                                         )}
                                     </div>
                                     <button
@@ -250,7 +250,7 @@ export default function AudioResponsePlayer({
                                     </button>
                                     <button
                                         onClick={reset}
-                                        className="flex items-center gap-2 px-6 py-3 glass hover:bg-white/10 rounded-xl font-bold text-gray-300 transition-all outline-none focus:ring-2 focus:ring-white/20"
+                                        className="flex items-center gap-2 px-6 py-3 glass hover:bg-black/5 dark:hover:bg-white/10 rounded-xl font-bold text-gray-600 dark:text-gray-300 transition-all outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/20 border-black/5 dark:border-white/5"
                                         aria-label="Delete and re-record"
                                     >
                                         <RotateCcw className="w-4 h-4" aria-hidden="true" />
@@ -262,9 +262,9 @@ export default function AudioResponsePlayer({
 
                         {/* Transcript Preview */}
                         {transcript && !submitted && (
-                            <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-                                <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Transcript:</p>
-                                <p className="text-sm text-gray-300">{transcript}</p>
+                            <div className="p-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl">
+                                <p className="text-xs text-gray-500 dark:text-gray-500 uppercase tracking-wider mb-2">Transcript:</p>
+                                <p className="text-sm text-gray-700 dark:text-gray-300">{transcript}</p>
                             </div>
                         )}
 
@@ -285,16 +285,16 @@ export default function AudioResponsePlayer({
                     <div className="space-y-4">
                         <div
                             className={`p-6 rounded-2xl border-2 ${evaluation.score >= 70
-                                ? 'bg-green-500/10 border-green-500'
+                                ? 'bg-green-500/10 border-green-600 dark:border-green-500'
                                 : evaluation.score >= 40
-                                    ? 'bg-yellow-500/10 border-yellow-500'
-                                    : 'bg-red-500/10 border-red-500'
+                                    ? 'bg-yellow-500/10 border-yellow-600 dark:border-yellow-500'
+                                    : 'bg-red-500/10 border-red-600 dark:border-red-500'
                                 }`}
                             aria-live="assertive"
                         >
                             <div className="flex items-center justify-between mb-4">
-                                <span className="text-sm font-bold uppercase tracking-wider text-gray-400">Your Score</span>
-                                <span className="text-3xl font-black">{evaluation.score}%</span>
+                                <span className="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Your Score</span>
+                                <span className="text-3xl font-black text-gray-900 dark:text-white">{evaluation.score}%</span>
                             </div>
 
                             {keywords.length > 0 && (
@@ -306,9 +306,9 @@ export default function AudioResponsePlayer({
                                             return (
                                                 <span
                                                     key={i}
-                                                    className={`px-3 py-1 rounded-lg text-sm font-medium flex items-center gap-1 ${found
-                                                        ? 'bg-green-500/20 border border-green-500/50 text-green-300'
-                                                        : 'bg-gray-500/20 border border-gray-500/50 text-gray-400'
+                                                    className={`px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1 ${found
+                                                        ? 'bg-green-600/10 dark:bg-green-500/20 border border-green-600/20 dark:border-green-500/50 text-green-700 dark:text-green-300'
+                                                        : 'bg-gray-500/10 dark:bg-gray-500/20 border border-gray-600/20 dark:border-gray-500/50 text-gray-600 dark:text-gray-400'
                                                         }`}
                                                 >
                                                     {found ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
@@ -326,25 +326,25 @@ export default function AudioResponsePlayer({
                                 <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                                     <BrainCircuit className="w-20 h-20 text-blue-400" />
                                 </div>
-                                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-400">
+                                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">
                                     <BrainCircuit className="w-4 h-4" />
                                     AI Teacher Feedback
                                 </div>
-                                <p className="text-gray-200 leading-relaxed italic text-lg relative z-10">
+                                <p className="text-gray-800 dark:text-gray-200 leading-relaxed italic text-lg relative z-10">
                                     &quot;{evaluation.feedback}&quot;
                                 </p>
                             </div>
                         )}
 
-                        <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                        <div className="p-4 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl">
                             <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Your Transcript:</p>
-                            <p className="text-sm text-gray-300">{transcript}</p>
+                            <p className="text-sm text-gray-700 dark:text-gray-300">{transcript}</p>
                         </div>
 
                         {!isGraded && evaluation.score < 70 && (
                             <button
                                 onClick={reset}
-                                className="w-full py-4 glass hover:bg-white/10 rounded-xl font-bold text-blue-400 transition-all"
+                                className="w-full py-4 glass hover:bg-black/5 dark:hover:bg-white/10 rounded-xl font-bold text-blue-600 dark:text-blue-400 border-black/5 dark:border-white/5 transition-all"
                             >
                                 Try Again
                             </button>

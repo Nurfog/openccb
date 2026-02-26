@@ -179,8 +179,8 @@ export default function OrganizationsPage() {
         <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 p-4 md:p-0">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Organizations</h1>
-                    <p className="text-gray-400 mt-1 text-sm">Manage tenants and isolated environments.</p>
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Organizations</h1>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm">Manage tenants and isolated environments.</p>
                 </div>
                 <button
                     onClick={() => setIsModalOpen(true)}
@@ -202,7 +202,7 @@ export default function OrganizationsPage() {
                     {organizations.map((org) => (
                         <div
                             key={org.id}
-                            className="group relative p-6 rounded-xl glass border border-white/10 hover:border-blue-500/50 transition-all hover:translate-y-[-2px] overflow-hidden"
+                            className="group relative p-6 rounded-xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:border-blue-500/50 transition-all hover:translate-y-[-2px] overflow-hidden"
                         >
                             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <Building2 className="w-16 h-16" />
@@ -217,7 +217,7 @@ export default function OrganizationsPage() {
                                     )}
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-lg">{org.name}</h3>
+                                    <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{org.name}</h3>
                                     <div className="flex items-center gap-1.5 text-sm text-gray-400">
                                         <Globe className="w-3 h-3" />
                                         {org.domain || 'No custom domain'}
@@ -231,7 +231,7 @@ export default function OrganizationsPage() {
                             </div>
 
                             <div className="space-y-3 mt-4">
-                                <div className="flex items-center justify-between text-xs text-gray-500 bg-black/20 p-2 rounded-lg">
+                                <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-500 bg-black/5 dark:bg-black/20 p-2 rounded-lg">
                                     <div className="flex items-center gap-1">
                                         <Calendar className="w-3 h-3" />
                                         Created: {new Date(org.created_at).toLocaleDateString()}
@@ -253,7 +253,7 @@ export default function OrganizationsPage() {
                                     >
                                         <Fingerprint className="w-3 h-3" /> SSO
                                     </button>
-                                    <button className="py-2 px-2 text-[10px] font-medium border border-white/5 bg-white/5 hover:bg-white/10 rounded-lg transition-colors flex items-center justify-center gap-1 text-gray-400">
+                                    <button className="py-2 px-2 text-[10px] font-medium border border-black/10 dark:border-white/5 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors flex items-center justify-center gap-1 text-gray-600 dark:text-gray-400">
                                         Docs <ExternalLink className="w-3 h-3" />
                                     </button>
                                 </div>
@@ -266,8 +266,8 @@ export default function OrganizationsPage() {
             {/* Create Organization Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="w-full max-w-md glass border border-white/10 rounded-2xl p-8 shadow-2xl">
-                        <h2 className="text-xl font-bold mb-6">Create New Organization</h2>
+                    <div className="w-full max-w-md bg-white dark:bg-gray-900 border border-black/10 dark:border-white/10 rounded-2xl p-8 shadow-2xl">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Create New Organization</h2>
                         <form onSubmit={handleCreate} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-400 mb-1.5">Organization Name</label>
@@ -312,7 +312,7 @@ export default function OrganizationsPage() {
                                             required
                                             value={adminEmail}
                                             onChange={(e) => setAdminEmail(e.target.value)}
-                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                            className="w-full bg-black/5 dark:bg-black/40 border border-black/10 dark:border-white/10 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-gray-900 dark:text-white"
                                             placeholder="admin@acme.com"
                                         />
                                     </div>
@@ -352,13 +352,13 @@ export default function OrganizationsPage() {
             {/* Branding Management Modal */}
             {isBrandingModalOpen && selectedOrg && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="w-full max-w-2xl glass border border-white/10 rounded-2xl p-8 shadow-2xl">
+                    <div className="w-full max-w-2xl bg-white dark:bg-gray-900 border border-black/10 dark:border-white/10 rounded-2xl p-8 shadow-2xl">
                         <div className="flex justify-between items-center mb-6">
                             <div>
-                                <h2 className="text-xl font-bold">Branding Management</h2>
-                                <p className="text-sm text-gray-400">{selectedOrg.name}</p>
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Branding Management</h2>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{selectedOrg.name}</p>
                             </div>
-                            <button onClick={() => setIsBrandingModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
+                            <button onClick={() => setIsBrandingModalOpen(false)} className="p-2 text-gray-500 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
@@ -428,8 +428,8 @@ export default function OrganizationsPage() {
 
                             {/* Live Preview */}
                             <div className="space-y-4">
-                                <label className="block text-sm font-medium text-gray-400 mb-2">Experience Portal Preview</label>
-                                <div className="rounded-xl border border-white/10 overflow-hidden bg-slate-900 shadow-inner">
+                                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Experience Portal Preview</label>
+                                <div className="rounded-xl border border-black/10 dark:border-white/10 overflow-hidden bg-gray-50 dark:bg-slate-900 shadow-inner">
                                     {/* Mock Experience Header */}
                                     <div className="h-10 px-4 flex items-center justify-between border-b border-white/5" style={{ backgroundColor: primaryColor }}>
                                         <div className="flex items-center gap-2">
@@ -446,7 +446,7 @@ export default function OrganizationsPage() {
                                         </div>
                                     </div>
                                     {/* Mock Experience Content */}
-                                    <div className="p-4 space-y-3 bg-[#0a0c10]">
+                                    <div className="p-4 space-y-3 bg-gray-50 dark:bg-[#0a0c10]">
                                         <div className="w-2/3 h-4 bg-white/10 rounded mb-2" />
                                         <div className="w-full h-24 bg-white/5 rounded-lg border border-white/5 p-3">
                                             <div className="w-1/3 h-3 rounded mb-2" style={{ backgroundColor: secondaryColor }} />

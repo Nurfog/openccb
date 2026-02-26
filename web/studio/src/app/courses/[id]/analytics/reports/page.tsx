@@ -65,7 +65,7 @@ export default function ReportsPage() {
     };
 
     if (loading) return (
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="min-h-screen bg-transparent flex items-center justify-center">
             <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
         </div>
     );
@@ -73,13 +73,13 @@ export default function ReportsPage() {
     if (!course || !analytics) return <div className="p-20 text-center text-red-400">Error caricamento dati.</div>;
 
     return (
-        <div className="min-h-screen bg-[#0f1115] text-white p-8">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-8">
             <div className="max-w-7xl mx-auto">
                 <div className="flex items-center justify-between mb-12">
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => router.push(`/courses/${id}/analytics`)}
-                            className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                            className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
                         >
                             <ArrowLeft className="w-6 h-6" />
                         </button>
@@ -87,7 +87,7 @@ export default function ReportsPage() {
                             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
                                 Custom Report Builder
                             </h1>
-                            <p className="text-gray-400 mt-1">Generate and export engagement data for {course.title}</p>
+                            <p className="text-gray-600 dark:text-gray-400 mt-1">Generate and export engagement data for {course.title}</p>
                         </div>
                     </div>
 
@@ -103,11 +103,11 @@ export default function ReportsPage() {
                 <CourseEditorLayout activeTab="analytics">
                     <div className="p-8 space-y-12">
                         {/* Filters */}
-                        <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+                        <div className="flex items-center gap-4 bg-black/5 dark:bg-white/5 p-4 rounded-2xl border border-black/5 dark:border-white/5">
                             <Filter size={18} className="text-gray-500 ml-2" />
                             <span className="text-xs font-black uppercase tracking-widest text-gray-500">Filter by Cohort:</span>
                             <select
-                                className="bg-transparent text-sm font-bold text-white focus:outline-none"
+                                className="bg-transparent text-sm font-bold text-gray-900 dark:text-white focus:outline-none"
                                 value={filter}
                                 onChange={(e) => setFilter(e.target.value)}
                             >
@@ -119,20 +119,20 @@ export default function ReportsPage() {
                         </div>
 
                         {/* Report Table */}
-                        <div className="rounded-3xl border border-white/10 bg-white/[0.02] overflow-hidden">
+                        <div className="rounded-3xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] overflow-hidden">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-white/5">
+                                    <tr className="bg-black/5 dark:bg-white/5">
                                         <th className="p-6 text-xs font-black uppercase tracking-widest text-gray-500">Lección</th>
                                         <th className="p-6 text-xs font-black uppercase tracking-widest text-gray-500">Completado por</th>
                                         <th className="p-6 text-xs font-black uppercase tracking-widest text-gray-500">Puntaje Promedio</th>
                                         <th className="p-6 text-xs font-black uppercase tracking-widest text-gray-500">Tendencia</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/5">
+                                <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                     {analytics.lessons.map((lesson) => (
                                         <tr key={lesson.lesson_id} className="hover:bg-white/[0.02] transition-colors">
-                                            <td className="p-6 font-bold text-gray-300">{lesson.lesson_title}</td>
+                                            <td className="p-6 font-bold text-gray-900 dark:text-gray-300">{lesson.lesson_title}</td>
                                             <td className="p-6">
                                                 <div className="flex items-center gap-2">
                                                     <Users size={14} className="text-blue-400" />
@@ -142,7 +142,7 @@ export default function ReportsPage() {
                                             </td>
                                             <td className="p-6">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden min-w-[100px]">
+                                                    <div className="flex-1 h-2 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden min-w-[100px]">
                                                         <div
                                                             className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                                                             style={{ width: `${lesson.average_score * 100}%` }}

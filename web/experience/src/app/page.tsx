@@ -103,15 +103,15 @@ export default function CatalogPage() {
             <Star size={14} className="fill-blue-500" />
             <span>Currículo Premier</span>
           </div>
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-tight md:leading-none">
-            Explorar <span className="block sm:inline text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600">Cursos</span>
+          <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-tight md:leading-none text-gray-900 dark:text-white">
+            Explorar <span className="block sm:inline text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 dark:from-blue-400 dark:to-indigo-600">Cursos</span>
           </h1>
-          <p className="text-gray-500 font-medium max-w-xl text-base md:text-lg mx-auto md:mx-0">
+          <p className="text-gray-600 dark:text-gray-500 font-medium max-w-xl text-base md:text-lg mx-auto md:mx-0">
             Domina las habilidades del futuro con nuestro contenido educativo de alta fidelidad.
           </p>
         </div>
         {!user && (
-          <Link href="/auth/register" className="btn-premium !bg-white !text-black shadow-none !px-8 w-full sm:w-auto">
+          <Link href="/auth/register" className="btn-premium !bg-blue-600 dark:!bg-white !text-white dark:!text-black shadow-none !px-8 w-full sm:w-auto">
             Comienza Gratis
           </Link>
         )}
@@ -120,21 +120,21 @@ export default function CatalogPage() {
       {user && gamification && (
         <div className="mb-16 grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-top-6 duration-700">
           <div className="lg:col-span-2 space-y-8">
-            <div className="glass-card p-10 bg-gradient-to-br from-blue-600/20 via-indigo-700/10 to-transparent border-blue-500/20 rounded-3xl relative overflow-hidden group">
+            <div className="glass-card p-10 bg-gradient-to-br from-blue-600/10 dark:from-blue-600/20 via-indigo-700/5 dark:via-indigo-700/10 to-transparent border-blue-500/10 dark:border-blue-500/20 rounded-3xl relative overflow-hidden group">
               <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-10">
                 <div className="flex-shrink-0 relative">
                   <div className="w-24 h-24 rounded-3xl bg-blue-600 flex items-center justify-center shadow-2xl shadow-blue-500/40 rotate-3 group-hover:rotate-0 transition-transform duration-500">
                     <Zap className="text-white fill-white/20" size={48} />
                   </div>
-                  <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-white text-black flex items-center justify-center font-black text-xs border-4 border-[#050505]">
+                  <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-white dark:bg-black text-black dark:text-gray-400 flex items-center justify-center font-black text-xs border-4 border-gray-50 dark:border-[#050505]">
                     {gamification.level}
                   </div>
                 </div>
 
                 <div className="flex-1 space-y-4">
                   <div>
-                    <div className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-400 mb-1">Posición Actual</div>
-                    <h2 className="text-3xl font-black text-white">Nivel {gamification.level} Pionero</h2>
+                    <div className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600 dark:text-blue-400 mb-1">Posición Actual</div>
+                    <h2 className="text-3xl font-black text-gray-900 dark:text-white">Nivel {gamification.level} Pionero</h2>
                   </div>
 
                   <div className="space-y-2">
@@ -146,9 +146,9 @@ export default function CatalogPage() {
                         {Math.floor(((gamification.points - Math.pow(gamification.level - 1, 2) * 100) / (Math.pow(gamification.level, 2) * 100 - Math.pow(gamification.level - 1, 2) * 100)) * 100)}% para el Nivel {gamification.level + 1}
                       </div>
                     </div>
-                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                    <div className="h-2 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden border border-black/5 dark:border-white/5">
                       <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-1000"
+                        className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-[0_0_20px_rgba(59,130,246,0.3)] dark:shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-1000"
                         style={{ width: `${Math.min(100, Math.max(0, ((gamification.points - Math.pow(gamification.level - 1, 2) * 100) / (Math.pow(gamification.level, 2) * 100 - Math.pow(gamification.level - 1, 2) * 100)) * 100))}%` }}
                       ></div>
                     </div>
@@ -160,7 +160,7 @@ export default function CatalogPage() {
               <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-blue-500/10 blur-[120px] rounded-full pointer-events-none group-hover:bg-blue-500/20 transition-colors duration-500"></div>
             </div>
 
-            <div className="glass-card p-8 bg-white/[0.01] border-white/5 rounded-3xl">
+            <div className="glass-card p-8 bg-black/[0.01] dark:bg-white/[0.01] border-black/5 dark:border-white/5 rounded-3xl">
               <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
                 <CheckCircle2 size={14} /> Mis Insignias
               </h3>
@@ -201,12 +201,12 @@ export default function CatalogPage() {
                       {lesson.important_date_type || 'Actividad'}
                     </div>
                     <div className="text-right">
-                      <div className="text-xs font-black text-white">{new Date(lesson.due_date!).toLocaleDateString()}</div>
-                      <div className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">Vencimiento</div>
+                      <div className="text-xs font-black text-gray-900 dark:text-white">{new Date(lesson.due_date!).toLocaleDateString()}</div>
+                      <div className="text-[8px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest">Vencimiento</div>
                     </div>
                   </div>
-                  <h4 className="font-bold text-sm text-gray-200 mb-1 group-hover:text-white transition-colors line-clamp-1">{lesson.title}</h4>
-                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{courseTitle}</p>
+                  <h4 className="font-bold text-sm text-gray-700 dark:text-gray-200 mb-1 group-hover:text-blue-600 dark:group-hover:text-white transition-colors line-clamp-1">{lesson.title}</h4>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest">{courseTitle}</p>
                 </div>
               </Link>
             ))}
@@ -215,8 +215,8 @@ export default function CatalogPage() {
       )}
 
       {courses.length === 0 ? (
-        <div className="py-20 text-center glass-card border-dashed border-white/10 rounded-3xl bg-white/[0.01]">
-          <p className="text-gray-500 font-bold uppercase tracking-widest">Aún no se han publicado cursos.</p>
+        <div className="py-20 text-center glass-card border-dashed border-black/10 dark:border-white/10 rounded-3xl bg-black/[0.01] dark:bg-white/[0.01]">
+          <p className="text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Aún no se han publicado cursos.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -224,7 +224,7 @@ export default function CatalogPage() {
             const isEnrolled = enrollments.includes(course.id);
 
             return (
-              <div key={course.id} className="glass-card group relative overflow-hidden h-full flex flex-col p-8 border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-500 rounded-3xl">
+              <div key={course.id} className="glass-card group relative overflow-hidden h-full flex flex-col p-8 border-black/5 dark:border-white/5 bg-black/[0.01] dark:bg-white/[0.02] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-all duration-500 rounded-3xl">
                 <div className="mb-8 flex items-start justify-between">
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-2xl shadow-blue-500/20 group-hover:scale-110 transition-transform duration-500">
                     <Rocket size={24} className="text-white fill-white/10" />
@@ -236,17 +236,17 @@ export default function CatalogPage() {
                   )}
                 </div>
 
-                <h2 className="text-2xl font-black text-white mb-4 leading-tight group-hover:text-blue-400 transition-colors">
+                <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-4 leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                   {course.title}
                 </h2>
 
                 <div className="flex-1">
-                  <p className="text-gray-500 text-sm font-medium line-clamp-3 mb-10 leading-relaxed">
+                  <p className="text-gray-600 dark:text-gray-500 text-sm font-medium line-clamp-3 mb-10 leading-relaxed">
                     {course.description || "Currículo detallado que cubre desde los principios fundamentales hasta el dominio avanzado, elaborado por veteranos de la industria."}
                   </p>
                 </div>
 
-                <div className="pt-8 border-t border-white/5 flex items-center justify-between mt-auto">
+                <div className="pt-8 border-t border-black/5 dark:border-white/5 flex items-center justify-between mt-auto">
                   {isEnrolled ? (
                     <Link href={`/courses/${course.id}`} className="btn-premium w-full !bg-blue-600/10 !text-blue-400 border border-blue-500/20 hover:!bg-blue-600/20 !shadow-none gap-2">
                       Continuar Aprendiendo <ArrowRight size={16} />

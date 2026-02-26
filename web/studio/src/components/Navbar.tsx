@@ -18,7 +18,7 @@ export function Navbar() {
     const platformName = branding?.platform_name || 'OpenCCB';
 
     return (
-        <nav className="fixed top-0 w-full z-50 glass border-b border-white/10 bg-black/40 backdrop-blur-xl">
+        <nav className="fixed top-0 w-full z-50 glass border-b border-black/5 dark:border-white/10 bg-gray-50/70 dark:bg-black/40 backdrop-blur-xl">
             <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
                 <Link href="/" className="flex items-center gap-2 md:gap-4 group" aria-label={`${platformName} Studio - Dashboard`}>
                     <div className={`rounded-lg md:rounded-xl bg-blue-600 flex items-center justify-center font-black text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-all overflow-hidden relative border border-white/5 ${branding?.logo_variant === 'wide' ? 'w-32 h-8 md:w-48 md:h-10 px-2 bg-white' : 'w-8 h-8 md:w-10 md:h-10'}`}>
@@ -32,10 +32,10 @@ export function Navbar() {
                     </div>
                     {branding?.logo_variant !== 'wide' && (
                         <div className="flex flex-col -gap-1">
-                            <span className="font-black text-sm md:text-lg tracking-tighter text-white leading-none">
+                            <span className="font-black text-sm md:text-lg tracking-tighter text-gray-900 dark:text-white leading-none">
                                 {platformName.toUpperCase()}
                             </span>
-                            <span className="text-[8px] md:text-[10px] font-black tracking-widest text-blue-500 uppercase">STUDIO</span>
+                            <span className="text-[8px] md:text-[10px] font-black tracking-widest text-blue-600 dark:text-blue-500 uppercase">STUDIO</span>
                         </div>
                     )}
                 </Link>
@@ -44,7 +44,7 @@ export function Navbar() {
                     <div className="flex items-center gap-4">
                         <Link
                             href="/"
-                            className="text-sm font-medium text-gray-400 hover:text-blue-400 transition-colors flex items-center gap-2"
+                            className="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"
                         >
                             <LayoutDashboard className="w-4 h-4" />
                             {t('nav.courses')}
@@ -52,7 +52,7 @@ export function Navbar() {
 
                         <Link
                             href="/library/assets"
-                            className="text-sm font-medium text-gray-400 hover:text-blue-400 transition-colors flex items-center gap-2"
+                            className="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2"
                         >
                             <Library className="w-4 h-4" aria-hidden="true" />
                             {t('nav.library') || 'Library'}
@@ -117,9 +117,9 @@ export function Navbar() {
                             aria-label={t('nav.selectLanguage') || 'Select Language'}
                             className="bg-transparent text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-colors focus:outline-none cursor-pointer"
                         >
-                            <option value="en" className="bg-gray-900">EN</option>
-                            <option value="es" className="bg-gray-900">ES</option>
-                            <option value="pt" className="bg-gray-900">PT</option>
+                            <option value="en" className="bg-white dark:bg-gray-900">EN</option>
+                            <option value="es" className="bg-white dark:bg-gray-900">ES</option>
+                            <option value="pt" className="bg-white dark:bg-gray-900">PT</option>
                         </select>
                     </div>
 
@@ -128,12 +128,12 @@ export function Navbar() {
                     {user ? (
                         <div className="flex items-center gap-4">
                             <div className="flex flex-col items-end">
-                                <span className="text-xs font-medium text-white">{user.full_name}</span>
+                                <span className="text-xs font-medium text-gray-900 dark:text-white">{user.full_name}</span>
                                 <span className="text-[10px] text-gray-500 uppercase tracking-wider">{user.role}</span>
                             </div>
                             <button
                                 onClick={logout}
-                                className="p-2 hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-all text-gray-500"
+                                className="p-2 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-all text-gray-500"
                                 title={t('nav.signOut') || "Sign Out"}
                                 aria-label={t('nav.signOut') || "Sign Out"}
                             >

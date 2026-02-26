@@ -136,13 +136,13 @@ export default function GradebookPage() {
     };
 
     if (loading && students.length === 0) return (
-        <div className="min-h-screen bg-[#0f1115] flex items-center justify-center">
+        <div className="min-h-screen bg-transparent flex items-center justify-center">
             <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-[#0f1115] text-white p-8">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-8">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-12">
@@ -207,7 +207,7 @@ export default function GradebookPage() {
                                                 value={bulkEmails}
                                                 onChange={(e) => setBulkEmails(e.target.value)}
                                                 placeholder="student1@example.com&#10;student2@example.com"
-                                                className="w-full h-48 bg-black/20 border border-white/10 rounded-xl p-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white placeholder-gray-600 resize-none font-mono"
+                                                className="w-full h-48 bg-black/20 border border-white/10 rounded-xl p-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-900 dark:text-white placeholder-gray-600 resize-none font-mono"
                                             />
                                         </div>
                                         <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex gap-3 italic text-sm text-blue-400">
@@ -289,7 +289,7 @@ export default function GradebookPage() {
                                     <select
                                         value={selectedCohortId}
                                         onChange={(e) => setSelectedCohortId(e.target.value)}
-                                        className="appearance-none bg-black/20 text-white border border-white/10 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-w-[200px]"
+                                        className="appearance-none bg-black/20 text-gray-900 dark:text-white border border-white/10 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-w-[200px]"
                                     >
                                         <option value="">All Cohorts</option>
                                         {cohorts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -305,7 +305,7 @@ export default function GradebookPage() {
                                         placeholder="Search students..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white placeholder-gray-600"
+                                        className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-900 dark:text-white placeholder-gray-600"
                                     />
                                 </div>
                             </div>
@@ -345,11 +345,11 @@ export default function GradebookPage() {
                                         <tr key={s.user_id} className="hover:bg-white/[0.02] transition-colors group">
                                             <td className="p-6">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-gray-900 dark:text-white font-bold text-sm">
                                                         {s.full_name.charAt(0)}
                                                     </div>
                                                     <div>
-                                                        <div className="font-bold text-white group-hover:text-blue-400 transition-colors">{s.full_name}</div>
+                                                        <div className="font-bold text-gray-900 dark:text-white group-hover:text-blue-400 transition-colors">{s.full_name}</div>
                                                         <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
                                                             <Mail size={10} /> {s.email}
                                                         </div>

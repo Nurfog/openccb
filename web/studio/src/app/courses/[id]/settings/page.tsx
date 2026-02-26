@@ -124,19 +124,19 @@ export default function CourseSettingsPage() {
     };
 
     if (loading) return (
-        <div className="min-h-screen bg-[#0f1115] flex items-center justify-center">
+        <div className="min-h-screen bg-transparent flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
     );
 
     if (!course) return (
-        <div className="min-h-screen bg-[#0f1115] text-white p-20 text-center">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-20 text-center">
             Course not found.
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-[#0f1115] text-white p-8">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-8">
             <div className="max-w-5xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-12">
@@ -317,7 +317,7 @@ export default function CourseSettingsPage() {
                                             min="0"
                                             value={price}
                                             onChange={(e) => setPrice(parseFloat(e.target.value))}
-                                            className="w-full bg-black/30 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                                            className="w-full bg-black/30 border border-white/10 rounded-xl py-3 px-4 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors"
                                             placeholder="0.00"
                                         />
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">
@@ -332,7 +332,7 @@ export default function CourseSettingsPage() {
                                     <select
                                         value={currency}
                                         onChange={(e) => setCurrency(e.target.value)}
-                                        className="w-full bg-black/30 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
+                                        className="w-full bg-black/30 border border-white/10 rounded-xl py-3 px-4 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none"
                                     >
                                         <option value="USD">USD - US Dollar</option>
                                         <option value="CLP">CLP - Chilean Peso</option>

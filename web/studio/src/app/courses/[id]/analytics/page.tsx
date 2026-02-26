@@ -67,24 +67,24 @@ export default function AnalyticsPage() {
     }, [id, user, router, selectedCohortId]);
 
     if (loading) return (
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="min-h-screen bg-transparent flex items-center justify-center">
             <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
         </div>
     );
 
     if (authError) return (
-        <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-20 text-center gap-6">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white flex flex-col items-center justify-center p-20 text-center gap-6">
             <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center text-red-500">
                 <AlertTriangle size={40} />
             </div>
             <h2 className="text-2xl font-bold">Access Denied</h2>
-            <p className="text-gray-400 max-w-md">{authError}</p>
+            <p className="text-gray-600 dark:text-gray-400 max-w-md">{authError}</p>
             <button onClick={() => router.back()} className="btn-premium px-8 py-3">Go Back</button>
         </div>
     );
 
     if (!course || !analytics) return (
-        <div className="min-h-screen bg-gray-900 text-white p-20 text-center">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-20 text-center">
             Course not found or analytics unavailable.
         </div>
     );
@@ -94,7 +94,7 @@ export default function AnalyticsPage() {
         .sort((a, b) => a.average_score - b.average_score);
 
     return (
-        <div className="min-h-screen bg-[#0f1115] text-white p-8">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-8">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-12">
@@ -109,14 +109,14 @@ export default function AnalyticsPage() {
                             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
                                 Course Analytics
                             </h1>
-                            <p className="text-gray-400 mt-1">Performance insights and student progress for {course?.title}</p>
+                            <p className="text-gray-600 dark:text-gray-400 mt-1">Performance insights and student progress for {course?.title}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
                         <select
                             value={selectedCohortId}
                             onChange={(e) => setSelectedCohortId(e.target.value)}
-                            className="bg-white/5 text-white border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                            className="bg-black/5 dark:bg-white/5 text-gray-900 dark:text-white border border-black/10 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                         >
                             <option value="">All Students</option>
                             {cohorts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -139,19 +139,19 @@ export default function AnalyticsPage() {
                         <div className="flex items-center gap-1 mb-10 p-1 bg-white/5 rounded-2xl w-fit">
                             <button
                                 onClick={() => setActiveAnalyticsTab("overview")}
-                                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeAnalyticsTab === "overview" ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeAnalyticsTab === "overview" ? 'bg-blue-600 text-gray-900 dark:text-white shadow-lg shadow-blue-500/20' : 'text-gray-400 hover:text-gray-900 dark:text-white hover:bg-white/5'}`}
                             >
                                 <BarChart3 size={16} /> Overview
                             </button>
                             <button
                                 onClick={() => setActiveAnalyticsTab("risks")}
-                                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeAnalyticsTab === "risks" ? 'bg-red-600 text-white shadow-lg shadow-red-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeAnalyticsTab === "risks" ? 'bg-red-600 text-gray-900 dark:text-white shadow-lg shadow-red-500/20' : 'text-gray-400 hover:text-gray-900 dark:text-white hover:bg-white/5'}`}
                             >
                                 <ShieldAlert size={16} /> Predictive Risks
                             </button>
                             <button
                                 onClick={() => setActiveAnalyticsTab("live")}
-                                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeAnalyticsTab === "live" ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeAnalyticsTab === "live" ? 'bg-blue-600 text-gray-900 dark:text-white shadow-lg shadow-blue-500/20' : 'text-gray-400 hover:text-gray-900 dark:text-white hover:bg-white/5'}`}
                             >
                                 <Video size={16} /> Live Sessions
                             </button>
@@ -204,7 +204,7 @@ export default function AnalyticsPage() {
                                         </h2>
                                         <div className="space-y-4">
                                             {analytics.lessons.map((lesson) => (
-                                                <div key={lesson.lesson_id} className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all">
+                                                <div key={lesson.lesson_id} className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl p-6 hover:bg-black/[0.07] dark:hover:bg-white/[0.07] transition-all">
                                                     <div className="flex items-start justify-between mb-4">
                                                         <div>
                                                             <h3 className="font-bold">{lesson.lesson_title}</h3>

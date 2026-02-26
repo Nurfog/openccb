@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-white dark:bg-[#050505] text-gray-900 dark:text-[#e5e5e5] min-h-screen flex flex-col transition-colors duration-300`}>
+      <body className={`${inter.className} min-h-screen flex flex-col transition-colors duration-300`}>
         <ThemeProvider>
           <BrandingProvider>
             <AuthProvider>

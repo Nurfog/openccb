@@ -86,7 +86,7 @@ export default function AssetLibraryPage() {
     };
 
     return (
-        <div className="min-h-screen bg-black text-white pt-24 pb-12 px-6">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white pt-24 pb-12 px-6 transition-colors duration-300">
             <div className="max-w-7xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -98,7 +98,7 @@ export default function AssetLibraryPage() {
                         <h1 className="text-4xl font-black tracking-tight flex items-center gap-4">
                             Global <span className="gradient-text">Asset Library</span>
                         </h1>
-                        <p className="text-gray-500 text-sm font-medium">Manage and reuse your organization's media files across all courses.</p>
+                        <p className="text-gray-600 dark:text-gray-500 text-sm font-medium">Manage and reuse your organization's media files across all courses.</p>
                     </div>
 
                     <div className="flex gap-3">
@@ -118,7 +118,7 @@ export default function AssetLibraryPage() {
 
                 {/* Upload Progress Bar */}
                 {isUploading && (
-                    <div className="w-full bg-white/5 rounded-2xl border border-white/10 p-4 animate-in fade-in slide-in-from-top-4">
+                    <div className="w-full bg-black/5 dark:bg-white/5 rounded-2xl border border-black/10 dark:border-white/10 p-4 animate-in fade-in slide-in-from-top-4">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-xs font-black uppercase tracking-widest text-blue-400">Uploading Assets...</span>
                             <span className="text-xs font-bold text-white">{uploadProgress}%</span>
@@ -141,7 +141,7 @@ export default function AssetLibraryPage() {
                             placeholder="Search by filename..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-sm font-medium focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all"
+                            className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl pl-12 pr-4 py-4 text-sm font-medium focus:outline-none focus:border-blue-500/50 focus:bg-black/10 dark:focus:bg-white/10 transition-all text-gray-900 dark:text-white"
                         />
                     </div>
 
@@ -150,12 +150,12 @@ export default function AssetLibraryPage() {
                         <select
                             value={filterType}
                             onChange={(e) => setFilterType(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold uppercase tracking-widest focus:outline-none focus:border-blue-500/50 appearance-none cursor-pointer hover:bg-white/10 transition-all"
+                            className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold uppercase tracking-widest focus:outline-none focus:border-blue-500/50 appearance-none cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-all text-gray-900 dark:text-white"
                         >
-                            <option value="all" className="bg-gray-900">All Types</option>
-                            <option value="image/" className="bg-gray-900">Images</option>
-                            <option value="video/" className="bg-gray-900">Videos</option>
-                            <option value="application/pdf" className="bg-gray-900">Documents (PDF)</option>
+                            <option value="all" className="bg-white dark:bg-gray-900">All Types</option>
+                            <option value="image/" className="bg-white dark:bg-gray-900">Images</option>
+                            <option value="video/" className="bg-white dark:bg-gray-900">Videos</option>
+                            <option value="application/pdf" className="bg-white dark:bg-gray-900">Documents (PDF)</option>
                         </select>
                     </div>
 
@@ -171,8 +171,8 @@ export default function AssetLibraryPage() {
                         <span className="text-[10px] uppercase font-black tracking-[0.3em] text-gray-500">Retrieving Cloud Assets...</span>
                     </div>
                 ) : assets.length === 0 ? (
-                    <div className="py-40 flex flex-col items-center gap-6 border-2 border-dashed border-white/5 rounded-[40px] bg-white/[0.02]">
-                        <div className="p-8 bg-white/5 rounded-[32px] border border-white/5">
+                    <div className="py-40 flex flex-col items-center gap-6 border-2 border-dashed border-black/10 dark:border-white/5 rounded-[40px] bg-black/[0.02] dark:bg-white/[0.02]">
+                        <div className="p-8 bg-black/5 dark:bg-white/5 rounded-[32px] border border-black/5 dark:border-white/5">
                             <Plus className="w-12 h-12 text-gray-700" />
                         </div>
                         <div className="text-center space-y-2">
@@ -185,7 +185,7 @@ export default function AssetLibraryPage() {
                         {assets.map((asset) => (
                             <div
                                 key={asset.id}
-                                className="group bg-white/5 border border-white/5 rounded-[32px] overflow-hidden hover:bg-white/10 hover:border-white/10 transition-all duration-300 hover:-translate-y-1 relative"
+                                className="group bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-[32px] overflow-hidden hover:bg-black/10 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-all duration-300 hover:-translate-y-1 relative"
                             >
                                 {/* Preview Area */}
                                 <div className="aspect-video w-full bg-black/40 flex items-center justify-center relative overflow-hidden">
@@ -227,7 +227,7 @@ export default function AssetLibraryPage() {
 
                                 {/* Content Info */}
                                 <div className="p-6 space-y-3">
-                                    <h3 className="text-sm font-bold text-gray-200 truncate pr-2" title={asset.filename}>
+                                    <h3 className="text-sm font-bold text-gray-900 dark:text-gray-200 truncate pr-2" title={asset.filename}>
                                         {asset.filename}
                                     </h3>
                                     <div className="flex items-center justify-between">

@@ -58,22 +58,22 @@ export default function CodeExercisePlayer({
 
     return (
         <div className="flex flex-col gap-6 animate-in fade-in duration-700">
-            <div className="glass-card p-6 border-white/5">
+            <div className="glass-card p-6 border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-black/20">
                 <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                    <div className="p-2 rounded-lg bg-indigo-600/10 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                         <Code2 size={24} />
                     </div>
-                    <h2 className="text-xl font-black tracking-tight">{title}</h2>
+                    <h2 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">{title}</h2>
                 </div>
-                <div className="prose prose-invert max-w-none text-gray-400 text-sm leading-relaxed">
+                <div className="prose dark:prose-invert max-w-none text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
                     {instructions}
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[500px]">
                 {/* Editor Area */}
-                <div className="flex flex-col rounded-2xl overflow-hidden border border-white/5 bg-[#1a1c21]">
-                    <div className="px-4 py-2 bg-white/5 border-b border-white/5 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
+                <div className="flex flex-col rounded-2xl overflow-hidden border border-black/5 dark:border-white/5 bg-[#1a1c21]">
+                    <div className="px-4 py-2 bg-black/40 dark:bg-white/5 border-b border-black/5 dark:border-white/5 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
                         <span>main.py</span>
                         <div className="flex gap-2">
                             <div className="w-2 h-2 rounded-full bg-red-500/20" />
@@ -87,7 +87,7 @@ export default function CodeExercisePlayer({
                         className="flex-1 bg-transparent p-6 font-mono text-sm resize-none focus:outline-none text-indigo-100 selection:bg-indigo-500/30"
                         spellCheck={false}
                     />
-                    <div className="p-4 bg-black/20 border-t border-white/5 flex gap-2">
+                    <div className="p-4 bg-black/40 dark:bg-black/20 border-t border-black/5 dark:border-white/5 flex gap-2">
                         <button
                             onClick={runCode}
                             disabled={status === "running"}
@@ -111,12 +111,12 @@ export default function CodeExercisePlayer({
                 </div>
 
                 {/* Console / Results Area */}
-                <div className="flex flex-col rounded-2xl overflow-hidden border border-white/5 bg-black/40">
-                    <div className="px-4 py-2 bg-white/5 border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                <div className="flex flex-col rounded-2xl overflow-hidden border border-black/5 dark:border-white/5 bg-black/[0.05] dark:bg-black/40">
+                    <div className="px-4 py-2 bg-black/10 dark:bg-white/5 border-b border-black/5 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-gray-500">
                         Console Output
                     </div>
                     <div className="flex-1 p-6 font-mono text-sm overflow-auto">
-                        {!output && <span className="text-gray-600 italic">Click &quot;Run Code&quot; to execute tests...</span>}
+                        {!output && <span className="text-gray-500 dark:text-gray-600 italic">Click &quot;Run Code&quot; to execute tests...</span>}
                         {output && (
                             <pre className={`whitespace-pre-wrap ${status === "success" ? "text-green-400" :
                                 status === "error" ? "text-red-400" :

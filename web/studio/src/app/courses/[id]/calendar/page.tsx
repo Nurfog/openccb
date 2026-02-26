@@ -89,7 +89,7 @@ export default function CourseCalendarPage({ params }: { params: { id: string } 
     const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
 
     if (loading) return (
-        <div className="min-h-screen bg-[#0f1115] flex items-center justify-center">
+        <div className="min-h-screen bg-transparent flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
     );
@@ -98,7 +98,7 @@ export default function CourseCalendarPage({ params }: { params: { id: string } 
     const year = currentDate.getFullYear();
 
     return (
-        <div className="min-h-screen bg-[#0f1115] text-white p-8">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-8">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-12">

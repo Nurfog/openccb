@@ -26,14 +26,14 @@ export default function DocumentPlayer({ id, title, url }: DocumentPlayerProps) 
     return (
         <div className="space-y-6" id={id}>
             <div className="flex items-center justify-between">
-                <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">
+                <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">
                     {title || "Material de Lectura"}
                 </h3>
             </div>
 
             <div className="relative">
                 {isPdf ? (
-                    <div className="glass-card !p-0 overflow-hidden border-white/5 bg-white/5 aspect-[4/3] w-full group relative">
+                    <div className="glass-card !p-0 overflow-hidden border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/5 aspect-[4/3] w-full group relative">
                         <iframe
                             src={`${displayUrl}#view=FitH&toolbar=0`}
                             className="w-full h-full border-none"
@@ -41,7 +41,7 @@ export default function DocumentPlayer({ id, title, url }: DocumentPlayerProps) 
                         />
 
                         {/* Overlay Controls */}
-                        <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between">
+                        <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between">
                             <span className="text-[10px] font-black uppercase tracking-widest text-white/50 flex items-center gap-2">
                                 <Eye size={12} /> Vista Previa
                             </span>
@@ -65,13 +65,13 @@ export default function DocumentPlayer({ id, title, url }: DocumentPlayerProps) 
                         </div>
                     </div>
                 ) : (
-                    <div className="glass-card p-12 flex flex-col items-center text-center gap-6 border-white/5 bg-white/5">
+                    <div className="glass-card p-12 flex flex-col items-center text-center gap-6 border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/5">
                         <div className="w-20 h-20 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400">
                             <FileText size={40} />
                         </div>
                         <div>
-                            <p className="text-xl font-bold text-white mb-2">Documento Adjunto</p>
-                            <p className="text-sm text-gray-500 max-w-sm mx-auto uppercase tracking-widest font-black leading-relaxed">
+                            <p className="text-xl font-bold text-gray-900 dark:text-white mb-2">Documento Adjunto</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-500 max-w-sm mx-auto uppercase tracking-widest font-black leading-relaxed">
                                 Este archivo no puede previsualizarse. Descárgalo para leerlo.
                             </p>
                         </div>

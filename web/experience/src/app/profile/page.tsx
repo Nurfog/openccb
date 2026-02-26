@@ -204,7 +204,7 @@ export default function ProfilePage() {
                                                 <Award size={24} className="text-gray-600 group-hover:text-yellow-500 transition-colors" />
                                             )}
                                         </div>
-                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-black border border-white/10 rounded-lg text-[10px] font-bold text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-gray-900 dark:bg-black border border-black/10 dark:border-white/10 rounded-lg text-[10px] font-bold text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                                             {badge.name}
                                         </div>
                                     </div>

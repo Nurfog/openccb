@@ -50,27 +50,27 @@ export default function AdvancedAnalyticsPage({ params }: { params: { id: string
     }, [id, user]);
 
     if (loading) return (
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="min-h-screen bg-transparent flex items-center justify-center">
             <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
         </div>
     );
 
     if (error || !course || !analytics) return (
-        <div className="min-h-screen bg-[#0f1115] text-white p-20 text-center flex flex-col items-center justify-center gap-6">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-20 text-center flex flex-col items-center justify-center gap-6">
             <div className="text-gray-400">{error || "Data unavailable"}</div>
             <button onClick={() => router.back()} className="btn-premium px-8">Go Back</button>
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-[#0f1115] text-white p-8">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-8">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-12">
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => router.push(`/courses/${id}/analytics`)}
-                            className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                            className="p-2 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
                         >
                             <ArrowLeft className="w-6 h-6" />
                         </button>
@@ -78,7 +78,7 @@ export default function AdvancedAnalyticsPage({ params }: { params: { id: string
                             <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
                                 Advanced Insights
                             </h1>
-                            <p className="text-gray-400 mt-1">Cohort analysis and student retention for {course.title}</p>
+                            <p className="text-gray-600 dark:text-gray-400 mt-1">Cohort analysis and student retention for {course.title}</p>
                         </div>
                     </div>
                 </div>
@@ -92,28 +92,28 @@ export default function AdvancedAnalyticsPage({ params }: { params: { id: string
                                     <Layers className="text-purple-500" />
                                     Cohort Completion
                                 </h2>
-                                <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest bg-white/5 px-4 py-2 rounded-xl">
+                                <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest bg-black/5 dark:bg-white/5 px-4 py-2 rounded-xl">
                                     <Filter size={14} /> Grouped by Month
                                 </div>
                             </div>
 
-                            <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.02]">
+                            <div className="overflow-hidden rounded-3xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02]">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
-                                        <tr className="bg-white/5">
+                                        <tr className="bg-black/5 dark:bg-white/5">
                                             <th className="p-6 text-xs font-black uppercase tracking-widest text-gray-500">Cohort (Enrollment Month)</th>
                                             <th className="p-6 text-xs font-black uppercase tracking-widest text-gray-500">Students</th>
                                             <th className="p-6 text-xs font-black uppercase tracking-widest text-gray-500">Avg. Completion Rate</th>
                                             <th className="p-6 text-xs font-black uppercase tracking-widest text-gray-500">Engagement Status</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-white/5">
+                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                         {analytics.cohorts.length === 0 ? (
                                             <tr>
                                                 <td colSpan={4} className="p-12 text-center text-gray-600 italic">No cohort data available yet.</td>
                                             </tr>
                                         ) : analytics.cohorts.map((cohort) => (
-                                            <tr key={cohort.period} className="hover:bg-white/[0.02] transition-colors">
+                                            <tr key={cohort.period} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
                                                 <td className="p-6 font-bold flex items-center gap-3">
                                                     <Calendar size={16} className="text-purple-400" />
                                                     {cohort.period}
@@ -161,17 +161,17 @@ export default function AdvancedAnalyticsPage({ params }: { params: { id: string
                                         <div key={item.lesson_id} className="group relative">
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[10px] font-black text-gray-500">
+                                                    <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center text-[10px] font-black text-gray-500">
                                                         {index + 1}
                                                     </div>
-                                                    <span className="font-bold text-gray-300">{item.lesson_title}</span>
+                                                    <span className="font-bold text-gray-900 dark:text-gray-300">{item.lesson_title}</span>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-sm font-black text-white">{item.student_count} Students</div>
+                                                    <div className="text-sm font-black text-gray-900 dark:text-white">{item.student_count} Students</div>
                                                     <div className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">{Math.round(percentage)}% Retention</div>
                                                 </div>
                                             </div>
-                                            <div className="h-4 w-full bg-white/5 rounded-lg overflow-hidden border border-white/5">
+                                            <div className="h-4 w-full bg-black/5 dark:bg-white/5 rounded-lg overflow-hidden border border-black/5 dark:border-white/5">
                                                 <div
                                                     className={`h-full transition-all duration-1000 ${percentage > 80 ? 'bg-indigo-500' :
                                                         percentage > 50 ? 'bg-indigo-600/70' :
@@ -199,7 +199,7 @@ export default function AdvancedAnalyticsPage({ params }: { params: { id: string
                                     Engagement Heatmap
                                 </h2>
                                 <select
-                                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+                                    className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
                                     onChange={(e) => {
                                         const lessonId = e.target.value;
                                         if (lessonId) {
@@ -220,7 +220,7 @@ export default function AdvancedAnalyticsPage({ params }: { params: { id: string
                             </div>
 
                             {heatmapData.length > 0 ? (
-                                <div className="p-8 rounded-3xl border border-white/10 bg-white/[0.02] space-y-8">
+                                <div className="p-8 rounded-3xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] space-y-8">
                                     <p className="text-sm text-gray-500 uppercase font-black tracking-widest">
                                         Playback concentration by second (Total Interactions: {heatmapData.reduce((acc: number, p: HeatmapPoint) => acc + Number(p.count), 0)})
                                     </p>
@@ -242,14 +242,14 @@ export default function AdvancedAnalyticsPage({ params }: { params: { id: string
                                                     className="flex-1 bg-orange-500/20 hover:bg-orange-500 transition-all rounded-t-[1px] relative group/bar"
                                                     style={{ height: `${(count / maxCount) * 100}%` }}
                                                 >
-                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-[10px] font-black rounded opacity-0 group-hover/bar:opacity-100 whitespace-nowrap z-10 pointer-events-none">
+                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 dark:bg-black text-[10px] font-black rounded opacity-0 group-hover/bar:opacity-100 whitespace-nowrap z-10 pointer-events-none transition-opacity">
                                                         {Math.floor(i / 60)}:{(i % 60).toString().padStart(2, '0')} - {count} views
                                                     </div>
                                                 </div>
                                             ));
                                         })()}
                                     </div>
-                                    <div className="flex justify-between text-[10px] font-black text-gray-600 uppercase tracking-widest pt-4 border-t border-white/5">
+                                    <div className="flex justify-between text-[10px] font-black text-gray-600 uppercase tracking-widest pt-4 border-t border-black/5 dark:border-white/5">
                                         <span>0:00 Start</span>
                                         <span>Video Timeline</span>
                                         <span>End</span>

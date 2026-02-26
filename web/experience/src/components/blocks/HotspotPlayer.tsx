@@ -68,18 +68,18 @@ export default function HotspotPlayer({
 
     return (
         <div className="flex flex-col gap-6 animate-in fade-in zoom-in duration-700">
-            <div className="glass-card p-6 border-indigo-500/20 bg-indigo-500/5">
+            <div className="glass-card p-6 border-indigo-600/10 dark:border-indigo-500/20 bg-indigo-600/5 dark:bg-indigo-500/5">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                         <div className="p-3 rounded-2xl bg-amber-400 text-black shadow-lg shadow-amber-400/20">
                             <Search size={24} strokeWidth={3} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-black tracking-tight text-white">{title}</h2>
-                            <p className="text-xs text-indigo-300 font-bold uppercase tracking-widest">{description}</p>
+                            <h2 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">{title}</h2>
+                            <p className="text-xs text-indigo-600 dark:text-indigo-300 font-bold uppercase tracking-widest">{description}</p>
                         </div>
                     </div>
-                    <div className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-black">
+                    <div className="px-4 py-2 rounded-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 text-xs font-black text-gray-900 dark:text-white">
                         {found.length} / {hotspots.length} FOUND
                     </div>
                 </div>
@@ -88,7 +88,7 @@ export default function HotspotPlayer({
             <div
                 ref={containerRef}
                 onClick={handleClick}
-                className="relative aspect-video rounded-3xl overflow-hidden border-4 border-white/10 bg-black cursor-crosshair group select-none shadow-2xl"
+                className="relative aspect-video rounded-3xl overflow-hidden border-4 border-black/5 dark:border-white/10 bg-black cursor-crosshair group select-none shadow-2xl"
             >
                 <Image
                     src={getImageUrl(imageUrl)}
@@ -149,8 +149,8 @@ export default function HotspotPlayer({
                     <div
                         key={h.id}
                         className={`px-4 py-2 rounded-xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-2 ${found.includes(h.id)
-                            ? "bg-green-500 text-white translate-y-[-2px] shadow-lg shadow-green-500/20"
-                            : "bg-white/5 text-gray-500 border border-white/5"
+                            ? "bg-green-600 dark:bg-green-500 text-white translate-y-[-2px] shadow-lg shadow-green-500/20"
+                            : "bg-black/5 dark:bg-white/5 text-gray-500 dark:text-gray-500 border border-black/5 dark:border-white/5"
                             }`}
                     >
                         {found.includes(h.id) ? <CheckCircle size={14} /> : <div className="w-1 h-1 rounded-full bg-current" />}

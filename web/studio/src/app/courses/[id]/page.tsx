@@ -222,24 +222,24 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
     if (error) return <div className="py-20 text-center text-red-400">{error}</div>;
 
     return (
-        <div className="min-h-screen bg-[#0f1115] text-white p-8">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-gray-100 p-8 transition-colors duration-300">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-12">
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => router.push('/')}
-                            className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                            className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors text-gray-700 dark:text-gray-300"
                         >
                             <ArrowLeft className="w-6 h-6" />
                         </button>
                         <div>
-                            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
                                 Course Editor
                             </h1>
                             <div className="flex items-center gap-3 mt-1">
-                                <p className="text-gray-400">Design your course structure and lesson content for {course?.title}</p>
-                                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${course?.pacing_mode === 'instructor_led' ? 'bg-purple-500/20 text-purple-400' : 'bg-green-500/20 text-green-400'}`}>
+                                <p className="text-gray-600 dark:text-gray-400">Design your course structure and lesson content for {course?.title}</p>
+                                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${course?.pacing_mode === 'instructor_led' ? 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400' : 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400'}`}>
                                     {course?.pacing_mode?.replace('_', ' ') || 'Self Paced'}
                                 </span>
                             </div>
@@ -307,7 +307,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                                                     value={editValue}
                                                     onChange={(e) => setEditValue(e.target.value)}
                                                     onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle(module.id, 'module')}
-                                                    className="bg-black/40 border border-blue-500/50 rounded px-3 py-1 flex-1 text-white focus:outline-none"
+                                                    className="bg-black/5 dark:bg-black/40 border border-blue-500/50 rounded px-3 py-1 flex-1 text-gray-900 dark:text-gray-900 dark:text-white focus:outline-none"
                                                 />
                                                 <button onClick={() => handleSaveTitle(module.id, 'module')} className="text-green-400 hover:text-green-300">
                                                     <Save className="w-5 h-5" />
@@ -320,13 +320,13 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                                             <div className="flex items-center gap-3 group flex-1">
                                                 <span
                                                     onClick={() => { setEditingId(module.id); setEditValue(module.title); }}
-                                                    className="font-semibold text-lg text-blue-400 cursor-pointer hover:text-blue-300 transition-colors"
+                                                    className="font-semibold text-lg text-blue-600 dark:text-blue-400 cursor-pointer hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
                                                 >
                                                     {module.title || `Module ${module.position}`}
                                                 </span>
                                                 <button
                                                     onClick={() => { setEditingId(module.id); setEditValue(module.title); }}
-                                                    className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-white transition-opacity"
+                                                    className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-900 dark:text-white transition-opacity"
                                                 >
                                                     <Pencil className="w-4 h-4" />
                                                 </button>
@@ -364,38 +364,38 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
 
                                             <div className="flex-1">
                                                 {editingId === lesson.id ? (
-                                                    <div className="flex items-center gap-2 glass border-blue-500/30 p-2 rounded-lg">
+                                                    <div className="flex items-center gap-2 glass border-blue-500/30 p-2 rounded-lg bg-black/5 dark:bg-black/20">
                                                         <input
                                                             autoFocus
                                                             value={editValue}
                                                             onChange={(e) => setEditValue(e.target.value)}
                                                             onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle(lesson.id, 'lesson')}
-                                                            className="bg-transparent border-none flex-1 text-white focus:outline-none"
+                                                            className="bg-transparent border-none flex-1 text-gray-900 dark:text-gray-900 dark:text-white focus:outline-none"
                                                         />
-                                                        <button onClick={() => handleSaveTitle(lesson.id, 'lesson')} className="text-green-400">
+                                                        <button onClick={() => handleSaveTitle(lesson.id, 'lesson')} className="text-green-600 dark:text-green-400">
                                                             <Save className="w-4 h-4" />
                                                         </button>
-                                                        <button onClick={() => setEditingId(null)} className="text-gray-400">
+                                                        <button onClick={() => setEditingId(null)} className="text-gray-500 dark:text-gray-400">
                                                             <X className="w-4 h-4" />
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <div className="flex items-center justify-between glass border-white/5 p-4 rounded-xl hover:bg-white/10 hover:border-blue-500/30 transition-all cursor-pointer group/lesson">
+                                                    <div className="flex items-center justify-between glass border-black/5 dark:border-white/5 p-4 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 hover:border-blue-500/30 transition-all cursor-pointer group/lesson">
                                                         <Link href={`/courses/${params.id}/lessons/${lesson.id}`} className="flex-1 flex items-center gap-4">
-                                                            <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400 group-hover/lesson:scale-110 transition-transform">
+                                                            <div className="p-2 bg-blue-500/10 dark:bg-blue-500/20 rounded-lg text-blue-600 dark:text-blue-400 group-hover/lesson:scale-110 transition-transform">
                                                                 {lesson.content_type === 'video' ? <PlayCircle className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
                                                             </div>
                                                             <div className="flex flex-col">
                                                                 <span
                                                                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEditing(lesson.id, lesson.title); }}
-                                                                    className="font-medium hover:text-blue-400 transition-colors"
+                                                                    className="font-medium text-gray-900 dark:text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                                                                 >
                                                                     {lesson.title}
                                                                 </span>
                                                                 <div className="flex items-center gap-3 text-[10px] text-gray-500 uppercase mt-0.5 font-semibold">
                                                                     <span>{lesson.content_type}</span>
                                                                     {lesson.due_date && (
-                                                                        <div className="flex items-center gap-1 text-orange-400">
+                                                                        <div className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
                                                                             <Calendar className="w-3 h-3" />
                                                                             {new Date(lesson.due_date).toLocaleDateString()}
                                                                         </div>
@@ -406,7 +406,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                                                         <div className="flex items-center gap-4">
                                                             <button
                                                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEditing(lesson.id, lesson.title); }}
-                                                                className="opacity-0 group-hover/lesson:opacity-100 text-gray-500 hover:text-white transition-opacity"
+                                                                className="opacity-0 group-hover/lesson:opacity-100 text-gray-500 hover:text-gray-900 dark:text-white transition-opacity"
                                                             >
                                                                 <Pencil className="w-4 h-4" />
                                                             </button>
@@ -425,7 +425,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
 
                                     <button
                                         onClick={() => handleAddLesson(module.id)}
-                                        className="w-full py-3 border border-dashed border-white/10 rounded-xl text-sm text-gray-500 hover:text-white hover:border-white/20 hover:bg-white/5 transition-all mt-3 flex items-center justify-center gap-2"
+                                        className="w-full py-3 border border-dashed border-black/10 dark:border-white/10 rounded-xl text-sm text-gray-500 hover:text-gray-900 dark:hover:text-gray-900 dark:text-white hover:border-black/20 dark:hover:border-white/20 hover:bg-black/5 dark:hover:bg-white/5 transition-all mt-3 flex items-center justify-center gap-2"
                                     >
                                         <Plus className="w-4 h-4" /> New Lesson
                                     </button>
@@ -435,7 +435,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
 
                         <button
                             onClick={handleAddModule}
-                            className="w-full py-6 border-2 border-dashed border-white/10 rounded-2xl font-medium text-gray-500 hover:text-white hover:border-white/20 hover:bg-white/5 transition-all flex items-center justify-center gap-3 text-lg"
+                            className="w-full py-6 border-2 border-dashed border-black/10 dark:border-white/10 rounded-2xl font-medium text-gray-500 hover:text-gray-900 dark:hover:text-gray-900 dark:text-white hover:border-black/20 dark:hover:border-white/20 hover:bg-black/5 dark:hover:bg-white/5 transition-all flex items-center justify-center gap-3 text-lg"
                         >
                             <Plus className="w-6 h-6" /> Add New Module
                         </button>

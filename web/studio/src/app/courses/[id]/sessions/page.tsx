@@ -74,14 +74,14 @@ export default function LiveSessionsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#0f1115] flex items-center justify-center">
+            <div className="min-h-screen bg-transparent flex items-center justify-center">
                 <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#0f1115] text-white p-8">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-8">
             <div className="max-w-7xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
@@ -219,7 +219,7 @@ export default function LiveSessionsPage() {
                                         type="datetime-local"
                                         value={newMeeting.start_at}
                                         onChange={(e) => setNewMeeting({ ...newMeeting, start_at: e.target.value })}
-                                        className="w-full bg-black/20 border border-white/10 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-blue-500/50 text-white"
+                                        className="w-full bg-black/20 border border-white/10 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-blue-500/50 text-gray-900 dark:text-white"
                                     />
                                 </div>
                                 <div className="space-y-2">

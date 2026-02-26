@@ -67,7 +67,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
         fetchAll();
     }, [params.id, params.lessonId, user]);
 
-    if (loading) return <div className="p-20 text-center animate-pulse text-gray-500 font-bold uppercase tracking-widest">Cargando Experiencia...</div>;
+    if (loading) return <div className="p-20 text-center animate-pulse text-gray-600 dark:text-gray-500 font-bold uppercase tracking-widest">Cargando Experiencia...</div>;
     if (!lesson || !course) return <div className="p-20 text-center text-red-400">Contenido no encontrado.</div>;
 
     const allLessons = course.modules.flatMap(m => m.lessons);
@@ -180,7 +180,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
             case 'completed': return 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]';
             case 'in-progress': return 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]';
             case 'repeatable': return 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]';
-            default: return 'bg-white/10';
+            default: return 'bg-black/10 dark:bg-white/10';
         }
     };
 
@@ -188,18 +188,18 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
         <div className="flex h-[calc(100vh-64px)] overflow-hidden">
             {/* Navigation Sidebar */}
             <aside
-                className={`glass border-r border-white/5 transition-all duration-500 bg-black/40 flex flex-col ${sidebarOpen ? 'w-80' : 'w-0 overflow-hidden border-none'}`}
+                className={`glass border-r border-black/5 dark:border-white/5 transition-all duration-500 bg-black/5 dark:bg-black/40 flex flex-col ${sidebarOpen ? 'w-80' : 'w-0 overflow-hidden border-none'}`}
             >
-                <div className="p-6 border-b border-white/5">
-                    <h2 className="text-xs font-black uppercase tracking-widest text-blue-500 mb-1">Contenido del Curso</h2>
-                    <p className="text-sm font-bold text-white truncate">{course.title}</p>
+                <div className="p-6 border-b border-black/5 dark:border-white/5">
+                    <h2 className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-500 mb-1">Contenido del Curso</h2>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{course.title}</p>
                 </div>
 
                 <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
                     {course.modules.map((module) => (
                         <div key={module.id} className="space-y-2">
                             <div className="flex items-center justify-between px-3 mb-2">
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500">{module.title}</h4>
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">{module.title}</h4>
                                 <div className={`w-1.5 h-1.5 rounded-full ${getStatusColor(getModuleStatus(module))}`} />
                             </div>
                             <div className="space-y-1">
@@ -224,14 +224,14 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                 <div className="absolute top-4 left-4 z-10 flex gap-2">
                     <button
                         onClick={() => setSidebarOpen(!sidebarOpen)}
-                        className="p-3 rounded-xl glass border-white/10 text-gray-400 hover:text-white transition-all bg-black/40"
+                        className="p-3 rounded-xl glass border-black/10 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all bg-black/5 dark:bg-black/40"
                         title="Alternar Barra Lateral"
                     >
                         <Menu size={20} />
                     </button>
                     <button
                         onClick={handleToggleBookmark}
-                        className={`p-3 rounded-xl glass border-white/10 transition-all bg-black/40 ${isBookmarked ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`}
+                        className={`p-3 rounded-xl glass border-black/10 dark:border-white/10 transition-all bg-black/5 dark:bg-black/40 ${isBookmarked ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                         title={isBookmarked ? "Quitar Marcador" : "Guardar Marcador"}
                     >
                         <Bookmark size={20} fill={isBookmarked ? "currentColor" : "none"} />
@@ -242,7 +242,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                 setTranscriptOpen(!transcriptOpen);
                                 if (!transcriptOpen) setNotesOpen(false);
                             }}
-                            className={`p-3 rounded-xl glass border-white/10 transition-all bg-black/40 ${transcriptOpen ? 'text-blue-400' : 'text-gray-400 hover:text-white'}`}
+                            className={`p-3 rounded-xl glass border-black/10 dark:border-white/10 transition-all bg-black/5 dark:bg-black/40 ${transcriptOpen ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                             title="Alternar Transcripción"
                         >
                             <ListMusic size={20} />
@@ -253,7 +253,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                             setNotesOpen(!notesOpen);
                             if (!notesOpen) setTranscriptOpen(false);
                         }}
-                        className={`p-3 rounded-xl glass border-white/10 transition-all bg-black/40 ${notesOpen ? 'text-indigo-400' : 'text-gray-400 hover:text-white'}`}
+                        className={`p-3 rounded-xl glass border-black/10 dark:border-white/10 transition-all bg-black/5 dark:bg-black/40 ${notesOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                         title="Alternar Notas"
                     >
                         <StickyNote size={20} />
@@ -265,7 +265,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                         <div className="max-w-4xl mx-auto space-y-20 pb-40">
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-400">
+                                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">
                                         <span>{lesson.content_type === 'activity' ? 'Actividad Interactiva' : 'Lección en Video'}</span>
                                     </div>
                                     <div className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest text-white ${getStatusColor(getLessonStatus(lesson))}`}>
@@ -275,7 +275,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                         {getLessonStatus(lesson) === 'not-started' && "No Iniciada"}
                                     </div>
                                 </div>
-                                <h1 className="text-4xl font-black tracking-tighter text-white">{lesson.title}</h1>
+                                <h1 className="text-4xl font-black tracking-tighter text-gray-900 dark:text-white">{lesson.title}</h1>
                             </div>
 
                             {lesson.summary && (
@@ -448,7 +448,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                                             />
                                                         );
                                                     default:
-                                                        return <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-gray-500 uppercase tracking-widest">Tipo de Bloque Desconocido: {block.type}</div>;
+                                                        return <div className="p-4 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-500 uppercase tracking-widest">Tipo de Bloque Desconocido: {block.type}</div>;
                                                 }
                                             };
 
@@ -460,14 +460,14 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                         })}
                                     </div>
                                 ) : (
-                                    <div className="py-20 text-center glass-card border-dashed border-white/10">
-                                        <p className="text-gray-500 font-bold uppercase tracking-widest">Actualmente, esta lección no tiene contenido.</p>
+                                    <div className="py-20 text-center glass-card border-dashed border-black/10 dark:border-white/10">
+                                        <p className="text-gray-600 dark:text-gray-500 font-bold uppercase tracking-widest">Actualmente, esta lección no tiene contenido.</p>
                                     </div>
                                 )
                             )}
 
                             {lesson.is_graded && (
-                                <div className="pt-20 border-t border-white/5 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                                <div className="pt-20 border-t border-black/5 dark:border-white/5 animate-in fade-in slide-in-from-bottom-8 duration-1000">
                                     {userGrade && lesson.max_attempts && userGrade.attempts_count >= lesson.max_attempts ? null : (
                                         <>
                                             <button
@@ -492,7 +492,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                                 </span>
                                             </button>
                                             {lesson.max_attempts && (
-                                                <p className="mt-4 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                                                <p className="mt-4 text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">
                                                     Intento {userGrade ? userGrade.attempts_count : 0} de {lesson.max_attempts} usado
                                                 </p>
                                             )}
@@ -505,13 +505,13 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
 
                     {/* Right Side Panels */}
                     {((hasTranscription && transcriptOpen) || notesOpen) && (
-                        <aside className="w-[400px] border-l border-white/5 bg-black/20 flex flex-col animate-in slide-in-from-right duration-500">
+                        <aside className="w-[400px] border-l border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-black/20 flex flex-col animate-in slide-in-from-right duration-500">
                             {/* Panel Tabs */}
-                            <div className="flex border-b border-white/5">
+                            <div className="flex border-b border-black/5 dark:border-white/5">
                                 {hasTranscription && (
                                     <button
                                         onClick={() => setTranscriptOpen(true)}
-                                        className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${transcriptOpen ? 'text-blue-400 bg-white/5' : 'text-gray-500 hover:text-gray-300'}`}
+                                        className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${transcriptOpen ? 'text-blue-600 dark:text-blue-400 bg-black/5 dark:bg-white/5' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'}`}
                                     >
                                         Transcripción
                                     </button>
@@ -521,7 +521,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                         setNotesOpen(true);
                                         if (hasTranscription) setTranscriptOpen(false);
                                     }}
-                                    className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${notesOpen && (!transcriptOpen || !hasTranscription) ? 'text-indigo-400 bg-white/5' : 'text-gray-500 hover:text-gray-300'}`}
+                                    className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${notesOpen && (!transcriptOpen || !hasTranscription) ? 'text-indigo-600 dark:text-indigo-400 bg-black/5 dark:bg-white/5' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'}`}
                                 >
                                     Notas
                                 </button>
@@ -545,15 +545,15 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                 </div>
 
                 {/* Footer Controls */}
-                <footer className="h-20 glass border-t border-white/5 px-6 flex items-center justify-between bg-black/60 backdrop-blur-3xl shrink-0">
+                <footer className="h-20 glass border-t border-black/5 dark:border-white/5 px-6 flex items-center justify-between bg-white/60 dark:bg-black/60 backdrop-blur-3xl shrink-0">
                     {prevLesson ? (
                         <Link href={`/courses/${params.id}/lessons/${prevLesson.id}`} className="group flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl glass border-white/10 flex items-center justify-center group-hover:bg-white/5 transition-all text-gray-400 group-hover:text-white">
+                            <div className="w-10 h-10 rounded-xl glass border-black/10 dark:border-white/10 flex items-center justify-center group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-all text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white">
                                 <ChevronLeft size={20} />
                             </div>
                             <div className="hidden sm:block">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Anterior</p>
-                                <p className="text-xs font-bold text-gray-300 group-hover:text-white truncate max-w-[120px]">{prevLesson.title}</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Anterior</p>
+                                <p className="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white truncate max-w-[120px]">{prevLesson.title}</p>
                             </div>
                         </Link>
                     ) : <div />}
@@ -561,10 +561,10 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                     <div className="hidden lg:flex items-center gap-2">
                         <div className="flex gap-1">
                             {allLessons.map((l, i) => (
-                                <div key={l.id} className={`w-8 h-1 rounded-full ${i <= currentIndex ? 'bg-blue-500' : 'bg-white/10'}`} />
+                                <div key={l.id} className={`w-8 h-1 rounded-full ${i <= currentIndex ? 'bg-blue-600 dark:bg-blue-500' : 'bg-black/10 dark:bg-white/10'}`} />
                             ))}
                         </div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 ml-4">
                             {currentIndex + 1} OF {allLessons.length} COMPLETADO
                         </span>
                     </div>

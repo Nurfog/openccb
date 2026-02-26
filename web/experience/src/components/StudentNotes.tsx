@@ -63,7 +63,7 @@ export default function StudentNotes({ lessonId }: StudentNotesProps) {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center p-8 text-gray-500">
+            <div className="flex flex-col items-center justify-center p-8 text-gray-600 dark:text-gray-500">
                 <Loader2 className="w-6 h-6 animate-spin mb-2" />
                 <span className="text-xs font-bold uppercase tracking-widest">Cargando tus notas...</span>
             </div>
@@ -71,11 +71,11 @@ export default function StudentNotes({ lessonId }: StudentNotesProps) {
     }
 
     return (
-        <div className="glass-card flex flex-col h-full bg-white/[0.02] border-white/5 overflow-hidden rounded-2xl">
-            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/[0.03]">
+        <div className="glass-card flex flex-col h-full bg-black/[0.01] dark:bg-white/[0.02] border-black/5 dark:border-white/5 overflow-hidden rounded-2xl">
+            <div className="p-4 border-b border-black/5 dark:border-white/5 flex items-center justify-between bg-black/[0.02] dark:bg-white/[0.03]">
                 <div className="flex items-center gap-2">
-                    <StickyNote size={18} className="text-indigo-400" />
-                    <h3 className="text-sm font-black uppercase tracking-widest text-white">Notas Personales</h3>
+                    <StickyNote size={18} className="text-indigo-600 dark:text-indigo-400" />
+                    <h3 className="text-sm font-black uppercase tracking-widest text-gray-900 dark:text-white">Notas Personales</h3>
                 </div>
                 <div className="flex items-center gap-2">
                     {saving ? (
@@ -98,10 +98,10 @@ export default function StudentNotes({ lessonId }: StudentNotesProps) {
                 value={note}
                 onChange={handleChange}
                 placeholder="Escribe tus apuntes aquí... Se guardan automáticamente."
-                className="flex-1 w-full p-6 bg-transparent text-gray-200 text-sm leading-relaxed focus:outline-none resize-none placeholder:text-gray-600 custom-scrollbar"
+                className="flex-1 w-full p-6 bg-transparent text-gray-800 dark:text-gray-200 text-sm leading-relaxed focus:outline-none resize-none placeholder:text-gray-400 dark:placeholder:text-gray-600 custom-scrollbar"
             />
 
-            <div className="p-3 bg-white/[0.01] border-t border-white/5 text-[10px] text-gray-500 font-medium text-center italic">
+            <div className="p-3 bg-black/[0.01] dark:bg-white/[0.01] border-t border-black/5 dark:border-white/5 text-[10px] text-gray-500 font-medium text-center italic">
                 Solo tú puedes ver estas notas.
             </div>
         </div>

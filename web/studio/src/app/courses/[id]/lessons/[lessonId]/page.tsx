@@ -369,7 +369,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-8">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 text-[10px] text-blue-500 font-bold uppercase tracking-[0.2em]">
-                        <Link href={`/courses/${params.id}`} className="hover:text-white transition-colors">Outline</Link>
+                        <Link href={`/courses/${params.id}`} className="hover:text-gray-900 dark:text-white transition-colors">Outline</Link>
                         <span className="text-gray-700">/</span>
                         <span>Activity</span>
                     </div>
@@ -391,7 +391,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 <h2 className="text-4xl font-black tracking-tight">{lesson.title}</h2>
                                 <button
                                     onClick={() => { setEditingId('lesson-title'); setEditValue(lesson.title); }}
-                                    className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-white transition-opacity"
+                                    className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-900 dark:text-white transition-opacity"
                                 >
                                     <Pencil className="w-5 h-5" />
                                 </button>
@@ -540,7 +540,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                             className="sr-only peer"
                                         />
                                         <div className="w-10 h-6 bg-gray-700 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-4"></div>
-                                        <span className="text-sm font-bold text-gray-400 peer-checked:text-white transition-colors">Allow Instant Corrections</span>
+                                        <span className="text-sm font-bold text-gray-400 peer-checked:text-gray-900 dark:text-white transition-colors">Allow Instant Corrections</span>
                                     </label>
                                     <p className="text-[10px] text-gray-600 italic">Enables &quot;Check Answer&quot; buttons for individual blocks</p>
                                 </div>
@@ -769,7 +769,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 <button
                                     onClick={() => moveBlock(index, 'up')}
                                     disabled={index === 0}
-                                    className="w-10 h-10 rounded-xl bg-white/5 text-gray-400 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all border border-white/10 disabled:opacity-20 disabled:cursor-not-allowed group-hover/block:scale-110"
+                                    className="w-10 h-10 rounded-xl bg-white/5 text-gray-400 flex items-center justify-center hover:bg-blue-500 hover:text-gray-900 dark:text-white transition-all border border-white/10 disabled:opacity-20 disabled:cursor-not-allowed group-hover/block:scale-110"
                                     title="Move Up"
                                 >
                                     <ChevronUp className="w-5 h-5" />
@@ -777,7 +777,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 <button
                                     onClick={() => moveBlock(index, 'down')}
                                     disabled={index === blocks.length - 1}
-                                    className="w-10 h-10 rounded-xl bg-white/5 text-gray-400 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all border border-white/10 disabled:opacity-20 disabled:cursor-not-allowed group-hover/block:scale-110"
+                                    className="w-10 h-10 rounded-xl bg-white/5 text-gray-400 flex items-center justify-center hover:bg-blue-500 hover:text-gray-900 dark:text-white transition-all border border-white/10 disabled:opacity-20 disabled:cursor-not-allowed group-hover/block:scale-110"
                                     title="Move Down"
                                 >
                                     <ChevronDown className="w-5 h-5" />
@@ -785,14 +785,14 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 <div className="h-4"></div>
                                 <button
                                     onClick={() => openSaveToLibraryModal(block)}
-                                    className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all border border-emerald-500/20 group-hover/block:scale-110"
+                                    className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-gray-900 dark:text-white transition-all border border-emerald-500/20 group-hover/block:scale-110"
                                     title="Save to Library"
                                 >
                                     <BookMarked className="w-5 h-5" />
                                 </button>
                                 <button
                                     onClick={() => removeBlock(block.id)}
-                                    className="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-500/20 group-hover/block:scale-110"
+                                    className="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-gray-900 dark:text-white transition-all border border-red-500/20 group-hover/block:scale-110"
                                     title="Remove Block"
                                 >
                                     <Trash2 className="w-5 h-5" />
@@ -1079,7 +1079,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                             value={aiQuizContext}
                             onChange={(e) => setAiQuizContext(e.target.value)}
                             placeholder="e.g. Focus on past tense verbs, or use vocabulary related to travel..."
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 transition-all text-white h-24 resize-none"
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 transition-all text-gray-900 dark:text-white h-24 resize-none"
                             disabled={isGeneratingQuiz}
                         />
                     </div>
@@ -1091,7 +1091,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                         <select
                             value={aiQuizType}
                             onChange={(e) => setAiQuizType(e.target.value)}
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 transition-all text-white appearance-none font-bold"
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 transition-all text-gray-900 dark:text-white appearance-none font-bold"
                             disabled={isGeneratingQuiz}
                         >
                             <option value="multiple-choice">Multiple Choice</option>
@@ -1113,7 +1113,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                         <button
                             type="submit"
                             disabled={isGeneratingQuiz}
-                            className="flex-[2] px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg transition-all shadow-lg shadow-purple-500/20 font-bold text-sm flex items-center justify-center gap-2"
+                            className="flex-[2] px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-gray-900 dark:text-white rounded-lg transition-all shadow-lg shadow-purple-500/20 font-bold text-sm flex items-center justify-center gap-2"
                         >
                             {isGeneratingQuiz ? (
                                 <>

@@ -104,14 +104,14 @@ export default function PeerReviewDashboard() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#0f1115] flex items-center justify-center">
+            <div className="min-h-screen bg-transparent flex items-center justify-center">
                 <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#0f1115] text-white p-8">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-8">
             <div className="max-w-7xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
@@ -204,14 +204,14 @@ export default function PeerReviewDashboard() {
                                                                 {sub.full_name.charAt(0)}
                                                             </div>
                                                             <div>
-                                                                <div className="font-bold text-white group-hover:text-blue-400 transition-colors">{sub.full_name}</div>
+                                                                <div className="font-bold text-gray-900 dark:text-white group-hover:text-blue-400 transition-colors">{sub.full_name}</div>
                                                                 <div className="text-xs text-gray-500">{sub.email}</div>
                                                             </div>
                                                         </div>
 
                                                         <div className="flex items-center gap-8">
                                                             <div className="text-right">
-                                                                <div className="text-sm font-black text-white flex items-center gap-1.5 justify-end">
+                                                                <div className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-1.5 justify-end">
                                                                     <Award className="w-4 h-4 text-yellow-400" />
                                                                     {sub.average_score !== null ? `${(sub.average_score).toFixed(1)}/10` : '—'}
                                                                 </div>

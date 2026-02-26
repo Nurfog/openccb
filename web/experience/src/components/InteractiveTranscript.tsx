@@ -47,24 +47,24 @@ export default function InteractiveTranscript({ transcription, currentTime, onSe
     };
 
     return (
-        <div className="flex flex-col h-full glass-card overflow-hidden border-white/5 bg-black/20">
-            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
+        <div className="flex flex-col h-full glass-card overflow-hidden border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-black/20">
+            <div className="p-6 border-b border-black/5 dark:border-white/5 flex items-center justify-between bg-black/[0.02] dark:bg-white/5">
                 <div className="flex items-center gap-3">
                     <Clock className="w-4 h-4 text-blue-400" />
                     <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Transcripción</h3>
                 </div>
-                <div className="flex bg-black/40 rounded-lg p-1 border border-white/5">
+                <div className="flex bg-white/40 dark:bg-black/40 rounded-lg p-1 border border-black/5 dark:border-white/5">
                     <button
                         onClick={() => setLang('en')}
                         aria-pressed={lang === 'en'}
-                        className={`px-3 py-1 text-[10px] font-black rounded-md transition-all ${lang === 'en' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-white'}`}
+                        className={`px-3 py-1 text-[10px] font-black rounded-md transition-all ${lang === 'en' ? 'bg-blue-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                     >
                         EN
                     </button>
                     <button
                         onClick={() => setLang('es')}
                         aria-pressed={lang === 'es'}
-                        className={`px-3 py-1 text-[10px] font-black rounded-md transition-all ${lang === 'es' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-white'}`}
+                        className={`px-3 py-1 text-[10px] font-black rounded-md transition-all ${lang === 'es' ? 'bg-blue-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                     >
                         ES
                     </button>
@@ -81,7 +81,7 @@ export default function InteractiveTranscript({ transcription, currentTime, onSe
                 {cues.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center p-8">
                         <span className="text-4xl mb-4">🤐</span>
-                        <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">No hay transcripción disponible</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-500 uppercase tracking-widest font-bold">No hay transcripción disponible</p>
                     </div>
                 ) : (
                     cues.map((cue, index) => {
@@ -104,12 +104,12 @@ export default function InteractiveTranscript({ transcription, currentTime, onSe
                                     }
                                 }}
                                 className={`group cursor-pointer p-4 rounded-2xl transition-all border ${active
-                                    ? 'bg-blue-500/10 border-blue-500/30 text-white translate-x-1'
-                                    : 'bg-white/5 border-transparent text-gray-400 hover:bg-white/10 hover:border-white/10'
+                                    ? 'bg-blue-600/10 dark:bg-blue-500/10 border-blue-600/20 dark:border-blue-500/30 text-gray-900 dark:text-white translate-x-1'
+                                    : 'bg-black/5 dark:bg-white/5 border-transparent text-gray-600 dark:text-gray-400 hover:bg-black/10 dark:hover:bg-white/10 hover:border-black/5 dark:hover:border-white/10'
                                     }`}
                             >
                                 <div className="flex items-start gap-4">
-                                    <span className={`text-[10px] font-mono mt-1 ${active ? 'text-blue-400' : 'text-gray-600'}`} aria-hidden="true">
+                                    <span className={`text-[10px] font-mono mt-1 ${active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`} aria-hidden="true">
                                         {formatTime(cue.start)}
                                     </span>
                                     <p className={`text-sm leading-relaxed ${active ? 'font-medium' : ''}`}>
@@ -122,17 +122,17 @@ export default function InteractiveTranscript({ transcription, currentTime, onSe
                 )}
 
                 {lang === 'es' && transcription.es && cues.length > 0 && (
-                    <div className="mt-8 pt-8 border-t border-white/10">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-4">Traducción Completa (Beta)</h4>
-                        <p className="text-sm text-gray-400 leading-relaxed italic">
+                    <div className="mt-8 pt-8 border-t border-black/5 dark:border-white/10">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-4">Traducción Completa (Beta)</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed italic">
                             {transcription.es}
                         </p>
                     </div>
                 )}
             </div>
 
-            <div className="p-4 bg-white/5 border-t border-white/5 flex items-center justify-between">
-                <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Haz clic para saltar al tiempo</span>
+            <div className="p-4 bg-black/[0.02] dark:bg-white/5 border-t border-black/5 dark:border-white/5 flex items-center justify-between">
+                <span className="text-[8px] font-bold text-gray-600 dark:text-gray-500 uppercase tracking-widest">Haz clic para saltar al tiempo</span>
                 <div className="flex gap-1">
                     <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse"></div>
                     <div className="w-1 h-1 rounded-full bg-blue-500/50"></div>

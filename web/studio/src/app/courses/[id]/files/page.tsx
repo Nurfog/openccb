@@ -128,7 +128,7 @@ export default function CourseFilesPage() {
                                             <div className="flex items-center gap-3">
                                                 {getIcon(asset.mimetype)}
                                                 <div>
-                                                    <div className="font-medium text-white">{asset.filename}</div>
+                                                    <div className="font-medium text-gray-900 dark:text-white">{asset.filename}</div>
                                                     <div className="text-xs text-blue-400">{getImageUrl(asset.storage_path.replace('uploads/', '/assets/'))}</div>
                                                 </div>
                                             </div>

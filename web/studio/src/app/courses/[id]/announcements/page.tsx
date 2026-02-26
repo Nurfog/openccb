@@ -54,7 +54,7 @@ export default function AnnouncementsPage() {
     );
 
     return (
-        <div className="min-h-screen bg-[#0f1115] text-white p-8">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-8">
             <div className="max-w-5xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
@@ -109,7 +109,7 @@ export default function AnnouncementsPage() {
                                     <div key={a.id} className={`relative p-6 rounded-2xl border transition-all duration-300 ${a.is_pinned ? 'bg-orange-500/10 border-orange-500/30' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
                                         <div className="flex items-start justify-between mb-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white font-bold overflow-hidden">
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-gray-900 dark:text-white font-bold overflow-hidden">
                                                     {a.author_avatar ? (
                                                         <img src={a.author_avatar} alt={a.author_name} className="w-full h-full object-cover" />
                                                     ) : (
@@ -117,7 +117,7 @@ export default function AnnouncementsPage() {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-semibold text-white">{a.author_name}</h4>
+                                                    <h4 className="font-semibold text-gray-900 dark:text-white">{a.author_name}</h4>
                                                     <div className="flex items-center gap-2 text-sm text-gray-400">
                                                         <span>{formatDistanceToNow(new Date(a.created_at), { addSuffix: true, locale: es })}</span>
                                                         {a.cohort_ids && a.cohort_ids.length > 0 && (
@@ -142,7 +142,7 @@ export default function AnnouncementsPage() {
                                                 </button>
                                             </div>
                                         </div>
-                                        <h3 className="text-xl font-bold text-white mb-2">{a.title}</h3>
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{a.title}</h3>
                                         <p className="text-gray-300 whitespace-pre-wrap">{a.content}</p>
 
                                         {/* Display Target Cohort Names if segmented */}
@@ -164,7 +164,7 @@ export default function AnnouncementsPage() {
                         ) : (
                             <div className="bg-white/5 border border-white/10 rounded-2xl p-20 text-center">
                                 <Megaphone className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                                <h3 className="text-xl font-bold text-white mb-2">No announcements found</h3>
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No announcements found</h3>
                                 <p className="text-gray-400">Start by creating a new announcement for your students.</p>
                             </div>
                         )}
@@ -228,7 +228,7 @@ function NewAnnouncementModal({ courseId, cohorts, onClose, onSuccess }: { cours
                         <Megaphone className="w-5 h-5 text-orange-500" />
                         Create New Announcement
                     </h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-900 dark:text-white transition-colors">
                         <Plus className="w-6 h-6 rotate-45" />
                     </button>
                 </div>
@@ -267,7 +267,7 @@ function NewAnnouncementModal({ courseId, cohorts, onClose, onSuccess }: { cours
                                     key={c.id}
                                     type="button"
                                     onClick={() => toggleCohort(c.id)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${selectedCohorts.includes(c.id) ? 'bg-blue-600 border-blue-500 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${selectedCohorts.includes(c.id) ? 'bg-blue-600 border-blue-500 text-gray-900 dark:text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
                                 >
                                     {c.name}
                                 </button>
@@ -295,7 +295,7 @@ function NewAnnouncementModal({ courseId, cohorts, onClose, onSuccess }: { cours
                         <button
                             type="submit"
                             disabled={loading}
-                            className="px-8 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-orange-500/20"
+                            className="px-8 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-gray-900 dark:text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-orange-500/20"
                         >
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Megaphone className="w-4 h-4" />}
                             Publish Announcement

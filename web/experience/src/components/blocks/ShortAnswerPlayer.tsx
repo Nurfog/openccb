@@ -24,13 +24,13 @@ export default function ShortAnswerPlayer({ id, title, prompt, correctAnswers, a
     return (
         <div className="space-y-8" id={id}>
             <div className="space-y-2">
-                <h3 className="text-xl font-bold border-l-4 border-blue-500 pl-4 py-1 tracking-tight text-white uppercase tracking-widest text-[10px]">
+                <h3 className="text-xl font-bold border-l-4 border-blue-600 dark:border-blue-500 pl-4 py-1 tracking-tight text-gray-900 dark:text-white uppercase tracking-widest text-[10px]">
                     {title || "Respuesta Corta"}
                 </h3>
             </div>
 
-            <div className="p-8 glass border-white/5 rounded-3xl space-y-8">
-                <p className="text-xl font-bold text-gray-100">{prompt || "Por favor, introduce tu respuesta a continuación:"}</p>
+            <div className="p-8 glass border-black/5 dark:border-white/5 rounded-3xl space-y-8 bg-black/[0.02] dark:bg-black/20">
+                <p className="text-xl font-bold text-gray-800 dark:text-gray-100">{prompt || "Por favor, introduce tu respuesta a continuación:"}</p>
 
                 <div className="space-y-4">
                     <input
@@ -38,9 +38,9 @@ export default function ShortAnswerPlayer({ id, title, prompt, correctAnswers, a
                         value={userAnswer}
                         onChange={(e) => setUserAnswer(e.target.value)}
                         disabled={submitted}
-                        className={`w-full bg-white/5 border-2 rounded-2xl px-6 py-4 text-lg transition-all focus:outline-none ${submitted
-                            ? (isCorrect ? "border-green-500 bg-green-500/10 text-green-400" : "border-red-500 bg-red-500/10 text-red-100")
-                            : "border-white/10 focus:border-blue-500 text-white"
+                        className={`w-full bg-black/5 dark:bg-white/5 border-2 rounded-2xl px-6 py-4 text-lg transition-all focus:outline-none ${submitted
+                            ? (isCorrect ? "border-green-600 dark:border-green-500 bg-green-500/10 text-green-700 dark:text-green-400" : "border-red-600 dark:border-red-500 bg-red-500/10 text-red-700 dark:text-red-100")
+                            : "border-black/10 dark:border-white/10 focus:border-blue-600 dark:focus:border-blue-500 text-gray-900 dark:text-white"
                             }`}
                         placeholder="Escribe tu respuesta..."
                     />
@@ -68,7 +68,7 @@ export default function ShortAnswerPlayer({ id, title, prompt, correctAnswers, a
                         {submitted && (
                             <button
                                 onClick={handleReset}
-                                className="w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-3xl border-white/5"
+                                className="w-full py-5 glass text-blue-600 dark:text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-black/5 dark:hover:bg-white/5 transition-all rounded-3xl border-black/5 dark:border-white/5"
                             >
                                 Intentar de Nuevo
                             </button>

@@ -39,7 +39,7 @@ export default function StudentPortfolioPage() {
     if (!profile) return null;
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white selection:bg-blue-500/30">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white selection:bg-blue-500/30 transition-colors duration-300">
             {/* Hero Section / Profile Header */}
             <div className="relative h-64 bg-gradient-to-r from-blue-900/30 to-purple-900/30 border-b border-white/5">
                 <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
@@ -47,7 +47,7 @@ export default function StudentPortfolioPage() {
                     <div className="flex items-end gap-6">
                         <div className="relative group">
                             <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-1000"></div>
-                            <div className="relative w-32 h-32 rounded-2xl bg-black border-2 border-white/10 overflow-hidden shadow-2xl">
+                            <div className="relative w-32 h-32 rounded-2xl bg-black/5 dark:bg-black border-2 border-black/10 dark:border-white/10 overflow-hidden shadow-2xl">
                                 {profile.avatar_url ? (
                                     <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
                                 ) : (

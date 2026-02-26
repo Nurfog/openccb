@@ -95,14 +95,14 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
     if (locked) {
         return (
             <div className="space-y-4" id={id}>
-                <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">{title || "Contenido Multimedia"}</h3>
-                <div className="glass-card aspect-video flex flex-col items-center justify-center gap-6 border-red-500/20 bg-red-500/5">
-                    <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
+                <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">{title || "Contenido Multimedia"}</h3>
+                <div className="glass-card aspect-video flex flex-col items-center justify-center gap-6 border-red-500/10 dark:border-red-500/20 bg-red-500/5">
+                    <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-red-600 dark:text-red-500">
                         <Lock size={32} />
                     </div>
                     <div className="text-center">
-                        <p className="text-xl font-bold text-white mb-2">Contenido Bloqueado</p>
-                        <p className="text-sm text-gray-500 max-w-xs uppercase tracking-widest font-black">
+                        <p className="text-xl font-bold text-gray-900 dark:text-white mb-2">Contenido Bloqueado</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-500 max-w-xs uppercase tracking-widest font-black">
                             Has alcanzado el límite de {maxPlays} reproducciones para este contenido.
                         </p>
                     </div>
@@ -135,9 +135,9 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
     return (
         <div className="space-y-6" id={id}>
             <div className="flex items-center justify-between">
-                <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">{title || "Contenido Multimedia"}</h3>
+                <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">{title || "Contenido Multimedia"}</h3>
                 {maxPlays > 0 && (
-                    <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-white/5 border border-white/5 text-gray-500">
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-gray-500 dark:text-gray-400">
                         {playCount} / {maxPlays} REPRODUCCIONES
                     </span>
                 )}
@@ -196,9 +196,9 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
                 {!isLocalFile && playCount === 0 && (
                     <div
                         onClick={handlePlay}
-                        className="absolute inset-0 bg-black/40 flex items-center justify-center cursor-pointer group-hover:bg-black/20 transition-all"
+                        className="absolute inset-0 bg-white/40 dark:bg-black/40 flex items-center justify-center cursor-pointer group-hover:bg-white/20 dark:group-hover:bg-black/20 transition-all"
                     >
-                        <div className="w-20 h-20 rounded-full bg-blue-500 flex items-center justify-center shadow-2xl shadow-blue-500/40 group-hover:scale-110 transition-transform">
+                        <div className="w-20 h-20 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center shadow-2xl shadow-blue-500/40 group-hover:scale-110 transition-transform">
                             <Play size={32} className="text-white fill-white ml-2" />
                         </div>
                     </div>
@@ -213,8 +213,8 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
             )}
             {/* Question Overlay */}
             {activeMarker && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md rounded-xl animate-in fade-in duration-300">
-                    <div className="bg-white text-black p-6 rounded-2xl shadow-2xl max-w-sm w-full space-y-4">
+                <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-white/60 dark:bg-black/60 backdrop-blur-md rounded-xl animate-in fade-in duration-300">
+                    <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6 rounded-2xl shadow-2xl max-w-sm w-full space-y-4 border border-black/5 dark:border-white/5">
                         <div className="flex items-center gap-2 text-blue-600 font-bold text-xs uppercase tracking-widest">
                             <AlertCircle size={16} />
                             <span>Quick Check</span>
@@ -259,9 +259,9 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
                                     }}
                                     className={`px-4 py-3 rounded-xl font-medium transition-all text-left ${feedback
                                         ? idx === activeMarker.correctIndex
-                                            ? "bg-green-500 text-white"
-                                            : feedback.isCorrect === false && "bg-red-500 text-white"
-                                        : "bg-gray-100 hover:bg-blue-500 hover:text-white"
+                                            ? "bg-green-600 dark:bg-green-500 text-white"
+                                            : feedback.isCorrect === false && "bg-red-600 dark:bg-red-500 text-white"
+                                        : "bg-black/5 dark:bg-gray-800 hover:bg-blue-600 dark:hover:bg-blue-500 hover:text-white"
                                         }`}
                                 >
                                     {option}

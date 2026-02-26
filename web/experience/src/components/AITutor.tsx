@@ -73,27 +73,27 @@ export default function AITutor({ lessonId }: { lessonId: string }) {
 
     return (
         <div
-            className="fixed bottom-24 right-6 w-80 md:w-96 h-[500px] glass bg-black/80 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl flex flex-col z-[200] animate-in slide-in-from-bottom-6 duration-500 overflow-hidden"
+            className="fixed bottom-24 right-6 w-80 md:w-96 h-[500px] glass bg-white/95 dark:bg-black/80 backdrop-blur-2xl border border-black/5 dark:border-white/10 rounded-3xl shadow-2xl flex flex-col z-[200] animate-in slide-in-from-bottom-6 duration-500 overflow-hidden"
             role="dialog"
             aria-label="Tutor de IA"
         >
             {/* Header */}
-            <div className="p-4 border-b border-white/5 bg-blue-600/10 flex items-center justify-between">
+            <div className="p-4 border-b border-black/5 dark:border-white/5 bg-blue-600/5 dark:bg-blue-600/10 flex items-center justify-between">
                 <div className="flex items-center gap-3" aria-hidden="true">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 dark:bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
                         <Bot className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-black text-white uppercase tracking-widest">Tutor de IA</h3>
+                        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">Tutor de IA</h3>
                         <div className="flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">En Línea</span>
+                            <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-tighter">En Línea</span>
                         </div>
                     </div>
                 </div>
                 <button
                     onClick={() => setIsOpen(false)}
-                    className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"
+                    className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                     aria-label="Cerrar Tutor de IA"
                 >
                     <X size={20} />
@@ -113,14 +113,14 @@ export default function AITutor({ lessonId }: { lessonId: string }) {
                         className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                         <div className={`flex gap-2 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                            <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${msg.role === 'user' ? 'bg-white/5' : 'bg-blue-600/20 text-blue-400'}`} aria-hidden="true">
+                            <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${msg.role === 'user' ? 'bg-black/5 dark:bg-white/5' : 'bg-blue-600/20 text-blue-600 dark:text-blue-400'}`} aria-hidden="true">
                                 {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
                             </div>
                             <div className={`p-3 rounded-2xl text-xs font-medium leading-relaxed ${msg.role === 'user'
                                 ? 'bg-blue-600 text-white rounded-tr-none'
-                                : 'bg-white/5 text-gray-200 border border-white/5 rounded-tl-none'
+                                : 'bg-black/5 dark:bg-white/5 text-gray-800 dark:text-gray-200 border border-black/5 dark:border-white/5 rounded-tl-none'
                                 }`}
-                                aria-label={msg.role === 'user' ? 'Tú dijiste' : 'El tutor dijo'}
+                                aria-label={msg.role === 'user' ? 'Tú dijeste' : 'El tutor dijo'}
                             >
                                 {msg.content}
                             </div>
@@ -130,10 +130,10 @@ export default function AITutor({ lessonId }: { lessonId: string }) {
                 {isLoading && (
                     <li className="flex justify-start animate-in fade-in duration-300" aria-busy="true">
                         <div className="flex gap-2 max-w-[85%]">
-                            <div className="shrink-0 w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center" aria-hidden="true">
+                            <div className="shrink-0 w-8 h-8 rounded-lg bg-blue-600/20 text-blue-600 dark:text-blue-400 flex items-center justify-center" aria-hidden="true">
                                 <Bot size={16} />
                             </div>
-                            <div className="bg-white/5 text-gray-400 border border-white/5 p-3 rounded-2xl rounded-tl-none flex items-center gap-2">
+                            <div className="bg-black/5 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-black/5 dark:border-white/5 p-3 rounded-2xl rounded-tl-none flex items-center gap-2">
                                 <Loader2 className="w-3 h-3 animate-spin" />
                                 <span className="text-[10px] font-bold uppercase tracking-widest">El tutor está pensando...</span>
                             </div>
@@ -143,7 +143,7 @@ export default function AITutor({ lessonId }: { lessonId: string }) {
             </ul>
 
             {/* Input */}
-            <div className="p-4 border-t border-white/5 bg-black/40">
+            <div className="p-4 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-black/40">
                 <div className="relative">
                     <input
                         type="text"
@@ -152,18 +152,18 @@ export default function AITutor({ lessonId }: { lessonId: string }) {
                         onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                         placeholder="Escribe tu duda aquí..."
                         aria-label="Escribe tu duda para el tutor"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 pr-12 text-xs font-medium focus:outline-none focus:border-blue-500/50 transition-colors placeholder:text-gray-600"
+                        className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl py-3 px-4 pr-12 text-xs font-medium focus:outline-none focus:border-blue-600/50 dark:focus:border-blue-500/50 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-600 text-gray-900 dark:text-gray-100"
                     />
                     <button
                         onClick={handleSend}
                         disabled={isLoading || !input.trim()}
-                        className="absolute right-2 top-1.5 p-1.5 bg-blue-600 text-white rounded-lg disabled:opacity-50 disabled:bg-gray-600 transition-all hover:bg-blue-500"
+                        className="absolute right-2 top-1.5 p-1.5 bg-blue-600 text-white rounded-lg disabled:opacity-50 disabled:bg-gray-400 dark:disabled:bg-gray-600 transition-all hover:bg-blue-500"
                         aria-label="Enviar mensaje"
                     >
                         <Send size={16} aria-hidden="true" />
                     </button>
                 </div>
-                <p className="mt-2 text-[9px] text-gray-600 font-bold uppercase tracking-widest text-center">
+                <p className="mt-2 text-[9px] text-gray-500 dark:text-gray-600 font-bold uppercase tracking-widest text-center">
                     IA entrenada con el contenido de esta lección
                 </p>
             </div>

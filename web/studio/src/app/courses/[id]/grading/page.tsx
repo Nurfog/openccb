@@ -74,13 +74,13 @@ export default function GradingPolicyPage() {
     const isBalanced = totalWeight === 100;
 
     if (loading) return (
-        <div className="min-h-screen bg-[#0f1115] flex items-center justify-center">
+        <div className="min-h-screen bg-transparent flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-[#0f1115] text-white p-8">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-8">
             <div className="max-w-4xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-12">
@@ -145,7 +145,7 @@ export default function GradingPolicyPage() {
                                             </div>
                                             <button
                                                 onClick={() => handleDelete(cat.id)}
-                                                className="p-3 bg-red-500/10 text-red-400 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all duration-300"
+                                                className="p-3 bg-red-500/10 text-red-400 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-gray-900 dark:text-white transition-all duration-300"
                                             >
                                                 <Trash2 className="w-5 h-5" />
                                             </button>
@@ -169,11 +169,11 @@ export default function GradingPolicyPage() {
                                                 onChange={(e) => setNewName(e.target.value)}
                                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 mt-1.5 focus:outline-none focus:border-blue-500 transition-all text-gray-100 appearance-none"
                                             >
-                                                <option value="" className="bg-gray-900 text-gray-500">Select a type...</option>
-                                                <option value="Continuous Assessment" className="bg-gray-900">Continuous Assessment (Min 4)</option>
-                                                <option value="Midterm" className="bg-gray-900">Midterm</option>
-                                                <option value="Final Test" className="bg-gray-900">Final Test</option>
-                                                <option value="Exam" className="bg-gray-900">Exam</option>
+                                                <option value="" className="bg-white dark:bg-gray-900 text-gray-500">Select a type...</option>
+                                                <option value="Continuous Assessment" className="bg-white dark:bg-gray-900">Continuous Assessment (Min 4)</option>
+                                                <option value="Midterm" className="bg-white dark:bg-gray-900">Midterm</option>
+                                                <option value="Final Test" className="bg-white dark:bg-gray-900">Final Test</option>
+                                                <option value="Exam" className="bg-white dark:bg-gray-900">Exam</option>
                                             </select>
                                         </div>
 
@@ -194,7 +194,7 @@ export default function GradingPolicyPage() {
                                         <button
                                             onClick={handleAdd}
                                             disabled={submitting || !newName || newWeight <= 0}
-                                            className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold py-4 rounded-2xl mt-4 transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-2"
+                                            className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-gray-900 dark:text-white font-bold py-4 rounded-2xl mt-4 transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-2"
                                         >
                                             {submitting ? "Adding..." : (
                                                 <>

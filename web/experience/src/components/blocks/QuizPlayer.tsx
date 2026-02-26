@@ -64,11 +64,11 @@ export default function QuizPlayer({ id, title, quizData, allowRetry = true, max
     return (
         <div className="space-y-8 notranslate" id={id} translate="no">
             <div className="space-y-2">
-                <h3 className="text-xl font-bold border-l-4 border-blue-500 pl-4 py-1 tracking-tight text-white uppercase tracking-widest text-[10px]">
+                <h3 className="text-xl font-bold border-l-4 border-blue-600 dark:border-blue-500 pl-4 py-1 tracking-tight text-gray-900 dark:text-white uppercase tracking-widest text-[10px]">
                     {title || "Verificación de Conocimientos"}
                 </h3>
                 {maxAttempts > 0 && (
-                    <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-white/5 border border-white/5 text-gray-500">
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-gray-500 dark:text-gray-400">
                         Intento {attempts} / {maxAttempts}
                     </span>
                 )}
@@ -76,8 +76,8 @@ export default function QuizPlayer({ id, title, quizData, allowRetry = true, max
 
             <div className="space-y-8">
                 {questions.map((q) => (
-                    <fieldset key={q.id} className="space-y-4 p-8 glass border-white/5 rounded-3xl" aria-labelledby={`q-${q.id}-text`}>
-                        <legend id={`q-${q.id}-text`} className="font-bold text-xl text-gray-100 leading-tight mb-4">{q.question}</legend>
+                    <fieldset key={q.id} className="space-y-4 p-8 glass border-black/5 dark:border-white/5 rounded-3xl bg-black/[0.02] dark:bg-black/20" aria-labelledby={`q-${q.id}-text`}>
+                        <legend id={`q-${q.id}-text`} className="font-bold text-xl text-gray-900 dark:text-gray-100 leading-tight mb-4">{q.question}</legend>
                         <div
                             className="grid gap-3"
                             role={q.type === 'multiple-select' ? 'group' : 'radiogroup'}
@@ -90,14 +90,14 @@ export default function QuizPlayer({ id, title, quizData, allowRetry = true, max
                                 const isWrongSelection = !isCorrect && isSelected;
                                 const missedCorrect = isCorrect && !isSelected;
 
-                                let style = "glass border-white/10 hover:bg-white/5";
+                                let style = "glass border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300";
                                 if (submitted) {
                                     if (isActuallyCorrect) style = "bg-green-500/20 border-green-500 text-green-400";
                                     else if (isWrongSelection) style = "bg-red-500/20 border-red-500 text-red-100";
                                     else if (missedCorrect) style = "border-orange-500/50 text-orange-400 animate-pulse";
                                     else style = "opacity-50 grayscale border-white/5";
                                 } else if (isSelected) {
-                                    style = "bg-blue-500/20 border-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.2)]";
+                                    style = "bg-blue-600/10 dark:bg-blue-500/20 border-blue-600 dark:border-blue-500 text-blue-700 dark:text-white shadow-[0_0_20px_rgba(59,130,246,0.2)]";
                                 }
 
                                 return (
@@ -145,7 +145,7 @@ export default function QuizPlayer({ id, title, quizData, allowRetry = true, max
                                     setUserAnswers({});
                                 }}
                                 disabled={maxAttempts > 0 && attempts >= maxAttempts}
-                                className={`w-full py-5 glass text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-white/5 transition-all rounded-3xl border-white/5 ${maxAttempts > 0 && attempts >= maxAttempts ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`w-full py-5 glass text-blue-600 dark:text-blue-400 font-black text-xs uppercase tracking-[0.2em] hover:bg-black/5 dark:hover:bg-white/5 transition-all rounded-3xl border-black/5 dark:border-white/5 ${maxAttempts > 0 && attempts >= maxAttempts ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 {maxAttempts > 0 && attempts >= maxAttempts ? 'Máximo de Intentos Alcanzado' : 'Intentar de Nuevo'}
                             </button>

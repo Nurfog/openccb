@@ -158,18 +158,18 @@ export default function StudioDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f1115] text-white p-8">
+    <div className="min-h-screen bg-transparent text-gray-900 dark:text-gray-100 p-8 transition-colors duration-300">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-12">
           <div>
-            <h1 className="text-4xl font-black bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent tracking-tight">
+            <h1 className="text-4xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent tracking-tight">
               {t('nav.courses')}
             </h1>
-            <p className="text-gray-400 mt-2">{t('dashboard.title')}</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">{t('dashboard.title')}</p>
           </div>
           <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-bold transition-all cursor-pointer active:scale-95">
+            <label className="flex items-center gap-2 px-6 py-3 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/5 dark:border-white/10 rounded-xl font-bold transition-all cursor-pointer active:scale-95">
               <Upload size={18} />
               Importar
               <input type="file" accept=".json" onChange={handleImport} className="hidden" />
@@ -183,7 +183,7 @@ export default function StudioDashboard() {
             </button>
             <button
               onClick={handleCreateCourse}
-              className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-bold transition-all active:scale-95"
+              className="flex items-center gap-2 px-6 py-3 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 rounded-xl font-bold transition-all active:scale-95"
             >
               <Plus size={20} />
               Manual
@@ -198,8 +198,8 @@ export default function StudioDashboard() {
             ))}
           </div>
         ) : courses.length === 0 ? (
-          <div className="text-center py-20 glass-card border-dashed border-white/10">
-            <p className="text-gray-500">Aún no has creado ningún curso.</p>
+          <div className="text-center py-20 glass-card border-dashed border-black/10 dark:border-white/10">
+            <p className="text-gray-500 dark:text-gray-400">Aún no has creado ningún curso.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -209,27 +209,27 @@ export default function StudioDashboard() {
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-4">
                       <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                        <BookOpen className="text-blue-400" />
+                        <BookOpen className="text-blue-600 dark:text-blue-400" />
                       </div>
                       <button
                         onClick={(e) => handleExport(e, course.id, course.title)}
-                        className="p-2 hover:bg-white/10 rounded-lg text-gray-500 hover:text-white transition-all"
+                        className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all"
                         title="Export Course"
                       >
                         <Download size={18} />
                       </button>
                       <button
                         onClick={(e) => handleDeleteCourse(e, course.id, course.title)}
-                        className="p-2 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-400 transition-all"
+                        className="p-2 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-all"
                         title="Delete Course"
                       >
                         <Trash2 size={18} />
                       </button>
                     </div>
-                    <h3 className="font-bold text-lg mb-2 group-hover:text-blue-400 transition-colors">{course.title}</h3>
-                    <p className="text-sm text-gray-400 line-clamp-2">{course.description || "Sin descripción disponible."}</p>
+                    <h3 className="font-bold text-lg mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-gray-900 dark:text-white">{course.title}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{course.description || "Sin descripción disponible."}</p>
                   </div>
-                  <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/5 text-xs text-gray-500">
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t border-black/5 dark:border-white/5 text-xs text-gray-500 dark:text-gray-400">
                     <span>Última actualización: {new Date(course.updated_at).toLocaleDateString()}</span>
                     <span>ID: {course.id.slice(0, 4)}...</span>
                   </div>
@@ -248,7 +248,7 @@ export default function StudioDashboard() {
       >
         <form onSubmit={onTitleConfirm} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
+            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
               Course Title
             </label>
             <input
@@ -258,7 +258,7 @@ export default function StudioDashboard() {
               value={newCourseTitle}
               onChange={(e) => setNewCourseTitle(e.target.value)}
               placeholder="e.g. Advanced Rust Development"
-              className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white"
+              className="w-full bg-black/5 dark:bg-black/40 border border-black/10 dark:border-white/10 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-gray-900 dark:text-white"
             />
           </div>
           <div className="flex gap-3 pt-2">
@@ -292,7 +292,7 @@ export default function StudioDashboard() {
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
+            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
               Course Topic or Description
             </label>
             <textarea
@@ -302,7 +302,7 @@ export default function StudioDashboard() {
               value={aiPrompt}
               onChange={(e) => setAiPrompt(e.target.value)}
               placeholder="e.g. A comprehensive guide to building distributed systems with Rust and Axum for intermediate developers."
-              className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-white resize-none"
+              className="w-full bg-black/5 dark:bg-black/40 border border-black/10 dark:border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-gray-900 dark:text-white resize-none"
               disabled={isGenerating}
             />
           </div>

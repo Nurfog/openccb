@@ -20,10 +20,10 @@ export default function SettingsPage() {
     if (!user || user.role !== "admin") return null;
 
     return (
-        <div className="pt-24 px-8 pb-12 min-h-screen bg-gradient-to-br from-gray-900 to-black">
+        <div className="pt-24 px-8 pb-12 min-h-screen bg-transparent transition-colors duration-300">
             <div className="max-w-4xl mx-auto mb-8">
-                <h1 className="text-3xl font-black text-white tracking-tight">Organization Settings</h1>
-                <p className="text-gray-400 mt-2">Manage your white-label branding and platform identity.</p>
+                <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Organization Settings</h1>
+                <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your white-label branding and platform identity.</p>
             </div>
             <BrandingSettings />
         </div>

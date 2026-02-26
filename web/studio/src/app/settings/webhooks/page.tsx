@@ -83,13 +83,13 @@ export default function WebhooksPage() {
     };
 
     if (loading) return (
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="min-h-screen bg-transparent flex items-center justify-center">
             <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-[#0f1115] text-white">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white">
             <Navbar />
             <main className="max-w-5xl mx-auto pt-32 pb-20 px-6">
                 <div className="flex items-center justify-between mb-12">
@@ -98,7 +98,7 @@ export default function WebhooksPage() {
                             <WebhookIcon size={40} className="text-blue-500" />
                             Enterprise Webhooks
                         </h1>
-                        <p className="text-gray-400">Integrate OpenCCB with your external systems via HTTP callbacks.</p>
+                        <p className="text-gray-600 dark:text-gray-400">Integrate OpenCCB with your external systems via HTTP callbacks.</p>
                     </div>
                     <button
                         onClick={() => setIsAdding(true)}
@@ -116,7 +116,7 @@ export default function WebhooksPage() {
                 )}
 
                 {isAdding && (
-                    <div className="mb-12 bg-white/5 border border-white/10 rounded-3xl p-8 overflow-hidden relative group">
+                    <div className="mb-12 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-3xl p-8 overflow-hidden relative group">
                         <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                         <h2 className="text-xl font-black mb-6 flex items-center gap-2">
                             <Plus size={20} className="text-blue-400" />
@@ -125,7 +125,7 @@ export default function WebhooksPage() {
                         <form onSubmit={handleCreate} className="space-y-6 relative">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                    <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                         <Globe size={14} /> Payload URL
                                     </label>
                                     <input
@@ -133,20 +133,20 @@ export default function WebhooksPage() {
                                         id="webhook-url"
                                         required
                                         placeholder="https://your-api.com/webhooks"
-                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors"
+                                        className="w-full bg-black/5 dark:bg-black/40 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors text-gray-900 dark:text-white"
                                         value={newWebhook.url}
                                         onChange={e => setNewWebhook({ ...newWebhook, url: e.target.value })}
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                    <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                         <Shield size={14} /> Secret (HMAC-SHA256)
                                     </label>
                                     <input
                                         type="text"
                                         id="webhook-secret"
                                         placeholder="Optional signing secret"
-                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors"
+                                        className="w-full bg-black/5 dark:bg-black/40 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors text-gray-900 dark:text-white"
                                         value={newWebhook.secret}
                                         onChange={e => setNewWebhook({ ...newWebhook, secret: e.target.value })}
                                     />
@@ -154,7 +154,7 @@ export default function WebhooksPage() {
                             </div>
 
                             <div className="space-y-4">
-                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                <label className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                     <Activity size={14} /> Events to Subscribe
                                 </label>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -164,8 +164,8 @@ export default function WebhooksPage() {
                                             id={`event-${event.id}`}
                                             onClick={() => toggleEvent(event.id)}
                                             className={`p-4 rounded-2xl border transition-all cursor-pointer ${newWebhook.events.includes(event.id)
-                                                ? 'bg-blue-500/20 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]'
-                                                : 'bg-black/20 border-white/10 text-gray-400 hover:bg-white/5'
+                                                ? 'bg-blue-500/10 border-blue-500 text-blue-600 dark:text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]'
+                                                : 'bg-black/[0.03] dark:bg-black/20 border-black/10 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:bg-black/[0.05] dark:hover:bg-white/5'
                                                 }`}
                                         >
                                             <div className="flex items-center justify-between mb-1">
@@ -178,11 +178,11 @@ export default function WebhooksPage() {
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-end gap-4 pt-4 border-t border-white/10">
+                            <div className="flex items-center justify-end gap-4 pt-4 border-t border-black/10 dark:border-white/10">
                                 <button
                                     type="button"
                                     onClick={() => setIsAdding(false)}
-                                    className="px-6 py-2 text-sm font-bold text-gray-400 hover:text-white transition-colors"
+                                    className="px-6 py-2 text-sm font-bold text-gray-500 hover:text-gray-900 dark:text-white transition-colors"
                                 >
                                     Cancel
                                 </button>
@@ -194,21 +194,21 @@ export default function WebhooksPage() {
 
                 <div className="space-y-6">
                     {webhooks.length === 0 && !isAdding ? (
-                        <div className="text-center py-20 bg-white/5 border border-dashed border-white/10 rounded-3xl">
+                        <div className="text-center py-20 bg-black/5 dark:bg-white/5 border border-dashed border-black/10 dark:border-white/10 rounded-3xl">
                             <WebhookIcon size={64} className="mx-auto text-gray-600 mb-6" />
                             <h3 className="text-xl font-bold text-gray-400">No webhooks configured</h3>
                             <p className="text-sm text-gray-500 mt-2">Add your first webhook to start receiving system notifications.</p>
                         </div>
                     ) : (
                         webhooks.map(webhook => (
-                            <div key={webhook.id} className="bg-white/5 border border-white/10 rounded-3xl p-8 flex items-center justify-between group hover:bg-white/[0.07] transition-all">
+                            <div key={webhook.id} className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-3xl p-8 flex items-center justify-between group hover:bg-black/[0.07] dark:hover:bg-white/[0.07] transition-all">
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
                                             <Globe size={20} />
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-lg">{webhook.url}</h3>
+                                            <h3 className="font-bold text-lg text-gray-900 dark:text-white">{webhook.url}</h3>
                                             <p className="text-xs text-gray-500">Created on {new Date(webhook.created_at).toLocaleDateString()}</p>
                                         </div>
                                     </div>
@@ -234,7 +234,7 @@ export default function WebhooksPage() {
                                     </div>
                                     <button
                                         onClick={() => handleDelete(webhook.id)}
-                                        className="delete-webhook-btn p-3 bg-red-500/10 text-red-400 rounded-2xl opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all transform hover:scale-110 shadow-lg"
+                                        className="delete-webhook-btn p-3 bg-red-500/10 text-red-400 rounded-2xl opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-gray-900 dark:text-white transition-all transform hover:scale-110 shadow-lg"
                                         title="Delete Webhook"
                                     >
                                         <Trash2 size={20} />

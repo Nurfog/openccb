@@ -23,7 +23,7 @@ export default function AppHeader() {
     const platformName = branding?.platform_name || branding?.name || 'OpenCCB';
 
     return (
-        <header className="h-16 glass sticky top-0 z-[100] px-4 md:px-6 flex items-center justify-between backdrop-blur-xl bg-black/40 border-b border-white/5">
+        <header className="h-16 glass sticky top-0 z-[100] px-4 md:px-6 flex items-center justify-between backdrop-blur-xl bg-gray-50/70 dark:bg-black/40 border-b border-black/5 dark:border-white/5">
             <Link href="/" className="flex items-center gap-2 md:gap-5 group" aria-label={`${platformName} - Dashboard`}>
                 <div className={`rounded-lg md:rounded-xl bg-blue-600 flex items-center justify-center font-black text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-all overflow-hidden relative border border-white/5 ${branding?.logo_variant === 'wide' ? 'w-36 h-9 md:w-56 md:h-12 px-2 bg-white' : 'w-8 h-8 md:w-12 md:h-12'}`}>
                     {branding?.logo_url ? (
@@ -36,27 +36,27 @@ export default function AppHeader() {
                 </div>
                 {branding?.logo_variant !== 'wide' && (
                     <div className="flex flex-col -gap-1" aria-hidden="true">
-                        <span className="font-black text-base md:text-xl tracking-tighter text-white leading-none">
+                        <span className="font-black text-base md:text-xl tracking-tighter text-gray-900 dark:text-white leading-none">
                             {platformName.toUpperCase()}
                         </span>
-                        <span className="text-[8px] md:text-[10px] font-black tracking-widest text-blue-500 uppercase">EXPERIENCIA</span>
+                        <span className="text-[8px] md:text-[10px] font-black tracking-widest text-blue-600 dark:text-blue-500 uppercase">EXPERIENCIA</span>
                     </div>
                 )}
             </Link>
 
             <div className="flex items-center gap-4">
                 <nav className="hidden md:flex items-center gap-8 mr-4" aria-label="Navegación principal">
-                    <Link href="/" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">
+                    <Link href="/" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                         {t('nav.catalog')}
                     </Link>
-                    <Link href="/my-learning" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">
+                    <Link href="/my-learning" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                         {t('nav.myLearning')}
                     </Link>
-                    <Link href="/bookmarks" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white transition-colors">
+                    <Link href="/bookmarks" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                         {t('nav.bookmarks')}
                     </Link>
                     {user && (
-                        <Link href={`/profile/${user.id}`} className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 hover:text-blue-300 transition-colors">
+                        <Link href={`/profile/${user.id}`} className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
                             MI PORTAFOLIO
                         </Link>
                     )}
@@ -74,9 +74,9 @@ export default function AppHeader() {
                             aria-label={t('nav.selectLanguage') || 'Select Language'}
                             className="bg-transparent text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors focus:outline-none cursor-pointer"
                         >
-                            <option value="en" className="bg-[#0f1115]">EN</option>
-                            <option value="es" className="bg-[#0f1115]">ES</option>
-                            <option value="pt" className="bg-[#0f1115]">PT</option>
+                            <option value="en" className="bg-white dark:bg-[#0f1115]">EN</option>
+                            <option value="es" className="bg-white dark:bg-[#0f1115]">ES</option>
+                            <option value="pt" className="bg-white dark:bg-[#0f1115]">PT</option>
                         </select>
                     </div>
 
@@ -183,9 +183,9 @@ export default function AppHeader() {
                                             aria-label={t('nav.selectLanguage') || 'Select Language'}
                                             className="bg-transparent text-xs font-bold uppercase tracking-widest text-gray-300 focus:outline-none"
                                         >
-                                            <option value="en" className="bg-[#0f1115]">English</option>
-                                            <option value="es" className="bg-[#0f1115]">Español</option>
-                                            <option value="pt" className="bg-[#0f1115]">Português</option>
+                                            <option value="en" className="bg-white dark:bg-[#0f1115]">English</option>
+                                            <option value="es" className="bg-white dark:bg-[#0f1115]">Español</option>
+                                            <option value="pt" className="bg-white dark:bg-[#0f1115]">Português</option>
                                         </select>
                                     </div>
                                     <button

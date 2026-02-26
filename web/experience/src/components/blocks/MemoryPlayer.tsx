@@ -105,8 +105,8 @@ export default function MemoryPlayer({
                         <Sparkles size={28} className="animate-pulse" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black tracking-tight text-white">{title}</h2>
-                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-indigo-400">
+                        <h2 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white">{title}</h2>
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
                             <span>Brain Training</span>
                             <span className="w-1 h-1 rounded-full bg-indigo-800" />
                             <span>Level: Beginner</span>
@@ -114,16 +114,16 @@ export default function MemoryPlayer({
                     </div>
                 </div>
                 <div className="flex gap-4">
-                    <div className="px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-center">
+                    <div className="px-5 py-3 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 text-center">
                         <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Moves</div>
-                        <div className="text-xl font-black text-white">{moves}</div>
+                        <div className="text-xl font-black text-gray-900 dark:text-white">{moves}</div>
                     </div>
                     <button
                         onClick={initializeGame}
-                        className="p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all active:scale-90"
+                        className="p-4 rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/5 dark:border-white/10 transition-all active:scale-90"
                         title="Restart"
                     >
-                        <RotateCcw size={20} className="text-gray-400" />
+                        <RotateCcw size={20} className="text-gray-500 dark:text-gray-400" />
                     </button>
                 </div>
             </div>
@@ -138,8 +138,8 @@ export default function MemoryPlayer({
                         <div className={`relative w-full h-full transition-all duration-500 transform-style-3d ${(card.isFlipped || card.isMatched) ? "rotate-y-180" : ""
                             }`}>
                             {/* Card Front (Hidden) */}
-                            <div className="absolute inset-0 backface-hidden flex items-center justify-center rounded-2xl bg-[#1a1c21] border-2 border-white/5 hover:border-indigo-500/50 transition-colors shadow-lg">
-                                <HelpCircle size={40} className="text-white/10 group-hover:text-indigo-500/30 transition-colors" />
+                            <div className="absolute inset-0 backface-hidden flex items-center justify-center rounded-2xl bg-gray-100 dark:bg-[#1a1c21] border-2 border-black/5 dark:border-white/5 hover:border-indigo-600 dark:hover:border-indigo-500/50 transition-colors shadow-lg">
+                                <HelpCircle size={40} className="text-black/10 dark:text-white/10 group-hover:text-indigo-600 dark:group-hover:text-indigo-500/30 transition-colors" />
                             </div>
 
                             {/* Card Back (Content) */}
@@ -166,8 +166,8 @@ export default function MemoryPlayer({
                     <div className="w-16 h-16 rounded-full bg-green-500 text-white flex items-center justify-center mb-4 shadow-lg shadow-green-500/20">
                         <CheckCircle2 size={32} strokeWidth={3} />
                     </div>
-                    <h3 className="text-2xl font-black text-white mb-1">BRAVO!</h3>
-                    <p className="text-green-500/80 font-bold uppercase tracking-widest text-xs">
+                    <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-1">BRAVO!</h3>
+                    <p className="text-green-600 dark:text-green-500/80 font-bold uppercase tracking-widest text-xs">
                         Finished in {moves} moves
                     </p>
                 </div>

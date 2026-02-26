@@ -96,14 +96,14 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                 <div className="h-6 w-1/3 bg-white/5 rounded-xl mb-12"></div>
                 <div className="space-y-6">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className="h-32 glass-card bg-white/5 border-white/5"></div>
+                        <div key={i} className="h-32 glass-card bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 animate-pulse"></div>
                     ))}
                 </div>
             </div>
         );
     }
 
-    if (!courseData) return <div className="text-center py-20 text-gray-500">Curso no encontrado.</div>;
+    if (!courseData) return <div className="text-center py-20 text-gray-600 dark:text-gray-500">Curso no encontrado.</div>;
 
     const isLessonLocked = (lessonId: string) => {
         if (!isEnrolled) return false;
@@ -124,7 +124,7 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
         }
         const grade = userGrades.find((g: UserGrade) => g.lesson_id === lessonId);
         if (!grade) {
-            return <Circle size={18} className="text-white/20" />;
+            return <Circle size={18} className="text-black/10 dark:text-white/20" />;
         }
 
         if (isGraded) {
@@ -141,19 +141,19 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
             }
         }
 
-        return <CheckCircle2 size={18} className="text-white/40" />;
+        return <CheckCircle2 size={18} className="text-black/20 dark:text-white/40" />;
     };
 
     return (
         <div className="max-w-4xl mx-auto px-6 py-20">
             <div className="mb-16">
-                <div className="flex items-center gap-2 mb-6 text-blue-500 font-bold text-xs uppercase tracking-widest">
-                    <Link href="/" className="hover:text-white transition-colors">Catálogo</Link>
+                <div className="flex items-center gap-2 mb-6 text-blue-600 dark:text-blue-500 font-bold text-xs uppercase tracking-widest">
+                    <Link href="/" className="hover:text-gray-900 dark:hover:text-white transition-colors">Catálogo</Link>
                     <ChevronRight size={14} className="text-gray-600" />
                     <span>Detalles del Curso</span>
                 </div>
-                <h1 className="text-5xl font-black tracking-tighter mb-6">{courseData.title}</h1>
-                <p className="text-gray-400 text-lg leading-relaxed max-w-2xl mb-10">
+                <h1 className="text-5xl font-black tracking-tighter mb-6 text-gray-900 dark:text-white">{courseData.title}</h1>
+                <p className="text-gray-600 dark:text-gray-400 text-lg leading-relaxed max-w-2xl mb-10">
                     {courseData.description || "Domina los principios básicos y las técnicas avanzadas en este plan de estudios estructurado. Cada módulo está diseñado para proporcionar conocimientos prácticos y experiencia práctica."}
                 </p>
 
@@ -167,11 +167,11 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                     </div>
 
                     {courseData.pacing_mode === 'instructor_led' && (courseData.start_date || courseData.end_date) && (
-                        <div className="flex items-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                        <div className="flex items-center gap-4 text-xs font-bold text-gray-600 dark:text-gray-500 uppercase tracking-widest">
                             <Calendar size={14} />
                             <span>
                                 {courseData.start_date ? new Date(courseData.start_date).toLocaleDateString() : 'Por Determinar'}
-                                <span className="mx-2 text-gray-700">→</span>
+                                <span className="mx-2 text-gray-300 dark:text-gray-700">→</span>
                                 {courseData.end_date ? new Date(courseData.end_date).toLocaleDateString() : 'Por Determinar'}
                             </span>
                         </div>
@@ -183,13 +183,13 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-4 block">Equipo docente</span>
                         <div className="flex flex-wrap gap-6">
                             {instructors.map((inst) => (
-                                <div key={inst.id} className="flex items-center gap-3 glass border-white/5 px-4 py-2 rounded-2xl hover:bg-white/5 transition-all">
-                                    <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30 text-blue-400 font-bold text-xs">
+                                <div key={inst.id} className="flex items-center gap-3 glass border-black/5 dark:border-white/5 px-4 py-2 rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-all">
+                                    <div className="w-8 h-8 rounded-full bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center border border-blue-500/20 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 font-bold text-xs">
                                         {inst.full_name?.charAt(0) || inst.email?.charAt(0)}
                                     </div>
                                     <div>
-                                        <div className="text-xs font-bold text-gray-200">{inst.full_name}</div>
-                                        <div className="text-[8px] font-black uppercase tracking-widest text-blue-500/60">{inst.role === 'primary' ? 'Instructor principal' : inst.role}</div>
+                                        <div className="text-xs font-bold text-gray-700 dark:text-gray-200">{inst.full_name}</div>
+                                        <div className="text-[8px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-500/60">{inst.role === 'primary' ? 'Instructor principal' : inst.role}</div>
                                     </div>
                                 </div>
                             ))}
@@ -200,13 +200,13 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-8">
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-1">Módulos</span>
-                            <span className="text-xl font-bold text-white">{courseData.modules.length}</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-600 mb-1">Módulos</span>
+                            <span className="text-xl font-bold text-gray-900 dark:text-white">{courseData.modules.length}</span>
                         </div>
-                        <div className="w-px h-8 bg-white/10" />
+                        <div className="w-px h-8 bg-black/10 dark:bg-white/10" />
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-1">Lecciones Totales</span>
-                            <span className="text-xl font-bold text-white">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-600 mb-1">Lecciones Totales</span>
+                            <span className="text-xl font-bold text-gray-900 dark:text-white">
                                 {courseData.modules.reduce((acc, m) => acc + m.lessons.length, 0)}
                             </span>
                         </div>
@@ -248,45 +248,45 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
             {(loadingAI || recommendations.length > 0) && (
                 <div className="mb-20">
                     <div className="flex items-center gap-3 mb-8">
-                        <div className="w-10 h-10 rounded-xl glass border-purple-500/20 bg-purple-500/10 flex items-center justify-center">
-                            <Sparkles size={18} className="text-purple-400" />
+                        <div className="w-10 h-10 rounded-xl glass border-purple-500/10 dark:border-purple-500/20 bg-purple-500/5 dark:bg-purple-500/10 flex items-center justify-center">
+                            <Sparkles size={18} className="text-purple-600 dark:text-purple-400" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-white tracking-tight">Tu Ruta de Aprendizaje IA</h2>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Sugerencias personalizadas basadas en tu rendimiento</p>
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Tu Ruta de Aprendizaje IA</h2>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Sugerencias personalizadas basadas en tu rendimiento</p>
                         </div>
                     </div>
 
                     <div className="grid gap-4">
                         {loadingAI ? (
-                            <div className="glass-card border-white/5 bg-white/5 animate-pulse p-8">
-                                <div className="h-4 w-1/3 bg-white/10 rounded mb-4"></div>
-                                <div className="h-3 w-2/3 bg-white/10 rounded"></div>
+                            <div className="glass-card border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/5 animate-pulse p-8">
+                                <div className="h-4 w-1/3 bg-black/10 dark:bg-white/10 rounded mb-4"></div>
+                                <div className="h-3 w-2/3 bg-black/10 dark:bg-white/10 rounded"></div>
                             </div>
                         ) : (
                             recommendations.map((rec: Recommendation, i: number) => (
-                                <div key={i} className="glass-card border-white/5 hover:border-purple-500/30 transition-all p-6 group">
+                                <div key={i} className="glass-card border-black/5 dark:border-white/5 hover:border-purple-600/30 dark:hover:border-purple-500/30 transition-all p-6 group">
                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                         <div className="space-y-3">
                                             <div className="flex items-center gap-3">
-                                                <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${rec.priority === 'high' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
-                                                    rec.priority === 'medium' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
-                                                        'bg-green-500/10 text-green-400 border border-green-500/20'
+                                                <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${rec.priority === 'high' ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20' :
+                                                    rec.priority === 'medium' ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20' :
+                                                        'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20'
                                                     }`}>
                                                     Prioridad {rec.priority}
                                                 </div>
-                                                {rec.priority === 'high' && <AlertTriangle size={12} className="text-red-400" />}
+                                                {rec.priority === 'high' && <AlertTriangle size={12} className="text-red-600 dark:text-red-400" />}
                                             </div>
-                                            <h3 className="text-lg font-bold text-white">{rec.title}</h3>
-                                            <p className="text-sm text-gray-400 leading-relaxed max-w-2xl">{rec.description}</p>
-                                            <div className="bg-white/5 rounded-lg p-3 inline-block">
-                                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 italic">¿Por qué?</p>
-                                                <p className="text-xs text-gray-300 font-medium">{rec.reason}</p>
+                                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{rec.title}</h3>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed max-w-2xl">{rec.description}</p>
+                                            <div className="bg-black/5 dark:bg-white/5 rounded-lg p-3 inline-block">
+                                                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1 italic">¿Por qué?</p>
+                                                <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">{rec.reason}</p>
                                             </div>
                                         </div>
                                         {rec.lesson_id && (
                                             <Link href={`/courses/${params.id}/lessons/${rec.lesson_id}`}>
-                                                <button className="whitespace-nowrap px-6 py-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 group-hover:gap-4 transition-all">
+                                                <button className="whitespace-nowrap px-6 py-3 rounded-xl bg-purple-600/10 dark:bg-purple-500/10 hover:bg-purple-600/20 dark:hover:bg-purple-500/20 border border-purple-600/20 dark:border-purple-500/30 text-purple-600 dark:text-purple-400 font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 group-hover:gap-4 transition-all">
                                                     Ir a la Lección <ArrowRight size={14} />
                                                 </button>
                                             </Link>
@@ -303,25 +303,25 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
             {meetings.length > 0 && (
                 <div className="mb-20">
                     <div className="flex items-center gap-3 mb-8">
-                        <div className="w-10 h-10 rounded-xl glass border-blue-500/20 bg-blue-500/10 flex items-center justify-center">
-                            <Video size={18} className="text-blue-400" />
+                        <div className="w-10 h-10 rounded-xl glass border-blue-500/10 dark:border-blue-500/20 bg-blue-500/5 dark:bg-blue-500/10 flex items-center justify-center">
+                            <Video size={18} className="text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-white tracking-tight">Sesiones en Vivo</h2>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Únete a las clases sincrónicas programadas</p>
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Sesiones en Vivo</h2>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Únete a las clases sincrónicas programadas</p>
                         </div>
                     </div>
 
                     <div className="grid gap-3">
                         {meetings.map((m) => (
-                            <div key={m.id} className="glass-card border-white/5 hover:border-blue-500/30 transition-all p-5 flex items-center justify-between">
+                            <div key={m.id} className="glass-card border-black/5 dark:border-white/5 hover:border-blue-600/30 dark:hover:border-blue-500/30 transition-all p-5 flex items-center justify-between">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+                                    <div className="w-10 h-10 rounded-lg bg-blue-500/5 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
                                         <Calendar size={18} />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-sm">{m.title}</h3>
-                                        <p className="text-[10px] text-gray-500 uppercase mt-1">
+                                        <h3 className="font-bold text-sm text-gray-900 dark:text-gray-100">{m.title}</h3>
+                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase mt-1">
                                             {new Date(m.start_at).toLocaleString()} • {m.duration_minutes} min
                                         </p>
                                     </div>
@@ -349,10 +349,10 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                 {courseData.modules.map((module: Module, idx: number) => (
                     <div key={module.id} className="relative">
                         <div className="flex items-center gap-4 mb-6">
-                            <div className="w-10 h-10 rounded-xl glass border-blue-500/20 bg-blue-500/10 flex items-center justify-center">
-                                <span className="text-blue-400 font-black text-xs">{idx + 1}</span>
+                            <div className="w-10 h-10 rounded-xl glass border-blue-500/10 dark:border-blue-500/20 bg-blue-500/5 dark:bg-blue-500/10 flex items-center justify-center">
+                                <span className="text-blue-600 dark:text-blue-400 font-black text-xs">{idx + 1}</span>
                             </div>
-                            <h2 className="text-xl font-bold text-white tracking-tight">{module.title}</h2>
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">{module.title}</h2>
                         </div>
 
                         <div className="grid gap-3 pl-14">
@@ -361,42 +361,42 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                                 const isPreviewable = lesson.is_previewable;
                                 return (isEnrolled || isPreviewable) ? (
                                     locked ? (
-                                        <div key={lesson.id} className="glass-card !p-4 border-white/5 opacity-60 cursor-not-allowed">
+                                        <div key={lesson.id} className="glass-card !p-4 border-black/5 dark:border-white/5 opacity-60 cursor-not-allowed">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
-                                                        <Lock size={18} className="text-gray-600" />
+                                                    <div className="w-10 h-10 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center">
+                                                        <Lock size={18} className="text-gray-400 dark:text-gray-600" />
                                                     </div>
                                                     <div>
-                                                        <h3 className="text-sm font-bold text-gray-400">{lesson.title}</h3>
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Bloqueado por Prerrequisitos</span>
+                                                        <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400">{lesson.title}</h3>
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600">Bloqueado por Prerrequisitos</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-6">
-                                                    <Lock size={18} className="text-gray-600" />
+                                                    <Lock size={18} className="text-gray-400 dark:text-gray-600" />
                                                 </div>
                                             </div>
                                         </div>
                                     ) : (
                                         <Link key={lesson.id} href={`/courses/${params.id}/lessons/${lesson.id}`}>
-                                            <div className="glass-card !p-4 group hover:bg-white/10 border-white/5 active:scale-[0.99] transition-all">
+                                            <div className="glass-card !p-4 group hover:bg-black/5 dark:hover:bg-white/10 border-black/5 dark:border-white/5 active:scale-[0.99] transition-all">
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
+                                                        <div className="w-10 h-10 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-blue-600/10 dark:group-hover:bg-blue-500/20 transition-colors">
                                                             {lesson.content_type === 'video' ? (
-                                                                <PlayCircle size={18} className={`${isPreviewable && !isEnrolled ? 'text-green-400' : 'text-gray-400'} group-hover:text-blue-400`} />
+                                                                <PlayCircle size={18} className={`${isPreviewable && !isEnrolled ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'} group-hover:text-blue-600 dark:group-hover:text-blue-400`} />
                                                             ) : (
-                                                                <BookOpen size={18} className={`${isPreviewable && !isEnrolled ? 'text-green-400' : 'text-gray-400'} group-hover:text-blue-400`} />
+                                                                <BookOpen size={18} className={`${isPreviewable && !isEnrolled ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'} group-hover:text-blue-600 dark:group-hover:text-blue-400`} />
                                                             )}
                                                         </div>
                                                         <div>
                                                             <div className="flex items-center gap-2">
-                                                                <h3 className="text-sm font-bold text-gray-200 group-hover:text-white transition-colors">{lesson.title}</h3>
+                                                                <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{lesson.title}</h3>
                                                                 {isPreviewable && !isEnrolled && (
-                                                                    <span className="text-[8px] font-black uppercase px-1.5 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded">Vista previa</span>
+                                                                    <span className="text-[8px] font-black uppercase px-1.5 py-0.5 bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 rounded">Vista previa</span>
                                                                 )}
                                                             </div>
-                                                            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                                                            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
                                                                 {lesson.content_type === 'activity' ? 'Actividad Interactiva' : 'Lección en Video'}
                                                             </span>
                                                         </div>
@@ -420,20 +420,20 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                                         </Link>
                                     )
                                 ) : (
-                                    <div key={lesson.id} onClick={handleEnrollOrBuy} className="glass-card !p-4 group border-white/5 opacity-60 cursor-pointer hover:bg-white/5 transition-all">
+                                    <div key={lesson.id} onClick={handleEnrollOrBuy} className="glass-card !p-4 group border-black/5 dark:border-white/5 opacity-60 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-all">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
-                                                    <Clock size={18} className="text-gray-600" />
+                                                <div className="w-10 h-10 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center">
+                                                    <Clock size={18} className="text-gray-400 dark:text-gray-600" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-sm font-bold text-gray-500">{lesson.title}</h3>
-                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-600 flex items-center gap-1">
+                                                    <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400">{lesson.title}</h3>
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600 flex items-center gap-1">
                                                         Contenido Protegido
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2 text-gray-600 font-bold text-[10px] uppercase tracking-widest">
+                                            <div className="flex items-center gap-2 text-gray-400 dark:text-gray-600 font-bold text-[10px] uppercase tracking-widest">
                                                 <span>Bloqueado</span>
                                             </div>
                                         </div>

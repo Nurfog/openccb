@@ -13,7 +13,7 @@ export default function RubricsPage() {
     const [editingRubricId, setEditingRubricId] = useState<string | null>(null);
 
     return (
-        <div className="min-h-screen bg-[#0f1115] text-white p-8">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-8">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-12">

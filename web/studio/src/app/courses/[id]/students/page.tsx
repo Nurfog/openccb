@@ -109,14 +109,14 @@ export default function CourseStudentsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#0f1115] flex items-center justify-center">
+            <div className="min-h-screen bg-transparent flex items-center justify-center">
                 <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#0f1115] text-white p-8">
+        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-8">
             <div className="max-w-7xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
@@ -156,7 +156,7 @@ export default function CourseStudentsPage() {
                             <div className="flex items-center gap-2 w-full md:w-auto">
                                 <Filter size={16} className="text-gray-400" />
                                 <select
-                                    className="bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500/50 text-white min-w-[150px]"
+                                    className="bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500/50 text-gray-900 dark:text-white min-w-[150px]"
                                     value={selectedCohortId}
                                     onChange={(e) => setSelectedCohortId(e.target.value)}
                                 >
@@ -189,7 +189,7 @@ export default function CourseStudentsPage() {
                                                         {student.full_name.charAt(0)}
                                                     </div>
                                                     <div>
-                                                        <div className="font-bold text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">{student.full_name}</div>
+                                                        <div className="font-bold text-gray-900 dark:text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">{student.full_name}</div>
                                                         <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5"><Mail size={12} /> {student.email}</div>
                                                     </div>
                                                 </div>
@@ -276,7 +276,7 @@ export default function CourseStudentsPage() {
                                             </div>
                                             <button
                                                 onClick={() => handleEnroll([user.email])}
-                                                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all"
+                                                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white text-xs font-bold rounded-lg transition-all"
                                             >
                                                 Enroll Now
                                             </button>
