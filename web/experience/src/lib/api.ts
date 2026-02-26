@@ -26,6 +26,7 @@ export interface Organization {
     platform_name?: string;
     primary_color?: string;
     secondary_color?: string;
+    logo_variant?: string;
 }
 export interface Recommendation {
     title: string;
@@ -446,6 +447,10 @@ const apiFetch = async (url: string, options: RequestInit = {}, isCMS: boolean =
 };
 
 export const lmsApi = {
+    async searchOrganizations(query: string): Promise<{ id: string, name: string, domain?: string }[]> {
+        return apiFetch(`/organizations/search?q=${encodeURIComponent(query)}`, {}, true);
+    },
+
     async getCatalog(orgId?: string, userId?: string): Promise<Course[]> {
         const params = new URLSearchParams();
         if (orgId) params.append('organization_id', orgId);

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cmsApi } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import AsyncCombobox from "@/components/AsyncCombobox";
 import { BookOpen, Lock, Mail, User, Building2 } from "lucide-react";
 
 export default function StudioLoginPage() {
@@ -168,23 +169,23 @@ export default function StudioLoginPage() {
                                 </div>
                             </>
                         ) : (
-                            <div>
+                            <div className="z-50 relative">
                                 <label className="block text-sm font-bold text-gray-300 mb-2">
                                     Organization ID
                                 </label>
-                                <div className="relative">
-                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        value={orgIdForSSO}
-                                        onChange={(e) => setOrgIdForSSO(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="00000000-0000-0000-0000-000000000000"
-                                        required
-                                    />
-                                </div>
+                                <AsyncCombobox
+                                    id="orgIdForSSO"
+                                    value={orgIdForSSO}
+                                    onChange={setOrgIdForSSO}
+                                    onSearch={async (q) => {
+                                        const res = await cmsApi.searchOrganizations(q);
+                                        return res.map(o => ({ id: o.id, name: o.name }));
+                                    }}
+                                    placeholder="Search for your organization..."
+                                    leftIcon={<Building2 size={20} />}
+                                />
                                 <p className="text-xs text-gray-500 mt-2 pl-1">
-                                    Contact your administrator if you don&apos;t know your Organization ID.
+                                    Please search and select your organization to continue.
                                 </p>
                             </div>
                         )}

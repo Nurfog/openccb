@@ -5,9 +5,10 @@ import Image from "next/image";
 import { useBranding } from "@/context/BrandingContext";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/context/I18nContext";
-import { LogOut, Globe, Menu, X } from "lucide-react";
+import { LogOut, Globe, Menu, X, Sun, Moon } from "lucide-react";
 import NotificationCenter from "./NotificationCenter";
 import { useState } from "react";
+import { useTheme } from "@/context/ThemeContext";
 
 import { lmsApi, getImageUrl } from "@/lib/api";
 
@@ -15,6 +16,7 @@ export default function AppHeader() {
     const { t, language, setLanguage } = useTranslation();
     const { branding } = useBranding();
     const { user, logout } = useAuth();
+    const { theme, toggleTheme } = useTheme();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     // Use platform_name if available, otherwise name, otherwise default
@@ -22,22 +24,24 @@ export default function AppHeader() {
 
     return (
         <header className="h-16 glass sticky top-0 z-[100] px-4 md:px-6 flex items-center justify-between backdrop-blur-xl bg-black/40 border-b border-white/5">
-            <Link href="/" className="flex items-center gap-2 md:gap-3 group" aria-label={`${platformName} - Dashboard`}>
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-blue-600 flex items-center justify-center font-black text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-all overflow-hidden relative">
+            <Link href="/" className="flex items-center gap-2 md:gap-5 group" aria-label={`${platformName} - Dashboard`}>
+                <div className={`rounded-lg md:rounded-xl bg-blue-600 flex items-center justify-center font-black text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-all overflow-hidden relative border border-white/5 ${branding?.logo_variant === 'wide' ? 'w-36 h-9 md:w-56 md:h-12 px-2 bg-white' : 'w-8 h-8 md:w-12 md:h-12'}`}>
                     {branding?.logo_url ? (
-                        <Image src={getImageUrl(branding.logo_url)} alt="" fill className="object-contain" sizes="40px" />
+                        <Image src={getImageUrl(branding.logo_url)} alt="" fill className={`object-contain ${branding?.logo_variant === 'wide' ? 'p-1' : 'p-0.5'}`} sizes={branding?.logo_variant === 'wide' ? '240px' : '48px'} />
                     ) : (
                         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700" aria-hidden="true">
                             {platformName.charAt(0).toUpperCase()}
                         </div>
                     )}
                 </div>
-                <div className="flex flex-col -gap-1" aria-hidden="true">
-                    <span className="font-black text-sm md:text-lg tracking-tighter text-white leading-none">
-                        {platformName.toUpperCase()}
-                    </span>
-                    <span className="text-[8px] md:text-[10px] font-black tracking-widest text-blue-500 uppercase">EXPERIENCIA</span>
-                </div>
+                {branding?.logo_variant !== 'wide' && (
+                    <div className="flex flex-col -gap-1" aria-hidden="true">
+                        <span className="font-black text-base md:text-xl tracking-tighter text-white leading-none">
+                            {platformName.toUpperCase()}
+                        </span>
+                        <span className="text-[8px] md:text-[10px] font-black tracking-widest text-blue-500 uppercase">EXPERIENCIA</span>
+                    </div>
+                )}
             </Link>
 
             <div className="flex items-center gap-4">
@@ -75,6 +79,14 @@ export default function AppHeader() {
                             <option value="pt" className="bg-[#0f1115]">PT</option>
                         </select>
                     </div>
+
+                    <button
+                        onClick={toggleTheme}
+                        className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-all border-l border-white/10 pl-4"
+                        title={theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
+                    >
+                        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                    </button>
 
                     <div className="hidden md:flex items-center gap-4 pl-4 border-l border-white/10">
                         <Link href="/profile" className="flex items-center gap-2 group/profile">
@@ -161,19 +173,27 @@ export default function AppHeader() {
                             )}
 
                             <div className="pt-6 mt-6 border-t border-white/5 space-y-4">
-                                <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5">
-                                    <Globe size={16} className="text-gray-500" aria-hidden="true" />
-                                    <select
-                                        id="mobile-language-selector"
-                                        value={language}
-                                        onChange={(e) => setLanguage(e.target.value)}
-                                        aria-label={t('nav.selectLanguage') || 'Select Language'}
-                                        className="bg-transparent text-xs font-bold uppercase tracking-widest text-gray-300 focus:outline-none flex-1"
+                                <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-white/5">
+                                    <div className="flex items-center gap-3">
+                                        <Globe size={16} className="text-gray-500" aria-hidden="true" />
+                                        <select
+                                            id="mobile-language-selector"
+                                            value={language}
+                                            onChange={(e) => setLanguage(e.target.value)}
+                                            aria-label={t('nav.selectLanguage') || 'Select Language'}
+                                            className="bg-transparent text-xs font-bold uppercase tracking-widest text-gray-300 focus:outline-none"
+                                        >
+                                            <option value="en" className="bg-[#0f1115]">English</option>
+                                            <option value="es" className="bg-[#0f1115]">Español</option>
+                                            <option value="pt" className="bg-[#0f1115]">Português</option>
+                                        </select>
+                                    </div>
+                                    <button
+                                        onClick={toggleTheme}
+                                        className="p-2 hover:bg-white/10 rounded-lg text-gray-400 transition-colors"
                                     >
-                                        <option value="en" className="bg-[#0f1115]">English</option>
-                                        <option value="es" className="bg-[#0f1115]">Español</option>
-                                        <option value="pt" className="bg-[#0f1115]">Português</option>
-                                    </select>
+                                        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                                    </button>
                                 </div>
                             </div>
                         </nav>

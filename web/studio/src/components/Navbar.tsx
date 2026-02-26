@@ -3,19 +3,41 @@
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from '@/context/I18nContext';
-import { LayoutDashboard, ShieldCheck, LogOut, Webhook, Settings, Globe, Library } from 'lucide-react';
+import { LayoutDashboard, ShieldCheck, LogOut, Webhook, Settings, Globe, Library, BookOpen, Sun, Moon } from 'lucide-react';
+import { useBranding } from '@/context/BrandingContext';
+import { useTheme } from '@/context/ThemeContext';
+import { getImageUrl } from '@/lib/api';
+import Image from 'next/image';
 
 export function Navbar() {
     const { t, language, setLanguage } = useTranslation();
     const { user, logout } = useAuth();
+    const { branding } = useBranding();
+    const { theme, toggleTheme } = useTheme();
+
+    const platformName = branding?.platform_name || 'OpenCCB';
 
     return (
-        <nav className="fixed top-0 w-full z-50 glass border-b border-white/10 bg-black/20">
+        <nav className="fixed top-0 w-full z-50 glass border-b border-white/10 bg-black/40 backdrop-blur-xl">
             <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-                <Link href="/" className="flex items-center gap-2" aria-label="OpenCCB Studio - Inicio">
-                    <h1 className="text-xl font-bold tracking-tight">
-                        Open<span className="gradient-text">CCB</span> Studio
-                    </h1>
+                <Link href="/" className="flex items-center gap-2 md:gap-4 group" aria-label={`${platformName} Studio - Dashboard`}>
+                    <div className={`rounded-lg md:rounded-xl bg-blue-600 flex items-center justify-center font-black text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-all overflow-hidden relative border border-white/5 ${branding?.logo_variant === 'wide' ? 'w-32 h-8 md:w-48 md:h-10 px-2 bg-white' : 'w-8 h-8 md:w-10 md:h-10'}`}>
+                        {branding?.logo_url ? (
+                            <Image src={getImageUrl(branding.logo_url)} alt="" fill className={`object-contain ${branding?.logo_variant === 'wide' ? 'p-1' : ''}`} sizes={branding?.logo_variant === 'wide' ? '200px' : '40px'} />
+                        ) : (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700" aria-hidden="true">
+                                <BookOpen size={branding?.logo_variant === 'wide' ? 16 : 20} />
+                            </div>
+                        )}
+                    </div>
+                    {branding?.logo_variant !== 'wide' && (
+                        <div className="flex flex-col -gap-1">
+                            <span className="font-black text-sm md:text-lg tracking-tighter text-white leading-none">
+                                {platformName.toUpperCase()}
+                            </span>
+                            <span className="text-[8px] md:text-[10px] font-black tracking-widest text-blue-500 uppercase">STUDIO</span>
+                        </div>
+                    )}
                 </Link>
 
                 <div className="flex items-center gap-6">
@@ -75,7 +97,17 @@ export function Navbar() {
 
                     <div className="h-6 w-px bg-white/10 mx-2" />
 
-                    {/* Language Switcher */}
+                    {/* Theme Toggle */}
+                    <button
+                        onClick={toggleTheme}
+                        className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-all"
+                        title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                        aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                    >
+                        {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                    </button>
+
+                    <div className="h-6 w-px bg-white/10 mx-2" />
                     <div className="flex items-center gap-2">
                         <Globe className="w-4 h-4 text-gray-500" aria-hidden="true" />
                         <select

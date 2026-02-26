@@ -1,48 +1,66 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { lmsApi, Organization, getImageUrl } from '@/lib/api';
+import { cmsApi, Organization, getImageUrl } from '@/lib/api';
+import { useAuth } from './AuthContext';
 import { usePathname } from 'next/navigation';
 
 interface BrandingContextType {
     branding: Organization | null;
     loading: boolean;
+    refreshBranding: () => Promise<void>;
 }
 
 const BrandingContext = createContext<BrandingContextType>({
     branding: null,
     loading: true,
+    refreshBranding: async () => { },
 });
 
 export const useBranding = () => useContext(BrandingContext);
 
 export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { user } = useAuth();
     const [branding, setBranding] = useState<Organization | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const orgId = process.env.NEXT_PUBLIC_ORG_ID || '00000000-0000-0000-0000-000000000001';
-
     const pathname = usePathname();
 
-    useEffect(() => {
-        const loadBranding = async () => {
-            try {
-                const data = await lmsApi.getBranding(orgId);
-                setBranding(data);
-                console.log('Branding loaded in Experience:', data);
-            } catch (error) {
-                console.error('Failed to load branding', error);
-            } finally {
-                setLoading(false);
-            }
-        };
+    const loadBranding = async () => {
+        if (!user?.organization_id) {
+            setLoading(false);
+            return;
+        }
+        try {
+            const data = await cmsApi.getBranding(user.organization_id);
+            // Translate BrandingResponse to Organization shape (partial)
+            const orgData = {
+                id: user.organization_id,
+                name: data.platform_name || 'OpenCCB',
+                logo_url: data.logo_url,
+                favicon_url: data.favicon_url,
+                platform_name: data.platform_name,
+                logo_variant: data.logo_variant,
+                primary_color: data.primary_color,
+                secondary_color: data.secondary_color,
+            } as any;
 
+            setBranding(orgData);
+            console.log('Branding loaded in Studio:', orgData);
+        } catch (error) {
+            console.error('Failed to load branding', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         loadBranding();
-    }, [orgId]);
+    }, [user?.organization_id]);
 
     useEffect(() => {
         if (!branding) return;
-        console.log('Applying branding in Experience for path:', pathname);
+        console.log('Applying branding in Studio for path:', pathname);
 
         // Apply CSS variables
         if (branding.primary_color) {
@@ -54,7 +72,7 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         // Update Title
         if (branding.platform_name) {
-            document.title = `${branding.platform_name} | Experiencia de Aprendizaje`;
+            document.title = `${branding.platform_name} | Studio`;
         }
 
         // Update Favicon
@@ -73,7 +91,7 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, [branding, pathname]);
 
     return (
-        <BrandingContext.Provider value={{ branding, loading }}>
+        <BrandingContext.Provider value={{ branding, loading, refreshBranding: loadBranding }}>
             {children}
         </BrandingContext.Provider>
     );

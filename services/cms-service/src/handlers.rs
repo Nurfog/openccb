@@ -2700,6 +2700,42 @@ pub async fn get_organizations(
     Ok(Json(orgs))
 }
 
+#[derive(Deserialize)]
+pub struct OrgSearchQuery {
+    pub q: String,
+}
+
+#[derive(Serialize, sqlx::FromRow)]
+pub struct OrgSearchResult {
+    pub id: Uuid,
+    pub name: String,
+    pub domain: Option<String>,
+}
+
+pub async fn search_organizations(
+    State(pool): State<PgPool>,
+    Query(query): Query<OrgSearchQuery>,
+) -> Result<Json<Vec<OrgSearchResult>>, StatusCode> {
+    if query.q.trim().is_empty() {
+        return Ok(Json(vec![]));
+    }
+
+    let search_term = format!("%{}%", query.q.trim());
+    
+    let orgs = sqlx::query_as::<_, OrgSearchResult>(
+        "SELECT id, name, domain FROM organizations WHERE name ILIKE $1 OR domain ILIKE $1 ORDER BY name ASC LIMIT 10"
+    )
+    .bind(search_term)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to search organizations: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(orgs))
+}
+
 pub async fn create_organization(
     claims: common::auth::Claims,
     State(pool): State<PgPool>,

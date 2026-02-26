@@ -6,6 +6,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { I18nProvider } from "@/context/I18nContext";
 import { BrandingProvider } from "@/context/BrandingContext";
 import AuthGuard from "@/components/AuthGuard";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,25 +23,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} bg-[#050505] text-[#e5e5e5] min-h-screen flex flex-col`}>
-        <BrandingProvider>
-          <AuthProvider>
-            <I18nProvider>
-              <AuthGuard>
-                <AppHeader />
-                <main className="flex-1">
-                  {children}
-                </main>
-                <footer className="py-12 px-6 border-t border-white/5 text-center bg-black/20">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">
-                    Desarrollado Por el Departamento de Informática © 2026. OpenCCB.
-                  </p>
-                </footer>
-              </AuthGuard>
-            </I18nProvider>
-          </AuthProvider>
-        </BrandingProvider>
+    <html lang="en">
+      <body className={`${inter.className} bg-white dark:bg-[#050505] text-gray-900 dark:text-[#e5e5e5] min-h-screen flex flex-col transition-colors duration-300`}>
+        <ThemeProvider>
+          <BrandingProvider>
+            <AuthProvider>
+              <I18nProvider>
+                <AuthGuard>
+                  <AppHeader />
+                  <main className="flex-1">
+                    {children}
+                  </main>
+                  <footer className="py-12 px-6 border-t border-black/5 dark:border-white/5 text-center bg-gray-50 dark:bg-black/20">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-600">
+                      Desarrollado Por el Departamento de Informática © 2026. OpenCCB.
+                    </p>
+                  </footer>
+                </AuthGuard>
+              </I18nProvider>
+            </AuthProvider>
+          </BrandingProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

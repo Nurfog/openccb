@@ -345,6 +345,7 @@ pub struct Organization {
     pub certificate_template: Option<String>,
     pub platform_name: Option<String>,
     pub favicon_url: Option<String>,
+    pub logo_variant: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

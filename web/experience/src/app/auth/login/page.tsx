@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { lmsApi } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import AsyncCombobox from "@/components/AsyncCombobox";
 import { GraduationCap, Lock, Mail, User, Building2, ChevronLeft, ArrowRight } from "lucide-react";
 
 type ViewMode = 'selection' | 'personal' | 'enterprise';
@@ -194,34 +195,25 @@ export default function ExperienceLoginPage() {
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-4">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Dominio de la Empresa</label>
-                                    <div className="relative">
-                                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                                        <input required type="text" value={organizationName} onChange={e => setOrganizationName(e.target.value)} className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white text-sm focus:border-emerald-500 focus:outline-none transition-colors font-mono" placeholder="acme-corp" />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Usuario / Correo</label>
-                                    <div className="relative">
-                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                                        <input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white text-sm focus:border-emerald-500 focus:outline-none transition-colors" placeholder="usuario@empresa.com" />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Contraseña</label>
-                                    <div className="relative">
-                                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                                        <input required type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white text-sm focus:border-emerald-500 focus:outline-none transition-colors" placeholder="••••••••" />
-                                    </div>
+                                <div className="space-y-1 z-50 relative">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Nombre de la Empresa</label>
+                                    <AsyncCombobox
+                                        id="orgIdForSSO"
+                                        value={orgIdForSSO}
+                                        onChange={setOrgIdForSSO}
+                                        onSearch={async (q) => {
+                                            const res = await lmsApi.searchOrganizations(q);
+                                            return res.map(o => ({ id: o.id, name: o.name }));
+                                        }}
+                                        placeholder="Busca tu empresa..."
+                                        leftIcon={<Building2 size={18} />}
+                                    />
                                 </div>
 
                                 {error && <div className="bg-red-500/10 border border-red-500/20 text-red-300 text-xs p-3 rounded-lg font-medium">{error}</div>}
 
-                                <button disabled={loading} type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-50 mt-2">
-                                    {loading ? "Validando..." : "Iniciar Sesión"}
+                                <button disabled={loading || !orgIdForSSO} type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-50 mt-2">
+                                    {loading ? "Redirigiendo..." : "Continuar con SSO"}
                                 </button>
                             </form>
                         </div>

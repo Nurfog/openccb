@@ -126,14 +126,26 @@ export interface Organization {
     primary_color?: string;
     secondary_color?: string;
     certificate_template?: string;
+    logo_variant?: string;
     created_at: string;
     updated_at: string;
 }
 
 export interface BrandingPayload {
+    name?: string;
     primary_color?: string;
     secondary_color?: string;
     platform_name?: string;
+    logo_variant?: string;
+}
+
+export interface BrandingResponse {
+    logo_url?: string;
+    favicon_url?: string;
+    platform_name?: string;
+    logo_variant?: string;
+    primary_color: string;
+    secondary_color: string;
 }
 
 export interface User {
@@ -590,6 +602,10 @@ export const cmsApi = {
     register: (payload: AuthPayload): Promise<AuthResponse> => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
     login: (payload: AuthPayload): Promise<AuthResponse> => apiFetch('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
     getMe: (): Promise<User> => apiFetch('/auth/me'),
+
+    // Organizations Search
+    searchOrganizations: (query: string): Promise<{ id: string, name: string, domain?: string }[]> => apiFetch(`/organizations/search?q=${encodeURIComponent(query)}`),
+    getBranding: (id: string): Promise<BrandingResponse> => apiFetch(`/organizations/${id}/branding`),
 
     // Courses
     getCourses: (): Promise<Course[]> => apiFetch('/courses'),

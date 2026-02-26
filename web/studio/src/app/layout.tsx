@@ -6,6 +6,8 @@ import { AuthProvider } from "@/context/AuthContext";
 import { I18nProvider } from "@/context/I18nContext";
 import { BookOpen } from "lucide-react";
 import AuthGuard from "@/components/AuthGuard";
+import { BrandingProvider } from "@/context/BrandingContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -14,7 +16,7 @@ export const metadata: Metadata = {
   description: "Create and manage high-fidelity educational content.",
 };
 
-import AuthHeader from "@/components/AuthHeader";
+import { Navbar } from "@/components/Navbar";
 import BrandingManager from "@/components/BrandingManager";
 
 export default function RootLayout({
@@ -23,25 +25,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} bg-gray-950 text-gray-200 min-h-screen flex flex-col`}>
-        <AuthProvider>
-          <I18nProvider>
-            <AuthGuard>
-              <BrandingManager />
-              <header className="h-16 md:h-20 glass sticky top-0 z-50 px-4 md:px-8 flex items-center justify-between border-b border-white/5 backdrop-blur-xl bg-black/40">
-                <Link href="/" className="flex items-center gap-3 group">
-                  <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
-                    <BookOpen size={20} />
-                  </div>
-                  <span className="font-black text-2xl tracking-tighter text-white">STUDIO</span>
-                </Link>
-                <AuthHeader />
-              </header>
-              <main className="flex-1">{children}</main>
-            </AuthGuard>
-          </I18nProvider>
-        </AuthProvider>
+    <html lang="en">
+      <body className={`${inter.className} bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-200 min-h-screen flex flex-col transition-colors duration-300`}>
+        <ThemeProvider>
+          <AuthProvider>
+            <I18nProvider>
+              <BrandingProvider>
+                <AuthGuard>
+                  <BrandingManager />
+                  <Navbar />
+                  <main className="flex-1 mt-16 md:mt-20">{children}</main>
+                </AuthGuard>
+              </BrandingProvider>
+            </I18nProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -15,9 +15,11 @@ use super::handlers::log_action;
 
 #[derive(Deserialize, Serialize)]
 pub struct BrandingPayload {
+    pub name: Option<String>,
     pub primary_color: Option<String>,
     pub secondary_color: Option<String>,
     pub platform_name: Option<String>,
+    pub logo_variant: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -25,6 +27,7 @@ pub struct BrandingResponse {
     pub logo_url: Option<String>,
     pub favicon_url: Option<String>,
     pub platform_name: Option<String>,
+    pub logo_variant: Option<String>,
     pub primary_color: String,
     pub secondary_color: String,
 }
@@ -293,16 +296,20 @@ pub async fn update_organization_branding(
     // Update organization
     let org = sqlx::query_as::<_, Organization>(
         "UPDATE organizations 
-         SET primary_color = COALESCE($1, primary_color),
-             secondary_color = COALESCE($2, secondary_color),
-             platform_name = COALESCE($3, platform_name),
+         SET name = COALESCE($1, name),
+             primary_color = COALESCE($2, primary_color),
+             secondary_color = COALESCE($3, secondary_color),
+             platform_name = COALESCE($4, platform_name),
+             logo_variant = COALESCE($5, logo_variant),
              updated_at = NOW()
-         WHERE id = $4
+         WHERE id = $6
          RETURNING *",
     )
+    .bind(&payload.name)
     .bind(&payload.primary_color)
     .bind(&payload.secondary_color)
     .bind(&payload.platform_name)
+    .bind(&payload.logo_variant)
     .bind(org_id)
     .fetch_one(&pool)
     .await
@@ -342,6 +349,7 @@ pub async fn get_organization_branding(
         logo_url: org.logo_url,
         favicon_url: org.favicon_url,
         platform_name: org.platform_name,
+        logo_variant: org.logo_variant,
         primary_color: org.primary_color.unwrap_or_else(|| "#3B82F6".to_string()),
         secondary_color: org.secondary_color.unwrap_or_else(|| "#8B5CF6".to_string()),
     }))

@@ -9,20 +9,21 @@ const nextConfig = {
         ignoreBuildErrors: true,
     },
     images: {
+        unoptimized: true,
         remotePatterns: [
             {
                 protocol: 'http',
                 hostname: 'localhost',
                 port: '3001',
-                pathname: '/uploads/**',
+                pathname: '/assets/**',
             },
         ],
     },
     async rewrites() {
         return [
             {
-                source: '/uploads/:path*',
-                destination: 'http://localhost:3001/uploads/:path*',
+                source: '/assets/:path*',
+                destination: 'http://localhost:3001/assets/:path*',
             },
         ];
     },

@@ -283,6 +283,10 @@ async fn main() {
         .route("/auth/sso/login/{org_id}", get(handlers::sso_login_init))
         .route("/auth/sso/callback", get(handlers::sso_callback))
         .route(
+            "/organizations/search",
+            get(handlers::search_organizations),
+        )
+        .route(
             "/organizations/{id}/branding",
             get(handlers_branding::get_organization_branding),
         )

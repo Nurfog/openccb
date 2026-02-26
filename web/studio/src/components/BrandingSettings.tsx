@@ -12,9 +12,11 @@ export default function BrandingSettings() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState<BrandingPayload>({
+        name: "",
         primary_color: "#3B82F6",
         secondary_color: "#8B5CF6",
         platform_name: "",
+        logo_variant: "standard",
     });
 
     useEffect(() => {
@@ -26,9 +28,11 @@ export default function BrandingSettings() {
             const data = await cmsApi.getOrganization();
             setOrg(data);
             setFormData({
+                name: data.name || "",
                 primary_color: data.primary_color || "#3B82F6",
                 secondary_color: data.secondary_color || "#8B5CF6",
                 platform_name: data.platform_name || "",
+                logo_variant: data.logo_variant || "standard",
             });
         } catch (error) {
             console.error("Failed to fetch organization:", error);
@@ -64,6 +68,20 @@ export default function BrandingSettings() {
                 </legend>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Organization Name */}
+                    <div className="col-span-full">
+                        <label htmlFor="org-name" className="block text-sm font-medium text-gray-400 mb-2">Organization Name</label>
+                        <input
+                            id="org-name"
+                            type="text"
+                            value={formData.name || ""}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500/50 transition-colors"
+                            placeholder="My Organization"
+                            required
+                        />
+                        <p className="text-xs text-gray-500 mt-2">The official name of your organization.</p>
+                    </div>
                     {/* Platform Name */}
                     <div className="col-span-full">
                         <label htmlFor="platform-name" className="block text-sm font-medium text-gray-400 mb-2">Platform Name</label>
@@ -142,6 +160,38 @@ export default function BrandingSettings() {
                             }}
                         />
                         <p className="text-xs text-gray-500">Recommended: ICO or PNG, 32x32px.</p>
+                    </div>
+
+                    {/* Logo Variant Selection */}
+                    <div className="col-span-full border-t border-white/5 pt-6 mt-2">
+                        <label className="block text-sm font-medium text-gray-400 mb-4">Logo Display Style (Header)</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <button
+                                type="button"
+                                onClick={() => setFormData({ ...formData, logo_variant: "standard" })}
+                                className={`flex flex-col gap-3 p-4 rounded-xl border transition-all text-left ${formData.logo_variant === "standard" ? "bg-blue-600/10 border-blue-500/50" : "bg-black/20 border-white/10 hover:border-white/20"}`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-xs">O</div>
+                                    <span className="text-sm font-bold">Standard</span>
+                                </div>
+                                <p className="text-xs text-gray-500">Small icon next to the organization name. Best for square logos.</p>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setFormData({ ...formData, logo_variant: "wide" })}
+                                className={`flex flex-col gap-3 p-4 rounded-xl border transition-all text-left ${formData.logo_variant === "wide" ? "bg-blue-600/10 border-blue-500/50" : "bg-black/20 border-white/10 hover:border-white/20"}`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <div className="w-20 h-6 bg-blue-600/20 rounded-md border border-blue-500/30 flex items-center justify-center">
+                                        <div className="w-12 h-2 bg-blue-500 rounded-full" />
+                                    </div>
+                                    <span className="text-sm font-bold">Wide / Horizontal</span>
+                                </div>
+                                <p className="text-xs text-gray-500">Shows the full logo without text. Best for horizontal images like yours.</p>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </fieldset>
