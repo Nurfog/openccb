@@ -46,13 +46,13 @@ export default function AppHeader() {
 
             <div className="flex items-center gap-4">
                 <nav className="hidden md:flex items-center gap-8 mr-4" aria-label="Navegación principal">
-                    <Link href="/" className="nav-link-standard text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                    <Link href="/" className="nav-link-standard text-slate-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                         {t('nav.catalog')}
                     </Link>
-                    <Link href="/my-learning" className="nav-link-standard text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                    <Link href="/my-learning" className="nav-link-standard text-slate-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                         {t('nav.myLearning')}
                     </Link>
-                    <Link href="/bookmarks" className="nav-link-standard text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                    <Link href="/bookmarks" className="nav-link-standard text-slate-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                         {t('nav.bookmarks')}
                     </Link>
 

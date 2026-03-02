@@ -48,7 +48,7 @@ body {
 }
 
 .nav-link-standard {
-  @apply text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2;
+  @apply text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2;
 }
 
 .btn-premium {

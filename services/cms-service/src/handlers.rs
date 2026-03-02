@@ -2415,17 +2415,27 @@ pub struct CourseWithOutline {
 
 pub async fn get_course_outline(
     Org(org_ctx): Org,
+    claims: common::auth::Claims,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<CourseWithOutline>, StatusCode> {
+    let is_super_admin = claims.role == "admin"
+        && claims.org == Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+
     // 1. Fetch Course
-    let course =
+    let course = if is_super_admin {
+        sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1")
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+    } else {
         sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1 AND organization_id = $2")
             .bind(id)
             .bind(org_ctx.id)
             .fetch_one(&pool)
             .await
-            .map_err(|_| StatusCode::NOT_FOUND)?;
+    }
+    .map_err(|_| StatusCode::NOT_FOUND)?;
 
     // 2. Fetch Modules
     let modules =

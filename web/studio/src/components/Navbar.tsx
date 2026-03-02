@@ -44,7 +44,7 @@ export function Navbar() {
                     <div className="flex items-center gap-4">
                         <Link
                             href="/"
-                            className="nav-link-standard text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                            className="nav-link-standard text-slate-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
                         >
                             <LayoutDashboard className="w-4 h-4" />
                             {t('nav.courses')}
@@ -52,7 +52,7 @@ export function Navbar() {
 
                         <Link
                             href="/library/assets"
-                            className="nav-link-standard text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                            className="nav-link-standard text-slate-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
                         >
                             <Library className="w-4 h-4" aria-hidden="true" />
                             {t('nav.library') || 'Library'}
@@ -64,7 +64,7 @@ export function Navbar() {
                                 {user.organization_id === '00000000-0000-0000-0000-000000000001' && (
                                     <Link
                                         href="/admin"
-                                        className="text-xs font-black text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-2 bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-500/20 shadow-glow-sm uppercase tracking-widest"
+                                        className="text-sm font-black text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-2 bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-500/20 shadow-glow-sm uppercase tracking-wider"
                                     >
                                         <ShieldCheck className="w-4 h-4" aria-hidden="true" />
                                         {t('nav.globalControl')}
@@ -72,14 +72,14 @@ export function Navbar() {
                                 )}
                                 <Link
                                     href="/settings/webhooks"
-                                    className="nav-link-standard text-gray-400 hover:text-blue-400"
+                                    className="nav-link-standard text-slate-600 dark:text-gray-400 hover:text-blue-400"
                                 >
                                     <Webhook className="w-4 h-4" />
                                     {t('nav.webhooks')}
                                 </Link>
                                 <Link
                                     href="/profile"
-                                    className="nav-link-standard text-gray-400 hover:text-blue-400"
+                                    className="nav-link-standard text-slate-600 dark:text-gray-400 hover:text-blue-400"
                                 >
                                     <Settings className="w-4 h-4" />
                                     {t('nav.profile')}
@@ -89,7 +89,7 @@ export function Navbar() {
 
                         <Link
                             href="/settings"
-                            className="nav-link-standard text-gray-400 hover:text-blue-400"
+                            className="nav-link-standard text-slate-600 dark:text-gray-400 hover:text-blue-400"
                         >
                             <Settings className="w-4 h-4" />
                             Settings
