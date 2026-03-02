@@ -3,12 +3,12 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
     Search, Image as ImageIcon, FileText, Film, File as FileIcon,
-    Loader2, Upload, Trash2, ExternalLink, Filter, Plus, ChevronLeft
+    Loader2, Upload, Trash2, ExternalLink, Filter, Plus
 } from "lucide-react";
 import { cmsApi, Asset, AssetFilters, getImageUrl } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/context/I18nContext";
-import Link from "next/link";
+import PageLayout from "@/components/PageLayout";
 
 export default function AssetLibraryPage() {
     const { t } = useTranslation();
@@ -86,37 +86,24 @@ export default function AssetLibraryPage() {
     };
 
     return (
-        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white pt-24 pb-12 px-6 transition-colors duration-300">
-            <div className="max-w-7xl mx-auto space-y-8">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                    <div className="space-y-1">
-                        <Link href="/" className="flex items-center gap-2 text-gray-500 hover:text-blue-400 transition-colors text-xs uppercase font-bold tracking-widest mb-2">
-                            <ChevronLeft className="w-4 h-4" />
-                            Back to Dashboard
-                        </Link>
-                        <h1 className="text-4xl font-black tracking-tight flex items-center gap-4">
-                            Global <span className="gradient-text">Asset Library</span>
-                        </h1>
-                        <p className="text-gray-600 dark:text-gray-500 text-sm font-medium">Manage and reuse your organization's media files across all courses.</p>
-                    </div>
-
-                    <div className="flex gap-3">
-                        <label className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold transition-all cursor-pointer shadow-lg shadow-blue-600/20 active:scale-95">
-                            <Upload className="w-5 h-5" />
-                            Upload Files
-                            <input
-                                type="file"
-                                multiple
-                                className="hidden"
-                                onChange={handleFileUpload}
-                                disabled={isUploading}
-                            />
-                        </label>
-                    </div>
-                </div>
-
-                {/* Upload Progress Bar */}
+        <PageLayout
+            title="Biblioteca de Recursos"
+            description="Gestiona y reutiliza archivos de medios en todos tus cursos."
+            actions={
+                <label className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all cursor-pointer shadow-md shadow-blue-600/20 active:scale-95">
+                    <Upload className="w-4 h-4" />
+                    Subir Archivos
+                    <input
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={handleFileUpload}
+                        disabled={isUploading}
+                    />
+                </label>
+            }
+        >
+            <div className="space-y-6">
                 {isUploading && (
                     <div className="w-full bg-black/5 dark:bg-white/5 rounded-2xl border border-black/10 dark:border-white/10 p-4 animate-in fade-in slide-in-from-top-4">
                         <div className="flex justify-between items-center mb-2">
@@ -251,6 +238,6 @@ export default function AssetLibraryPage() {
                     </div>
                 )}
             </div>
-        </div>
+        </PageLayout>
     );
 }

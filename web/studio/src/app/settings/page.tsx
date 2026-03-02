@@ -1,6 +1,7 @@
 "use client";
 
 import BrandingSettings from "@/components/BrandingSettings";
+import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -16,16 +17,15 @@ export default function SettingsPage() {
     }, [user, loading, router]);
 
     if (loading) return null;
-
     if (!user || user.role !== "admin") return null;
 
     return (
-        <div className="pt-24 px-8 pb-12 min-h-screen bg-transparent transition-colors duration-300">
-            <div className="max-w-4xl mx-auto mb-8">
-                <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Organization Settings</h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your white-label branding and platform identity.</p>
-            </div>
+        <PageLayout
+            title="Configuración de Organización"
+            description="Gestiona el branding y la identidad de tu plataforma."
+            maxWidth="narrow"
+        >
             <BrandingSettings />
-        </div>
+        </PageLayout>
     );
 }

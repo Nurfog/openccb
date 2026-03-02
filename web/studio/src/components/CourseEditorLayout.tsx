@@ -1,13 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
     Layout, CheckCircle2, BarChart2, Settings, Folder,
     GraduationCap, Megaphone, Users, Award, Video,
-    BookOpen, ShieldCheck, Radio, TrendingUp
+    BookOpen, ShieldCheck, Radio, TrendingUp, ChevronLeft
 } from "lucide-react";
+import { cmsApi, Course } from "@/lib/api";
 
 type TabKey =
     | "outline"
@@ -27,6 +28,12 @@ type TabKey =
 interface CourseEditorLayoutProps {
     children: React.ReactNode;
     activeTab: TabKey;
+    /** Título de la sección específica (ej: "Grading Policy"). Si se omite, usa el nombre del curso. */
+    pageTitle?: string;
+    /** Descripción de la sección específica. */
+    pageDescription?: string;
+    /** Acciones extra que van a la derecha del header (Preview, Publish, etc.) */
+    pageActions?: React.ReactNode;
 }
 
 interface Tab {
@@ -43,8 +50,21 @@ interface Group {
     tabs: Tab[];
 }
 
-export default function CourseEditorLayout({ children, activeTab }: CourseEditorLayoutProps) {
-    const { id } = useParams() as { id: string };
+export default function CourseEditorLayout({
+    children,
+    activeTab,
+    pageTitle,
+    pageDescription,
+    pageActions,
+}: CourseEditorLayoutProps) {
+    const params = useParams() as { id: string };
+    const id = params.id;
+    const router = useRouter();
+    const [course, setCourse] = useState<Course | null>(null);
+
+    useEffect(() => {
+        cmsApi.getCourse(id).then(setCourse).catch(console.error);
+    }, [id]);
 
     const groups: Group[] = [
         {
@@ -101,65 +121,109 @@ export default function CourseEditorLayout({ children, activeTab }: CourseEditor
     const activeGroup = groups.find((g) => g.tabs.some((t) => t.key === activeTab));
     const subTabs = activeGroup?.tabs ?? [];
 
-    return (
-        <div className="space-y-0">
-            {/* PRIMARY GROUP NAV */}
-            <nav
-                className="bg-white dark:bg-black/20 border border-black/8 dark:border-white/8 rounded-t-xl overflow-hidden"
-                aria-label="Grupos del editor de cursos"
-            >
-                <ul className="flex border-b border-black/8 dark:border-white/8">
-                    {groups.map((group) => {
-                        const Icon = group.icon;
-                        const isGroupActive = group.key === activeGroup?.key;
-                        // When clicking a group, go to its first tab
-                        const groupHref = group.tabs[0].href;
-                        return (
-                            <li key={group.key} className="flex-shrink-0">
-                                <Link
-                                    href={groupHref}
-                                    className={`flex items-center gap-2 px-6 py-3 text-sm font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${isGroupActive
-                                            ? "border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/10"
-                                            : "border-transparent text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-100 hover:bg-slate-50 dark:hover:bg-white/5"
-                                        }`}
-                                >
-                                    <Icon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
-                                    {group.label}
-                                </Link>
-                            </li>
-                        );
-                    })}
-                </ul>
+    // Determine header text
+    const displayTitle = pageTitle || "Course Editor";
+    const displayDescription = pageDescription
+        || (course ? `${course.title}` : "Cargando curso...");
 
-                {/* SECONDARY SUB-TAB NAV */}
-                {subTabs.length > 1 && (
-                    <ul className="flex bg-slate-50 dark:bg-white/[0.03] border-b border-black/5 dark:border-white/5 px-2 gap-1" aria-label="Sub-secciones">
-                        {subTabs.map((tab) => {
-                            const Icon = tab.icon;
-                            const isActive = tab.key === activeTab;
+    return (
+        <div className="min-h-screen bg-transparent">
+            <div className="max-w-7xl mx-auto px-6 pt-8 pb-12">
+
+                {/* ── PAGE HEADER ── */}
+                <div className="flex items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => router.push("/")}
+                            className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors text-slate-500 hover:text-slate-800 dark:hover:text-gray-200"
+                            aria-label="Volver al inicio"
+                        >
+                            <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <div>
+                            <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
+                                {displayTitle}
+                            </h1>
+                            <p className="text-sm text-slate-500 dark:text-gray-400 mt-0.5">
+                                {displayDescription}
+                                {course?.pacing_mode && (
+                                    <span className={`ml-2 text-xs font-bold px-1.5 py-0.5 rounded ${course.pacing_mode === "instructor_led"
+                                            ? "bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400"
+                                            : "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400"
+                                        }`}>
+                                        {course.pacing_mode.replace("_", " ").toUpperCase()}
+                                    </span>
+                                )}
+                            </p>
+                        </div>
+                    </div>
+                    {pageActions && (
+                        <div className="flex items-center gap-3 shrink-0">
+                            {pageActions}
+                        </div>
+                    )}
+                </div>
+
+                {/* ── TAB NAVIGATION ── */}
+                <nav
+                    className="bg-white dark:bg-black/20 border border-black/8 dark:border-white/8 rounded-xl overflow-hidden mb-6"
+                    aria-label="Grupos del editor de cursos"
+                >
+                    <ul className="flex border-b border-black/8 dark:border-white/8">
+                        {groups.map((group) => {
+                            const Icon = group.icon;
+                            const isGroupActive = group.key === activeGroup?.key;
+                            const groupHref = group.tabs[0].href;
                             return (
-                                <li key={tab.key} className="flex-shrink-0">
+                                <li key={group.key} className="flex-shrink-0">
                                     <Link
-                                        href={tab.href}
-                                        aria-current={isActive ? "page" : undefined}
-                                        className={`flex items-center gap-1.5 px-4 py-2 my-1 text-xs font-bold uppercase tracking-wider rounded-lg transition-all whitespace-nowrap ${isActive
-                                                ? "bg-blue-600 text-white shadow-sm shadow-blue-500/30"
-                                                : "text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-100 hover:bg-black/5 dark:hover:bg-white/5"
+                                        href={groupHref}
+                                        className={`flex items-center gap-2 px-6 py-3 text-sm font-black uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${isGroupActive
+                                                ? "border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/10"
+                                                : "border-transparent text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-100 hover:bg-slate-50 dark:hover:bg-white/5"
                                             }`}
                                     >
-                                        <Icon className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
-                                        {tab.label}
+                                        <Icon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                                        {group.label}
                                     </Link>
                                 </li>
                             );
                         })}
                     </ul>
-                )}
-            </nav>
 
-            {/* Content */}
-            <div className="pt-6 space-y-6">
-                {children}
+                    {/* SECONDARY SUB-TAB NAV */}
+                    {subTabs.length > 1 && (
+                        <ul
+                            className="flex bg-slate-50 dark:bg-white/[0.03] px-2 gap-1"
+                            aria-label="Sub-secciones"
+                        >
+                            {subTabs.map((tab) => {
+                                const Icon = tab.icon;
+                                const isActive = tab.key === activeTab;
+                                return (
+                                    <li key={tab.key} className="flex-shrink-0">
+                                        <Link
+                                            href={tab.href}
+                                            aria-current={isActive ? "page" : undefined}
+                                            className={`flex items-center gap-1.5 px-4 py-2 my-1 text-xs font-bold uppercase tracking-wider rounded-lg transition-all whitespace-nowrap ${isActive
+                                                    ? "bg-blue-600 text-white shadow-sm shadow-blue-500/30"
+                                                    : "text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-gray-100 hover:bg-black/5 dark:hover:bg-white/5"
+                                                }`}
+                                        >
+                                            <Icon className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+                                            {tab.label}
+                                        </Link>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    )}
+                </nav>
+
+                {/* ── PAGE CONTENT ── */}
+                <div className="space-y-6">
+                    {children}
+                </div>
             </div>
         </div>
     );

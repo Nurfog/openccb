@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { lmsApi, cmsApi, Course, Meeting } from "@/lib/api";
 import {
     Video,
@@ -9,7 +9,6 @@ import {
     Calendar as CalendarIcon,
     Clock,
     Trash2,
-    ArrowLeft,
     Loader2,
     Globe,
     Link as LinkIcon,
@@ -19,7 +18,6 @@ import CourseEditorLayout from "@/components/CourseEditorLayout";
 
 export default function LiveSessionsPage() {
     const { id } = useParams() as { id: string };
-    const router = useRouter();
     const [meetings, setMeetings] = useState<Meeting[]>([]);
     const [loading, setLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -81,103 +79,93 @@ export default function LiveSessionsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white p-8">
-            <div className="max-w-7xl mx-auto">
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => router.back()} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                            <ArrowLeft className="w-6 h-6" />
-                        </button>
-                        <div>
-                            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent">
-                                Live Learning Sessions
-                            </h1>
-                            <p className="text-gray-400 mt-1">Schedule and manage virtual meetings and live sessions</p>
-                        </div>
-                    </div>
+        <>
+            <CourseEditorLayout
+                activeTab="sessions"
+                pageTitle="Sesiones en Vivo"
+                pageDescription="Programa y gestiona reuniones virtuales y sesiones en vivo."
+                pageActions={
                     <button
                         onClick={() => setIsCreateModalOpen(true)}
-                        className="btn-premium px-6 py-3 flex items-center gap-2"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-md shadow-blue-600/20 transition-all active:scale-95"
                     >
-                        <Plus size={18} />
-                        Schedule Session
+                        <Plus size={16} />
+                        Programar Sesión
                     </button>
-                </div>
+                }
+            >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {meetings.length === 0 ? (
+                        <div className="col-span-full py-20 bg-white/[0.02] border border-dashed border-white/10 rounded-3xl text-center">
+                            <Video className="w-16 h-16 text-gray-700 mx-auto mb-4" />
+                            <h3 className="text-xl font-bold text-gray-400 mb-2">No active sessions</h3>
+                            <p className="text-gray-500 max-w-sm mx-auto">Start by scheduling your first virtual meeting for this course.</p>
+                        </div>
+                    ) : (
+                        meetings.map(meeting => (
+                            <div key={meeting.id} className="glass p-6 border-white/10 hover:border-blue-500/30 transition-all group relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        onClick={() => handleDeleteMeeting(meeting.id)}
+                                        className="p-2 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
 
-                <CourseEditorLayout activeTab="sessions">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {meetings.length === 0 ? (
-                            <div className="col-span-full py-20 bg-white/[0.02] border border-dashed border-white/10 rounded-3xl text-center">
-                                <Video className="w-16 h-16 text-gray-700 mx-auto mb-4" />
-                                <h3 className="text-xl font-bold text-gray-400 mb-2">No active sessions</h3>
-                                <p className="text-gray-500 max-w-sm mx-auto">Start by scheduling your first virtual meeting for this course.</p>
-                            </div>
-                        ) : (
-                            meetings.map(meeting => (
-                                <div key={meeting.id} className="glass p-6 border-white/10 hover:border-blue-500/30 transition-all group relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button
-                                            onClick={() => handleDeleteMeeting(meeting.id)}
-                                            className="p-2 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
+                                <div className="flex items-start gap-4 mb-6">
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+                                        <Video size={24} />
                                     </div>
-
-                                    <div className="flex items-start gap-4 mb-6">
-                                        <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
-                                            <Video size={24} />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-lg leading-tight mb-1 group-hover:text-blue-400 transition-colors uppercase tracking-tight">{meeting.title}</h4>
-                                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-500">
-                                                <Globe size={10} />
-                                                {meeting.provider} Session
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-3 mb-8">
-                                        <div className="flex items-center gap-3 text-sm text-gray-400">
-                                            <CalendarIcon size={16} className="text-blue-500" />
-                                            <span className="font-medium">{new Date(meeting.start_at).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3 text-sm text-gray-400">
-                                            <Clock size={16} className="text-blue-500" />
-                                            <span className="font-medium">
-                                                {new Date(meeting.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                <span className="mx-2 opacity-30">|</span>
-                                                {meeting.duration_minutes} minutes
-                                            </span>
-                                        </div>
-                                        {meeting.description && (
-                                            <p className="text-xs text-gray-500 line-clamp-2 mt-2 leading-relaxed italic">
-                                                "{meeting.description}"
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div className="flex items-center gap-3">
-                                        <button
-                                            className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
-                                            onClick={() => {
-                                                const url = meeting.join_url || `https://meet.jit.si/${meeting.meeting_id}`;
-                                                window.open(url, '_blank');
-                                            }}
-                                        >
-                                            <LinkIcon size={14} />
-                                            Preview Link
-                                        </button>
-                                        <div className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${meeting.is_active ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-500'}`}>
-                                            {meeting.is_active ? 'Scheduled' : 'Past'}
+                                    <div>
+                                        <h4 className="font-bold text-lg leading-tight mb-1 group-hover:text-blue-400 transition-colors uppercase tracking-tight">{meeting.title}</h4>
+                                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                            <Globe size={10} />
+                                            {meeting.provider} Session
                                         </div>
                                     </div>
                                 </div>
-                            ))
-                        )}
-                    </div>
-                </CourseEditorLayout>
-            </div>
+
+                                <div className="space-y-3 mb-8">
+                                    <div className="flex items-center gap-3 text-sm text-gray-400">
+                                        <CalendarIcon size={16} className="text-blue-500" />
+                                        <span className="font-medium">{new Date(meeting.start_at).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm text-gray-400">
+                                        <Clock size={16} className="text-blue-500" />
+                                        <span className="font-medium">
+                                            {new Date(meeting.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            <span className="mx-2 opacity-30">|</span>
+                                            {meeting.duration_minutes} minutes
+                                        </span>
+                                    </div>
+                                    {meeting.description && (
+                                        <p className="text-xs text-gray-500 line-clamp-2 mt-2 leading-relaxed italic">
+                                            "{meeting.description}"
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
+                                        onClick={() => {
+                                            const url = meeting.join_url || `https://meet.jit.si/${meeting.meeting_id}`;
+                                            window.open(url, '_blank');
+                                        }}
+                                    >
+                                        <LinkIcon size={14} />
+                                        Preview Link
+                                    </button>
+                                    <div className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${meeting.is_active ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-500'}`}>
+                                        {meeting.is_active ? 'Scheduled' : 'Past'}
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </CourseEditorLayout>
 
             {/* Create Meeting Modal */}
             {isCreateModalOpen && (
@@ -246,6 +234,6 @@ export default function LiveSessionsPage() {
                     </div>
                 </div>
             )}
-        </div>
+        </>
     );
 }

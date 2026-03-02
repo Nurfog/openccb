@@ -17,6 +17,7 @@ import {
     Trash2
 } from "lucide-react";
 import Image from "next/image";
+import PageLayout from "@/components/PageLayout";
 
 export default function ProfilePage() {
     const { t, setLanguage: setContextLanguage } = useTranslation();
@@ -89,12 +90,11 @@ export default function ProfilePage() {
     if (!user) return null;
 
     return (
-        <div className="max-w-5xl mx-auto py-12 px-6">
-            <div className="mb-12">
-                <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-2 transition-colors">User Profile</h1>
-                <p className="text-slate-500 dark:text-gray-400 transition-colors">Manage your identity and preferences across the platform.</p>
-            </div>
-
+        <PageLayout
+            title="Perfil de Usuario"
+            description="Gestiona tu identidad y preferencias en la plataforma."
+            maxWidth="narrow"
+        >
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Column: Profile Card */}
                 <div className="lg:col-span-1 space-y-6">
@@ -285,6 +285,6 @@ export default function ProfilePage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </PageLayout>
     );
 }

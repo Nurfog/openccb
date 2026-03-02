@@ -8,6 +8,7 @@ import { useTranslation } from "@/context/I18nContext";
 import { Plus, BookOpen, Download, Upload, Sparkles, Wand2, Trash2 } from "lucide-react";
 import OrganizationSelector from "@/components/OrganizationSelector";
 import Modal from "@/components/Modal";
+import PageLayout from "@/components/PageLayout";
 
 export default function StudioDashboard() {
   const { t } = useTranslation();
@@ -158,87 +159,81 @@ export default function StudioDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-transparent text-gray-900 dark:text-gray-100 p-8 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-12">
-          <div>
-            <h1 className="text-4xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent tracking-tight">
-              {t('nav.courses')}
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">{t('dashboard.title')}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 px-6 py-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl font-bold transition-all cursor-pointer active:scale-95 text-slate-900 dark:text-white">
-              <Upload size={18} />
-              Importar
-              <input type="file" accept=".json" onChange={handleImport} className="hidden" />
-            </label>
-            <button
-              onClick={() => setIsAIModalOpen(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-all active:scale-95 group"
-            >
-              <Sparkles size={18} className="text-amber-300 group-hover:rotate-12 transition-transform" />
-              AI Wizard
-            </button>
-            <button
-              onClick={handleCreateCourse}
-              className="flex items-center gap-2 px-6 py-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl font-bold transition-all active:scale-95 text-slate-900 dark:text-white"
-            >
-              <Plus size={20} />
-              Manual
-            </button>
-          </div>
-        </div>
+    <PageLayout
+      title={t('nav.courses')}
+      description={t('dashboard.title') || 'Panel de Control'}
+      actions={
+        <>
+          <label className="flex items-center gap-2 px-5 py-2.5 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl font-bold text-sm transition-all cursor-pointer active:scale-95 text-slate-900 dark:text-white">
+            <Upload size={16} />
+            Importar
+            <input type="file" accept=".json" onChange={handleImport} className="hidden" />
+          </label>
+          <button
+            onClick={() => setIsAIModalOpen(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/20 transition-all active:scale-95 group"
+          >
+            <Sparkles size={16} className="text-amber-300 group-hover:rotate-12 transition-transform" />
+            AI Wizard
+          </button>
+          <button
+            onClick={handleCreateCourse}
+            className="flex items-center gap-2 px-5 py-2.5 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl font-bold text-sm transition-all active:scale-95 text-slate-900 dark:text-white"
+          >
+            <Plus size={18} />
+            Manual
+          </button>
+        </>
+      }
+    >
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-64 glass-card animate-pulse bg-white/5 border-white/5"></div>
-            ))}
-          </div>
-        ) : courses.length === 0 ? (
-          <div className="text-center py-20 glass-card border-dashed border-black/10 dark:border-white/10">
-            <p className="text-gray-500 dark:text-gray-400">Aún no has creado ningún curso.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courses.map((course: Course) => (
-              <Link href={`/courses/${course.id}`} key={course.id}>
-                <div className="glass-card h-full flex flex-col group hover:border-blue-500/50 transition-all">
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                        <BookOpen className="text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <button
-                        onClick={(e) => handleExport(e, course.id, course.title)}
-                        className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all"
-                        title="Export Course"
-                      >
-                        <Download size={18} />
-                      </button>
-                      <button
-                        onClick={(e) => handleDeleteCourse(e, course.id, course.title)}
-                        className="p-2 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-all"
-                        title="Delete Course"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-64 glass-card animate-pulse bg-white/5 border-white/5"></div>
+          ))}
+        </div>
+      ) : courses.length === 0 ? (
+        <div className="text-center py-20 glass-card border-dashed border-black/10 dark:border-white/10">
+          <p className="text-gray-500 dark:text-gray-400">Aún no has creado ningún curso.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {courses.map((course: Course) => (
+            <Link href={`/courses/${course.id}`} key={course.id}>
+              <div className="glass-card h-full flex flex-col group hover:border-blue-500/50 transition-all">
+                <div className="flex-1">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                      <BookOpen className="text-blue-600 dark:text-blue-400" />
                     </div>
-                    <h3 className="font-bold text-lg mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-gray-900 dark:text-white">{course.title}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{course.description || "Sin descripción disponible."}</p>
+                    <button
+                      onClick={(e) => handleExport(e, course.id, course.title)}
+                      className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all"
+                      title="Export Course"
+                    >
+                      <Download size={18} />
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteCourse(e, course.id, course.title)}
+                      className="p-2 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-all"
+                      title="Delete Course"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   </div>
-                  <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100 dark:border-white/5 text-xs text-slate-500 dark:text-gray-400">
-                    <span>Última actualización: {new Date(course.updated_at).toLocaleDateString()}</span>
-                    <span>ID: {course.id.slice(0, 4)}...</span>
-                  </div>
+                  <h3 className="font-bold text-lg mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-gray-900 dark:text-white">{course.title}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{course.description || "Sin descripción disponible."}</p>
                 </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
+                <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100 dark:border-white/5 text-xs text-slate-500 dark:text-gray-400">
+                  <span>Última actualización: {new Date(course.updated_at).toLocaleDateString()}</span>
+                  <span>ID: {course.id.slice(0, 4)}...</span>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* New Course Title Modal */}
       <Modal
@@ -345,6 +340,6 @@ export default function StudioDashboard() {
         actionLabel="Create Course"
         onConfirm={(orgId) => createCourse(orgId)}
       />
-    </div >
+    </PageLayout>
   );
 }

@@ -80,30 +80,30 @@ export default function CourseFilesPage() {
     };
 
     return (
-        <CourseEditorLayout activeTab="files">
-            <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl font-bold">Course Files & Assets</h1>
-                        <p className="text-gray-400 mt-1">Manage files specific to this course. These will be included in exports.</p>
-                    </div>
-                    <div className="relative">
-                        <input
-                            type="file"
-                            onChange={handleUpload}
-                            className="hidden"
-                            id="file-upload"
-                            disabled={isUploading}
-                        />
-                        <label
-                            htmlFor="file-upload"
-                            className={`btn btn-primary gap-2 cursor-pointer ${isUploading ? 'loading' : ''}`}
-                        >
-                            {!isUploading && <Upload className="w-4 h-4" />}
-                            {isUploading ? `Uploading ${uploadProgress}%` : 'Upload File'}
-                        </label>
-                    </div>
+        <CourseEditorLayout
+            activeTab="files"
+            pageTitle="Archivos y Recursos"
+            pageDescription="Gestiona los archivos específicos de este curso. Estos se incluirán en las exportaciones."
+            pageActions={
+                <div className="relative">
+                    <input
+                        type="file"
+                        onChange={handleUpload}
+                        className="hidden"
+                        id="file-upload"
+                        disabled={isUploading}
+                    />
+                    <label
+                        htmlFor="file-upload"
+                        className={`flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-md shadow-blue-600/20 transition-all cursor-pointer active:scale-95 ${isUploading ? 'opacity-50 cursor-wait' : ''}`}
+                    >
+                        {!isUploading && <Upload className="w-4 h-4" />}
+                        {isUploading ? `Subiendo ${uploadProgress}%` : 'Subir Archivo'}
+                    </label>
                 </div>
+            }
+        >
+            <div className="space-y-6">
 
                 <div className="glass rounded-xl overflow-hidden">
                     <table className="w-full text-left">
