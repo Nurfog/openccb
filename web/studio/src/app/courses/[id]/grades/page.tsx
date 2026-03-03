@@ -166,11 +166,11 @@ export default function GradebookPage() {
 
                 {/* Bulk Enroll Modal */}
                 {showBulkEnroll && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                        <div className="bg-[#1a1d23] border border-white/10 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
-                            <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                                <h3 className="text-xl font-bold flex items-center gap-2">
-                                    <Users className="text-blue-400" /> Inscripción Masiva de Estudiantes
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+                        <div className="bg-white dark:bg-[#1a1d23] border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+                            <div className="p-6 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                                <h3 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+                                    <Users className="text-blue-500 dark:text-blue-400" /> Inscripción Masiva de Estudiantes
                                 </h3>
                                 <button
                                     onClick={() => {
@@ -188,14 +188,14 @@ export default function GradebookPage() {
                                 {!bulkResults ? (
                                     <>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-400 mb-2">
+                                            <label className="block text-sm font-medium text-slate-500 dark:text-gray-400 mb-2">
                                                 Ingresa las direcciones de correo (separadas por comas o saltos de línea)
                                             </label>
                                             <textarea
                                                 value={bulkEmails}
                                                 onChange={(e) => setBulkEmails(e.target.value)}
                                                 placeholder="student1@example.com&#10;student2@example.com"
-                                                className="w-full h-48 bg-black/20 border border-white/10 rounded-xl p-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-900 dark:text-white placeholder-gray-600 resize-none font-mono"
+                                                className="w-full h-48 bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-600 resize-none font-mono"
                                             />
                                         </div>
                                         <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex gap-3 italic text-sm text-blue-400">
@@ -234,12 +234,12 @@ export default function GradebookPage() {
                                 )}
                             </div>
 
-                            <div className="p-6 bg-white/5 border-t border-white/5 flex justify-end gap-3">
+                            <div className="p-6 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/5 flex justify-end gap-3">
                                 {!bulkResults ? (
                                     <>
                                         <button
                                             onClick={() => setShowBulkEnroll(false)}
-                                            className="px-6 py-2 rounded-xl hover:bg-white/5 transition-colors font-medium"
+                                            className="px-6 py-2 rounded-xl hover:bg-slate-200 dark:hover:bg-white/5 transition-colors font-medium text-slate-600 dark:text-gray-400"
                                         >
                                             Cancel
                                         </button>
@@ -280,7 +280,7 @@ export default function GradebookPage() {
                                 <select
                                     value={selectedCohortId}
                                     onChange={(e) => setSelectedCohortId(e.target.value)}
-                                    className="appearance-none bg-black/20 text-gray-900 dark:text-white border border-white/10 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-w-[200px]"
+                                    className="appearance-none bg-slate-100 dark:bg-black/20 text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-w-[200px]"
                                 >
                                     <option value="">All Cohorts</option>
                                     {cohorts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -296,15 +296,15 @@ export default function GradebookPage() {
                                     placeholder="Search students..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-900 dark:text-white placeholder-gray-600"
+                                    className="w-full bg-slate-100 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-600"
                                 />
                             </div>
                         </div>
 
                         <div className="flex gap-8 border-l border-white/10 pl-8">
                             <div>
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Students</p>
-                                <p className="text-2xl font-black">{filteredStudents.length}</p>
+                                <p className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-wider mb-1">Students</p>
+                                <p className="text-2xl font-black text-slate-900 dark:text-white">{filteredStudents.length}</p>
                             </div>
                             <div>
                                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Avg Score</p>

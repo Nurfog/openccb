@@ -107,10 +107,10 @@ export default function CourseCalendarPage({ params }: { params: { id: string } 
                 <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-6">
                         <h3 className="text-2xl font-black uppercase tracking-tight">{monthName} <span className="text-blue-500">{year}</span></h3>
-                        <div className="flex items-center gap-2 bg-white/5 rounded-xl p-1 border border-white/10">
-                            <button onClick={prevMonth} className="p-2 hover:bg-white/10 rounded-lg transition-colors"><ChevronLeft className="w-5 h-5" /></button>
-                            <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1 text-xs font-bold uppercase tracking-widest hover:text-blue-400 transition-colors">Hoy</button>
-                            <button onClick={nextMonth} className="p-2 hover:bg-white/10 rounded-lg transition-colors"><ChevronRight className="w-5 h-5" /></button>
+                        <div className="flex items-center gap-2 bg-slate-100 dark:bg-white/5 rounded-xl p-1 border border-slate-200 dark:border-white/10">
+                            <button onClick={prevMonth} className="p-2 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg transition-colors text-slate-600 dark:text-gray-400"><ChevronLeft className="w-5 h-5" /></button>
+                            <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1 text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Hoy</button>
+                            <button onClick={nextMonth} className="p-2 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg transition-colors text-slate-600 dark:text-gray-400"><ChevronRight className="w-5 h-5" /></button>
                         </div>
                     </div>
 

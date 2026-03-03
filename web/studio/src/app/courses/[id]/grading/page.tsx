@@ -98,29 +98,29 @@ export default function GradingPolicyPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Categories List */}
                     <div className="lg:col-span-2 space-y-4">
-                        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-6 flex items-center gap-2">
+                        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-gray-500 mb-6 flex items-center gap-2">
                             <Settings className="w-4 h-4" /> Assessment Categories
                         </h2>
 
                         {categories.length === 0 ? (
-                            <div className="bg-white/5 border border-white/10 rounded-2xl p-12 text-center">
-                                <TrendingUp className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                                <p className="text-gray-400 italic">No grading categories defined yet.</p>
+                            <div className="bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-2xl p-12 text-center">
+                                <TrendingUp className="w-12 h-12 text-slate-400 dark:text-gray-600 mx-auto mb-4" />
+                                <p className="text-slate-500 dark:text-gray-400 italic">No grading categories defined yet.</p>
                             </div>
                         ) : (
                             categories.map((cat) => (
                                 <div
                                     key={cat.id}
-                                    className="group bg-white/5 border border-white/10 p-6 rounded-2xl flex items-center justify-between hover:border-blue-500/50 hover:bg-white/[0.07] transition-all duration-300"
+                                    className="group bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 p-6 rounded-2xl flex items-center justify-between hover:border-blue-500/50 hover:bg-slate-100 dark:hover:bg-white/[0.07] transition-all duration-300"
                                 >
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold group-hover:scale-110 transition-transform">
+                                        <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold group-hover:scale-110 transition-transform">
                                             {cat.weight}%
                                         </div>
                                         <div>
-                                            <h3 className="text-lg font-semibold text-gray-100">{cat.name}</h3>
+                                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{cat.name}</h3>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded-full capitalize">
+                                                <span className="text-xs text-slate-500 dark:text-gray-500 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-full capitalize">
                                                     Weight: {cat.weight}%
                                                 </span>
                                             </div>
@@ -128,7 +128,7 @@ export default function GradingPolicyPage() {
                                     </div>
                                     <button
                                         onClick={() => handleDelete(cat.id)}
-                                        className="p-3 bg-red-500/10 text-red-400 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-gray-900 dark:text-white transition-all duration-300"
+                                        className="p-3 bg-red-500/10 text-red-500 dark:text-red-400 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all duration-300"
                                     >
                                         <Trash2 className="w-5 h-5" />
                                     </button>
@@ -139,45 +139,45 @@ export default function GradingPolicyPage() {
 
                     {/* Add New Category Form */}
                     <div className="space-y-6">
-                        <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 p-8 rounded-3xl border border-white/10 sticky top-8">
-                            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                                <Plus className="w-5 h-5 text-blue-400" /> New Format
+                        <div className="bg-slate-50 dark:bg-gradient-to-br dark:from-gray-800/50 dark:to-gray-900/50 p-8 rounded-3xl border border-slate-200 dark:border-white/10 sticky top-8">
+                            <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
+                                <Plus className="w-5 h-5 text-blue-500 dark:text-blue-400" /> New Format
                             </h2>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest ml-1">Assessment Type</label>
+                                    <label className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-widest ml-1">Assessment Type</label>
                                     <select
                                         value={newName}
                                         onChange={(e) => setNewName(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 mt-1.5 focus:outline-none focus:border-blue-500 transition-all text-gray-100 appearance-none"
+                                        className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 mt-1.5 focus:outline-none focus:border-blue-500 transition-all text-slate-900 dark:text-gray-100 appearance-none"
                                     >
-                                        <option value="" className="bg-white dark:bg-gray-900 text-gray-500">Select a type...</option>
-                                        <option value="Continuous Assessment" className="bg-white dark:bg-gray-900">Continuous Assessment (Min 4)</option>
-                                        <option value="Midterm" className="bg-white dark:bg-gray-900">Midterm</option>
-                                        <option value="Final Test" className="bg-white dark:bg-gray-900">Final Test</option>
-                                        <option value="Exam" className="bg-white dark:bg-gray-900">Exam</option>
+                                        <option value="">Select a type...</option>
+                                        <option value="Continuous Assessment">Continuous Assessment (Min 4)</option>
+                                        <option value="Midterm">Midterm</option>
+                                        <option value="Final Test">Final Test</option>
+                                        <option value="Exam">Exam</option>
                                     </select>
                                 </div>
 
                                 <div>
-                                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest ml-1">Weight (%)</label>
+                                    <label className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-widest ml-1">Weight (%)</label>
                                     <div className="relative mt-1.5">
                                         <input
                                             type="number"
                                             placeholder="20"
                                             value={newWeight || ""}
                                             onChange={(e) => setNewWeight(parseInt(e.target.value) || 0)}
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-all text-gray-100 pl-10"
+                                            className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-all text-slate-900 dark:text-gray-100 pl-10"
                                         />
-                                        <Percent className="w-4 h-4 text-gray-500 absolute left-4 top-1/2 -translate-y-1/2" />
+                                        <Percent className="w-4 h-4 text-slate-400 dark:text-gray-500 absolute left-4 top-1/2 -translate-y-1/2" />
                                     </div>
                                 </div>
 
                                 <button
                                     onClick={handleAdd}
                                     disabled={submitting || !newName || newWeight <= 0}
-                                    className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-gray-900 dark:text-white font-bold py-4 rounded-2xl mt-4 transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-2"
+                                    className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-200 dark:disabled:bg-gray-700 disabled:text-slate-400 dark:disabled:text-gray-500 text-white font-bold py-4 rounded-2xl mt-4 transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-2"
                                 >
                                     {submitting ? "Adding..." : (
                                         <>
@@ -189,8 +189,8 @@ export default function GradingPolicyPage() {
 
                                 {!isBalanced && (
                                     <div className="mt-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex gap-3">
-                                        <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                                        <p className="text-sm text-amber-200/80 leading-relaxed">
+                                        <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                                        <p className="text-sm text-amber-800 dark:text-amber-200/80 leading-relaxed">
                                             The total weight of all categories must be exactly 100% for the course to be valid for certification. Currently: <strong>{totalWeight}%</strong>
                                         </p>
                                     </div>

@@ -83,7 +83,7 @@ export default function AnnouncementsPage() {
                                 placeholder="Search announcements..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-black/20 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-orange-500/50 transition-all"
+                                className="w-full bg-slate-100 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-orange-500/50 transition-all text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-500"
                             />
                         </div>
                     </div>
@@ -97,7 +97,7 @@ export default function AnnouncementsPage() {
                     ) : filteredAnnouncements.length > 0 ? (
                         <div className="grid gap-6">
                             {filteredAnnouncements.map((a) => (
-                                <div key={a.id} className={`relative p-6 rounded-2xl border transition-all duration-300 ${a.is_pinned ? 'bg-orange-500/10 border-orange-500/30' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
+                                <div key={a.id} className={`relative p-6 rounded-2xl border transition-all duration-300 ${a.is_pinned ? 'bg-orange-500/10 border-orange-500/30' : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/10 hover:border-slate-200 dark:hover:border-white/20'}`}>
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-gray-900 dark:text-white font-bold overflow-hidden">
@@ -108,8 +108,8 @@ export default function AnnouncementsPage() {
                                                 )}
                                             </div>
                                             <div>
-                                                <h4 className="font-semibold text-gray-900 dark:text-white">{a.author_name}</h4>
-                                                <div className="flex items-center gap-2 text-sm text-gray-400">
+                                                <h4 className="font-semibold text-slate-900 dark:text-white">{a.author_name}</h4>
+                                                <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-gray-400">
                                                     <span>{formatDistanceToNow(new Date(a.created_at), { addSuffix: true, locale: es })}</span>
                                                     {a.cohort_ids && a.cohort_ids.length > 0 && (
                                                         <>
@@ -133,8 +133,8 @@ export default function AnnouncementsPage() {
                                             </button>
                                         </div>
                                     </div>
-                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{a.title}</h3>
-                                    <p className="text-gray-300 whitespace-pre-wrap">{a.content}</p>
+                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{a.title}</h3>
+                                    <p className="text-slate-600 dark:text-gray-300 whitespace-pre-wrap">{a.content}</p>
 
                                     {/* Display Target Cohort Names if segmented */}
                                     {a.cohort_ids && a.cohort_ids.length > 0 && (
@@ -153,10 +153,10 @@ export default function AnnouncementsPage() {
                             ))}
                         </div>
                     ) : (
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-20 text-center">
-                            <Megaphone className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No announcements found</h3>
-                            <p className="text-gray-400">Start by creating a new announcement for your students.</p>
+                        <div className="bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-2xl p-20 text-center">
+                            <Megaphone className="w-12 h-12 text-slate-400 dark:text-gray-600 mx-auto mb-4" />
+                            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No announcements found</h3>
+                            <p className="text-slate-500 dark:text-gray-400">Start by creating a new announcement for your students.</p>
                         </div>
                     )}
                 </div>
@@ -212,14 +212,14 @@ function NewAnnouncementModal({ courseId, cohorts, onClose, onSuccess }: { cours
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-[#1a1c1e] border border-white/10 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
-                <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                    <h2 className="text-xl font-bold flex items-center gap-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-[#1a1c1e] border border-slate-200 dark:border-white/10 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+                <div className="p-6 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                    <h2 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
                         <Megaphone className="w-5 h-5 text-orange-500" />
                         Create New Announcement
                     </h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-900 dark:text-white transition-colors">
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-900 dark:text-gray-500 dark:hover:text-white transition-colors">
                         <Plus className="w-6 h-6 rotate-45" />
                     </button>
                 </div>
@@ -230,7 +230,7 @@ function NewAnnouncementModal({ courseId, cohorts, onClose, onSuccess }: { cours
                             required
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-orange-500/50"
+                            className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-orange-500/50 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-500"
                             placeholder="Announcement title"
                         />
                     </div>
@@ -241,7 +241,7 @@ function NewAnnouncementModal({ courseId, cohorts, onClose, onSuccess }: { cours
                             rows={5}
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-orange-500/50 resize-none"
+                            className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-orange-500/50 resize-none text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-500"
                             placeholder="Type your message here..."
                         />
                     </div>
@@ -258,7 +258,7 @@ function NewAnnouncementModal({ courseId, cohorts, onClose, onSuccess }: { cours
                                     key={c.id}
                                     type="button"
                                     onClick={() => toggleCohort(c.id)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${selectedCohorts.includes(c.id) ? 'bg-blue-600 border-blue-500 text-gray-900 dark:text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${selectedCohorts.includes(c.id) ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/10'}`}
                                 >
                                     {c.name}
                                 </button>
@@ -272,9 +272,9 @@ function NewAnnouncementModal({ courseId, cohorts, onClose, onSuccess }: { cours
                             id="pin"
                             checked={isPinned}
                             onChange={(e) => setIsPinned(e.target.checked)}
-                            className="w-5 h-5 rounded border-white/10 bg-white/5 text-orange-600 focus:ring-orange-500/50"
+                            className="w-5 h-5 rounded border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-orange-600 focus:ring-orange-500/50"
                         />
-                        <label htmlFor="pin" className="text-sm font-medium text-gray-300 cursor-pointer">
+                        <label htmlFor="pin" className="text-sm font-medium text-slate-600 dark:text-gray-300 cursor-pointer">
                             Pin this announcement to the top
                         </label>
                     </div>
@@ -286,7 +286,7 @@ function NewAnnouncementModal({ courseId, cohorts, onClose, onSuccess }: { cours
                         <button
                             type="submit"
                             disabled={loading}
-                            className="px-8 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-gray-900 dark:text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-orange-500/20"
+                            className="px-8 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-orange-500/20"
                         >
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Megaphone className="w-4 h-4" />}
                             Publish Announcement

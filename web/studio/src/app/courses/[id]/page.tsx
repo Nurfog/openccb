@@ -240,7 +240,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                                     alert("Failed to start preview.");
                                 }
                             }}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-white dark:bg-white/5 hover:bg-black/5 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 rounded-xl text-sm font-bold transition-all active:scale-95"
+                            className="flex items-center gap-2 px-6 py-2.5 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold transition-all active:scale-95 text-slate-700 dark:text-white shadow-sm"
                         >
                             <PlayCircle size={18} /> Previsualizar
                         </button>
@@ -261,26 +261,26 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
             >
                 <div className="space-y-6">
                     {modules.map((module: FullModule, mIndex: number) => (
-                        <div key={module.id} className="glass rounded-xl overflow-hidden border-white/5">
-                            <div className="bg-white/5 px-6 py-4 flex justify-between items-center border-b border-white/5">
+                        <div key={module.id} className="glass rounded-xl overflow-hidden border-slate-200 dark:border-white/5 shadow-sm">
+                            <div className="bg-slate-50 dark:bg-white/5 px-6 py-4 flex justify-between items-center border-b border-slate-200 dark:border-white/5">
                                 <div className="flex items-center gap-4 flex-1">
                                     <div className="flex flex-col">
                                         <button
                                             onClick={() => handleReorderModule(mIndex, 'up')}
                                             disabled={mIndex === 0}
-                                            className="text-gray-500 hover:text-blue-400 disabled:opacity-0 transition-colors"
+                                            className="text-slate-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-0 transition-colors"
                                         >
                                             <ChevronUp className="w-4 h-4" />
                                         </button>
                                         <button
                                             onClick={() => handleReorderModule(mIndex, 'down')}
                                             disabled={mIndex === modules.length - 1}
-                                            className="text-gray-500 hover:text-blue-400 disabled:opacity-0 transition-colors"
+                                            className="text-slate-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-0 transition-colors"
                                         >
                                             <ChevronDown className="w-4 h-4" />
                                         </button>
                                     </div>
-                                    <GripVertical className="text-gray-600 w-5 h-5 cursor-grab active:cursor-grabbing" />
+                                    <GripVertical className="text-slate-400 dark:text-gray-600 w-5 h-5 cursor-grab active:cursor-grabbing" />
 
                                     {editingId === module.id ? (
                                         <div className="flex items-center gap-2 flex-1">
@@ -289,7 +289,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                                                 value={editValue}
                                                 onChange={(e) => setEditValue(e.target.value)}
                                                 onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle(module.id, 'module')}
-                                                className="bg-black/5 dark:bg-black/40 border border-blue-500/50 rounded px-3 py-1 flex-1 text-gray-900 dark:text-gray-900 dark:text-white focus:outline-none"
+                                                className="bg-slate-100 dark:bg-black/40 border border-blue-500/50 rounded px-3 py-1 flex-1 text-slate-900 dark:text-white focus:outline-none"
                                             />
                                             <button onClick={() => handleSaveTitle(module.id, 'module')} className="text-green-400 hover:text-green-300">
                                                 <Save className="w-5 h-5" />
@@ -302,13 +302,13 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                                         <div className="flex items-center gap-3 group flex-1">
                                             <span
                                                 onClick={() => { setEditingId(module.id); setEditValue(module.title); }}
-                                                className="font-semibold text-lg text-blue-600 dark:text-blue-400 cursor-pointer hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                                                className="font-bold text-lg text-blue-600 dark:text-blue-400 cursor-pointer hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
                                             >
                                                 {module.title || `Module ${module.position}`}
                                             </span>
                                             <button
                                                 onClick={() => { setEditingId(module.id); setEditValue(module.title); }}
-                                                className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-900 dark:text-white transition-opacity"
+                                                className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-900 dark:text-white transition-opacity"
                                             >
                                                 <Pencil className="w-4 h-4" />
                                             </button>
@@ -318,7 +318,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                                 <div className="flex items-center gap-3">
                                     <button
                                         onClick={() => handleDeleteModule(module.id)}
-                                        className="text-gray-500 hover:text-red-400 transition-colors"
+                                        className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </button>
@@ -331,14 +331,14 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                                             <button
                                                 onClick={() => handleReorderLesson(module.id, lIndex, 'up')}
                                                 disabled={lIndex === 0}
-                                                className="text-gray-500 hover:text-blue-400 disabled:opacity-0"
+                                                className="text-slate-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-0"
                                             >
                                                 <ChevronUp className="w-3 h-3" />
                                             </button>
                                             <button
                                                 onClick={() => handleReorderLesson(module.id, lIndex, 'down')}
                                                 disabled={lIndex === module.lessons.length - 1}
-                                                className="text-gray-500 hover:text-blue-400 disabled:opacity-0"
+                                                className="text-slate-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-0"
                                             >
                                                 <ChevronDown className="w-3 h-3" />
                                             </button>
@@ -346,35 +346,35 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
 
                                         <div className="flex-1">
                                             {editingId === lesson.id ? (
-                                                <div className="flex items-center gap-2 glass border-blue-500/30 p-2 rounded-lg bg-black/5 dark:bg-black/20">
+                                                <div className="flex items-center gap-2 glass border-blue-500/30 p-2 rounded-lg bg-slate-50 dark:bg-black/20 shadow-inner">
                                                     <input
                                                         autoFocus
                                                         value={editValue}
                                                         onChange={(e) => setEditValue(e.target.value)}
                                                         onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle(lesson.id, 'lesson')}
-                                                        className="bg-transparent border-none flex-1 text-gray-900 dark:text-gray-900 dark:text-white focus:outline-none"
+                                                        className="bg-transparent border-none flex-1 text-slate-900 dark:text-white focus:outline-none font-medium"
                                                     />
                                                     <button onClick={() => handleSaveTitle(lesson.id, 'lesson')} className="text-green-600 dark:text-green-400">
                                                         <Save className="w-4 h-4" />
                                                     </button>
-                                                    <button onClick={() => setEditingId(null)} className="text-gray-500 dark:text-gray-400">
+                                                    <button onClick={() => setEditingId(null)} className="text-slate-400 dark:text-gray-400">
                                                         <X className="w-4 h-4" />
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="flex items-center justify-between glass border-black/5 dark:border-white/5 p-4 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 hover:border-blue-500/30 transition-all cursor-pointer group/lesson">
+                                                <div className="flex items-center justify-between glass border-slate-200 dark:border-white/5 p-4 rounded-xl hover:bg-slate-50 dark:hover:bg-white/10 hover:border-blue-500/30 transition-all cursor-pointer group/lesson shadow-sm">
                                                     <Link href={`/courses/${params.id}/lessons/${lesson.id}`} className="flex-1 flex items-center gap-4">
-                                                        <div className="p-2 bg-blue-500/10 dark:bg-blue-500/20 rounded-lg text-blue-600 dark:text-blue-400 group-hover/lesson:scale-110 transition-transform">
+                                                        <div className="p-2 bg-blue-600/10 dark:bg-blue-500/20 rounded-lg text-blue-600 dark:text-blue-400 group-hover/lesson:scale-110 transition-transform">
                                                             {lesson.content_type === 'video' ? <PlayCircle className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
                                                         </div>
                                                         <div className="flex flex-col">
                                                             <span
                                                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEditing(lesson.id, lesson.title); }}
-                                                                className="font-medium text-gray-900 dark:text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                                                className="font-bold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                                                             >
                                                                 {lesson.title}
                                                             </span>
-                                                            <div className="flex items-center gap-3 text-xs text-gray-500 uppercase mt-0.5 font-bold">
+                                                            <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-gray-500 uppercase mt-0.5 font-bold">
                                                                 <span>{lesson.content_type}</span>
                                                                 {lesson.due_date && (
                                                                     <div className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
@@ -388,13 +388,13 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
                                                     <div className="flex items-center gap-4">
                                                         <button
                                                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEditing(lesson.id, lesson.title); }}
-                                                            className="opacity-0 group-hover/lesson:opacity-100 text-gray-500 hover:text-gray-900 dark:text-white transition-opacity"
+                                                            className="opacity-0 group-hover/lesson:opacity-100 text-slate-400 hover:text-slate-900 dark:text-white transition-opacity"
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </button>
                                                         <button
                                                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteLesson(module.id, lesson.id); }}
-                                                            className="opacity-0 group-hover/lesson:opacity-100 text-gray-500 hover:text-red-400 transition-opacity"
+                                                            className="opacity-0 group-hover/lesson:opacity-100 text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-opacity"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
                                                         </button>
@@ -407,7 +407,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
 
                                 <button
                                     onClick={() => handleAddLesson(module.id)}
-                                    className="w-full py-3 border border-dashed border-black/10 dark:border-white/10 rounded-xl text-sm text-gray-500 hover:text-gray-900 dark:hover:text-gray-900 dark:text-white hover:border-black/20 dark:hover:border-white/20 hover:bg-black/5 dark:hover:bg-white/5 transition-all mt-3 flex items-center justify-center gap-2"
+                                    className="w-full py-3 border border-dashed border-slate-300 dark:border-white/10 rounded-xl text-sm text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:border-blue-500/50 hover:bg-slate-50 dark:hover:bg-white/5 transition-all mt-3 flex items-center justify-center gap-2 font-bold"
                                 >
                                     <Plus className="w-4 h-4" /> New Lesson
                                 </button>
@@ -417,7 +417,7 @@ export default function CourseEditor({ params }: { params: { id: string } }) {
 
                     <button
                         onClick={handleAddModule}
-                        className="w-full py-6 border-2 border-dashed border-black/10 dark:border-white/10 rounded-2xl font-medium text-gray-500 hover:text-gray-900 dark:hover:text-gray-900 dark:text-white hover:border-black/20 dark:hover:border-white/20 hover:bg-black/5 dark:hover:bg-white/5 transition-all flex items-center justify-center gap-3 text-lg"
+                        className="w-full py-6 border-2 border-dashed border-slate-300 dark:border-white/10 rounded-2xl font-bold text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:border-blue-500/50 hover:bg-slate-50 dark:hover:bg-white/5 transition-all flex items-center justify-center gap-3 text-lg"
                     >
                         <Plus className="w-6 h-6" /> Add New Module
                     </button>

@@ -366,11 +366,11 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
 
     return (
         <div className="max-w-4xl mx-auto space-y-12 pb-40 px-4">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-200 dark:border-white/5 pb-8">
                 <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-[10px] text-blue-500 font-bold uppercase tracking-[0.2em]">
-                        <Link href={`/courses/${params.id}`} className="hover:text-gray-900 dark:text-white transition-colors">Outline</Link>
-                        <span className="text-gray-700">/</span>
+                    <div className="flex items-center gap-2 text-[10px] text-blue-600 dark:text-blue-500 font-bold uppercase tracking-[0.2em]">
+                        <Link href={`/courses/${params.id}`} className="hover:text-slate-900 dark:text-white transition-colors">Outline</Link>
+                        <span className="text-slate-300 dark:text-gray-700">/</span>
                         <span>Activity</span>
                     </div>
                     <div className="flex items-center gap-4">
@@ -388,10 +388,10 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                             </div>
                         ) : (
                             <div className="flex items-center gap-4 group">
-                                <h2 className="text-4xl font-black tracking-tight">{lesson.title}</h2>
+                                <h2 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">{lesson.title}</h2>
                                 <button
                                     onClick={() => { setEditingId('lesson-title'); setEditValue(lesson.title); }}
-                                    className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-900 dark:text-white transition-opacity"
+                                    className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-900 dark:text-white transition-opacity"
                                 >
                                     <Pencil className="w-5 h-5" />
                                 </button>
@@ -403,13 +403,13 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                 <div className="flex items-center gap-3">
                     {editMode ? (
                         <>
-                            <button onClick={() => setEditMode(false)} className="px-6 py-2.5 glass text-xs font-bold uppercase tracking-widest hover:bg-white/5 transition-all">Discard</button>
-                            <button onClick={handleSave} disabled={isSaving} className="btn-premium px-8 py-2.5 min-w-[140px] text-xs font-bold uppercase tracking-widest shadow-blue-500/20 shadow-lg">
+                            <button onClick={() => setEditMode(false)} className="px-6 py-2.5 glass text-xs font-bold uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-white/5 transition-all text-slate-600 dark:text-white">Discard</button>
+                            <button onClick={handleSave} disabled={isSaving} className="btn-premium px-8 py-2.5 min-w-[140px] text-xs font-bold uppercase tracking-widest text-white">
                                 {isSaving ? "Saving..." : "Publish Changes"}
                             </button>
                         </>
                     ) : (
-                        <button onClick={() => setEditMode(true)} className="px-8 py-3 glass text-xs font-bold uppercase tracking-widest hover:border-blue-500/50 transition-all flex items-center gap-2 group">
+                        <button onClick={() => setEditMode(true)} className="px-8 py-3 glass text-xs font-bold uppercase tracking-widest hover:border-blue-500/50 transition-all flex items-center gap-2 group text-slate-700 dark:text-white">
                             <span className="group-hover:rotate-12 transition-transform">✏️</span> Edit Activity
                         </button>
                     )}
@@ -417,13 +417,13 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
             </div>
 
             {editMode && (
-                <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h3 className="text-xl font-bold flex items-center gap-2">
+                            <h3 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
                                 <span className="text-blue-500">⚖️</span> Grading Configuration
                             </h3>
-                            <p className="text-sm text-gray-500 mt-1">Determine if this activity contributes to the final grade</p>
+                            <p className="text-sm text-slate-500 dark:text-gray-500 mt-1">Determine if this activity contributes to the final grade</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer group">
                             <input
@@ -432,19 +432,19 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 onChange={(e) => setIsGraded(e.target.checked)}
                                 className="sr-only peer"
                             />
-                            <div className="w-14 h-8 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600 group-hover:after:scale-110 transition-all"></div>
-                            <span className="ms-3 text-sm font-bold uppercase tracking-widest text-gray-400 peer-checked:text-blue-400 transition-colors">
+                            <div className="w-14 h-8 bg-slate-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-slate-300 dark:after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600 group-hover:after:scale-110 transition-all shadow-sm"></div>
+                            <span className="ms-3 text-sm font-bold uppercase tracking-widest text-slate-400 dark:text-gray-400 peer-checked:text-blue-600 dark:peer-checked:text-blue-400 transition-colors">
                                 {isGraded ? "Graded" : "Not Graded"}
                             </span>
                         </label>
                     </div>
 
-                    <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                    <div className="flex items-center justify-between pt-6 border-t border-slate-200 dark:border-white/5">
                         <div>
-                            <h3 className="text-xl font-bold flex items-center gap-2">
+                            <h3 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
                                 <span className="text-blue-500">🔓</span> Course Preview
                             </h3>
-                            <p className="text-sm text-gray-500 mt-1">Allow students to view this lesson without being enrolled</p>
+                            <p className="text-sm text-slate-500 dark:text-gray-500 mt-1">Allow students to view this lesson without being enrolled</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer group">
                             <input
@@ -453,8 +453,8 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 onChange={(e) => setIsPreviewable(e.target.checked)}
                                 className="sr-only peer"
                             />
-                            <div className="w-14 h-8 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600 group-hover:after:scale-110 transition-all"></div>
-                            <span className="ms-3 text-sm font-bold uppercase tracking-widest text-gray-400 peer-checked:text-blue-400 transition-colors">
+                            <div className="w-14 h-8 bg-slate-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-slate-300 dark:after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600 group-hover:after:scale-110 transition-all shadow-sm"></div>
+                            <span className="ms-3 text-sm font-bold uppercase tracking-widest text-slate-400 dark:text-gray-400 peer-checked:text-blue-600 dark:peer-checked:text-blue-400 transition-colors">
                                 {isPreviewable ? "Preview Enabled" : "Preview Disabled"}
                             </span>
                         </label>
@@ -464,44 +464,44 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Assessment Category</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-gray-500 mb-2 block">Assessment Category</span>
                                     <select
                                         value={selectedCategoryId}
                                         onChange={(e) => setSelectedCategoryId(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all appearance-none font-bold"
+                                        className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all appearance-none font-bold text-slate-900 dark:text-white"
                                     >
-                                        <option value="" className="bg-gray-900 border-0">Select Category...</option>
+                                        <option value="">Select Category...</option>
                                         {gradingCategories.map((cat) => (
-                                            <option key={cat.id} value={cat.id} className="bg-gray-900 border-0">
+                                            <option key={cat.id} value={cat.id}>
                                                 {cat.name} ({cat.weight}%)
                                             </option>
                                         ))}
                                     </select>
-                                    <div className="text-[10px] text-gray-500 italic mt-1 pl-1">
-                                        Manage categories in <Link href={`/courses/${params.id}/grading`} className="text-blue-400 hover:underline">Grading Policy</Link>
+                                    <div className="text-[10px] text-slate-500 dark:text-gray-500 italic mt-1 pl-1">
+                                        Manage categories in <Link href={`/courses/${params.id}/grading`} className="text-blue-600 dark:text-blue-400 hover:underline">Grading Policy</Link>
                                     </div>
                                 </div>
 
                                 <div className="space-y-4">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Rubric (Optional)</span>
-                                    <div className="bg-white/5 border border-white/10 rounded-xl p-4 max-h-48 overflow-y-auto space-y-2">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-gray-500 mb-2 block">Rubric (Optional)</span>
+                                    <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4 max-h-48 overflow-y-auto space-y-2">
                                         {courseRubrics.length === 0 ? (
-                                            <p className="text-xs text-gray-500 italic p-2 text-center">No rubrics found in this course.</p>
+                                            <p className="text-xs text-slate-400 dark:text-gray-500 italic p-2 text-center">No rubrics found in this course.</p>
                                         ) : (
                                             courseRubrics.map(rubric => {
                                                 const isAssigned = assignedRubricIds.includes(rubric.id);
                                                 return (
-                                                    <label key={rubric.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-all cursor-pointer group">
+                                                    <label key={rubric.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 transition-all cursor-pointer group">
                                                         <div className="flex items-center gap-3">
                                                             <input
                                                                 type="checkbox"
                                                                 checked={isAssigned}
                                                                 onChange={() => toggleRubric(rubric.id, isAssigned)}
-                                                                className="w-4 h-4 rounded border-gray-700 bg-gray-800 text-blue-500 focus:ring-blue-500"
+                                                                className="w-4 h-4 rounded border-slate-300 dark:border-gray-700 bg-slate-100 dark:bg-gray-800 text-blue-500 focus:ring-blue-500"
                                                             />
-                                                            <span className="text-sm font-medium text-gray-200 group-hover:text-blue-400 transition-colors">{rubric.name}</span>
+                                                            <span className="text-sm font-medium text-slate-600 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{rubric.name}</span>
                                                         </div>
-                                                        <span className="text-[10px] font-bold text-gray-600 bg-white/5 px-1.5 py-0.5 rounded">{rubric.total_points} pts</span>
+                                                        <span className="text-[10px] font-bold text-slate-500 bg-slate-200 dark:bg-white/5 px-1.5 py-0.5 rounded">{rubric.total_points} pts</span>
                                                     </label>
                                                 );
                                             })
@@ -516,22 +516,22 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-white/5 animate-in fade-in duration-500">
                                 <div className="space-y-4">
                                     <label className="block">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Maximum Attempts</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-gray-500 mb-2 block">Maximum Attempts</span>
                                         <div className="flex items-center gap-3">
                                             <input
                                                 type="number"
                                                 value={maxAttempts || ""}
                                                 onChange={(e) => setMaxAttempts(e.target.value ? parseInt(e.target.value) : null)}
                                                 placeholder="Unlimited"
-                                                className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all w-32"
+                                                className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all w-32 text-slate-900 dark:text-white"
                                             />
-                                            <span className="text-xs text-gray-500">Leave empty for unlimited</span>
+                                            <span className="text-xs text-slate-500 dark:text-gray-500">Leave empty for unlimited</span>
                                         </div>
                                     </label>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-2">After Submission</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-gray-500 block mb-2">After Submission</span>
                                     <label className="flex items-center gap-3 cursor-pointer group relative">
                                         <input
                                             type="checkbox"
@@ -539,54 +539,54 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                             onChange={(e) => setAllowRetry(e.target.checked)}
                                             className="sr-only peer"
                                         />
-                                        <div className="w-10 h-6 bg-gray-700 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-4"></div>
-                                        <span className="text-sm font-bold text-gray-400 peer-checked:text-gray-900 dark:text-white transition-colors">Allow Instant Corrections</span>
+                                        <div className="w-10 h-6 bg-slate-200 dark:bg-gray-700 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-4 shadow-sm"></div>
+                                        <span className="text-sm font-bold text-slate-400 dark:text-gray-400 peer-checked:text-slate-900 dark:peer-checked:text-white transition-colors">Allow Instant Corrections</span>
                                     </label>
-                                    <p className="text-[10px] text-gray-600 italic">Enables &quot;Check Answer&quot; buttons for individual blocks</p>
+                                    <p className="text-[10px] text-slate-500 dark:text-gray-600 italic">Enables &quot;Check Answer&quot; buttons for individual blocks</p>
                                 </div>
                             </div>
 
-                            <div className="pt-8 border-t border-white/5 animate-in fade-in duration-500 delay-150">
-                                <div className="flex items-center gap-2 mb-6 uppercase tracking-[0.2em] text-[10px] font-black text-gray-500">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50"></span>
+                            <div className="pt-8 border-t border-slate-200 dark:border-white/5 animate-in fade-in duration-500 delay-150">
+                                <div className="flex items-center gap-2 mb-6 uppercase tracking-[0.2em] text-[10px] font-black text-slate-400 dark:text-gray-500">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-500 shadow-lg shadow-blue-500/50"></span>
                                     Access & Prerequisites
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="space-y-4">
-                                        <h4 className="text-sm font-bold text-gray-200">Prerequisites</h4>
-                                        <p className="text-xs text-gray-500 leading-relaxed">
+                                        <h4 className="text-sm font-bold text-slate-900 dark:text-gray-200">Prerequisites</h4>
+                                        <p className="text-xs text-slate-500 dark:text-gray-500 leading-relaxed">
                                             Students must complete these lessons before they can access this one.
                                         </p>
-                                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 max-h-60 overflow-y-auto space-y-2">
+                                        <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 max-h-60 overflow-y-auto space-y-2">
                                             {allLessons.length === 0 ? (
-                                                <p className="text-xs text-gray-500 italic p-4 text-center">No other lessons available.</p>
+                                                <p className="text-xs text-slate-500 dark:text-gray-500 italic p-4 text-center">No other lessons available.</p>
                                             ) : (
                                                 allLessons.map(l => {
                                                     const dep = dependencies.find(d => d.prerequisite_lesson_id === l.id);
                                                     const isAssigned = !!dep;
                                                     return (
-                                                        <div key={l.id} className="space-y-2 p-2 rounded-xl hover:bg-white/5 transition-all group border border-transparent hover:border-white/10">
+                                                        <div key={l.id} className="space-y-2 p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-white/5 transition-all group border border-transparent hover:border-slate-300 dark:hover:border-white/10">
                                                             <label className="flex items-center justify-between cursor-pointer">
                                                                 <div className="flex items-center gap-3">
                                                                     <input
                                                                         type="checkbox"
                                                                         checked={isAssigned}
                                                                         onChange={() => toggleDependency(l.id, isAssigned)}
-                                                                        className="w-4 h-4 rounded-md border-gray-700 bg-gray-800 text-blue-500 focus:ring-blue-500 transition-all"
+                                                                        className="w-4 h-4 rounded-md border-slate-300 dark:border-gray-700 bg-slate-100 dark:bg-gray-800 text-blue-500 focus:ring-blue-500 transition-all"
                                                                     />
-                                                                    <span className={`text-sm font-medium transition-colors ${isAssigned ? 'text-blue-400' : 'text-gray-400 group-hover:text-gray-200'}`}>
+                                                                    <span className={`text-sm font-medium transition-colors ${isAssigned ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-gray-400 group-hover:text-slate-900 dark:group-hover:text-gray-200'}`}>
                                                                         {l.title}
                                                                     </span>
                                                                 </div>
                                                                 {l.is_graded && (
-                                                                    <span className="text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/20">Graded</span>
+                                                                    <span className="text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full border border-blue-500/20">Graded</span>
                                                                 )}
                                                             </label>
                                                             {isAssigned && l.is_graded && (
                                                                 <div className="pl-7 animate-in slide-in-from-left-2 duration-300">
                                                                     <div className="flex items-center gap-3">
-                                                                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest whitespace-nowrap">Min. Score %</span>
+                                                                        <span className="text-[10px] text-slate-500 dark:text-gray-500 font-bold uppercase tracking-widest whitespace-nowrap">Min. Score %</span>
                                                                         <input
                                                                             type="number"
                                                                             min="0"
@@ -604,7 +604,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                                                                     console.error("Failed to update min score", err);
                                                                                 }
                                                                             }}
-                                                                            className="w-16 bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-xs text-blue-400 font-bold focus:outline-none focus:border-blue-500"
+                                                                            className="w-16 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs text-blue-600 dark:text-blue-400 font-bold focus:outline-none focus:border-blue-500"
                                                                         />
                                                                     </div>
                                                                 </div>
@@ -616,26 +616,25 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-col justify-center gap-4 px-6 border-l border-white/5">
+                                    <div className="flex flex-col justify-center gap-4 px-6 border-l border-slate-100 dark:border-white/5">
                                         <div className="flex items-start gap-4 p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10">
                                             <div className="p-2 rounded-xl bg-indigo-500/20">
-                                                <Layout className="w-5 h-5 text-indigo-400" />
+                                                <Layout className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
                                             </div>
                                             <div>
-                                                <h5 className="text-sm font-bold text-indigo-300">Intelligent Sequences</h5>
-                                                <p className="text-[11px] text-indigo-300/60 leading-relaxed mt-1">
+                                                <h5 className="text-sm font-bold text-indigo-600 dark:text-indigo-300">Intelligent Sequences</h5>
+                                                <p className="text-[11px] text-indigo-500 dark:text-indigo-300/60 leading-relaxed mt-1">
                                                     Locked lessons will be visible in the student outline with a lock icon 🔒 until they meet all prerequisites.
                                                 </p>
                                             </div>
                                         </div>
-
                                         <div className="flex items-start gap-4 p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10">
                                             <div className="p-2 rounded-xl bg-blue-500/20">
-                                                <CheckCircle2 className="w-5 h-5 text-blue-400" />
+                                                <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                                             </div>
                                             <div>
-                                                <h5 className="text-sm font-bold text-blue-300">Completion Tracking</h5>
-                                                <p className="text-[11px] text-blue-300/60 leading-relaxed mt-1">
+                                                <h5 className="text-sm font-bold text-blue-600 dark:text-blue-300">Completion Tracking</h5>
+                                                <p className="text-[11px] text-blue-500 dark:text-blue-300/60 leading-relaxed mt-1">
                                                     If a minimum score is set, students must pass the prerequisite before the next lesson is unlocked.
                                                 </p>
                                             </div>
@@ -645,45 +644,45 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                             </div>
                         </>
                     )}
-                </div >
+                </div>
             )}
 
             {
                 editMode && (
-                    <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
                         <div>
-                            <h3 className="text-xl font-bold flex items-center gap-2">
+                            <h3 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
                                 <span className="text-blue-500">📅</span> Scheduling & Deadlines
                             </h3>
-                            <p className="text-sm text-gray-500 mt-1">Set deadlines and mark important dates for this activity</p>
+                            <p className="text-sm text-slate-500 dark:text-gray-500 mt-1">Set deadlines and mark important dates for this activity</p>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-4">
                                 <label className="block">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Due Date</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-gray-500 mb-2 block">Due Date</span>
                                     <input
                                         type="date"
                                         value={dueDate}
                                         onChange={(e) => setDueDate(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all font-bold"
+                                        className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white"
                                     />
                                 </label>
                             </div>
 
                             <div className="space-y-4">
                                 <label className="block">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Date Type</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-gray-500 mb-2 block">Date Type</span>
                                     <select
                                         value={importantDateType}
                                         onChange={(e) => setImportantDateType(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all appearance-none font-bold"
+                                        className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all appearance-none font-bold text-slate-900 dark:text-white"
                                     >
-                                        <option value="" className="bg-gray-900">Standard Activity</option>
-                                        <option value="exam" className="bg-gray-900">Exam</option>
-                                        <option value="assignment" className="bg-gray-900">Assignment</option>
-                                        <option value="milestone" className="bg-gray-900">Milestone</option>
-                                        <option value="live-session" className="bg-gray-900">Live Session</option>
+                                        <option value="">Standard Activity</option>
+                                        <option value="exam">Exam</option>
+                                        <option value="assignment">Assignment</option>
+                                        <option value="milestone">Milestone</option>
+                                        <option value="live-session">Live Session</option>
                                     </select>
                                 </label>
                             </div>
@@ -695,21 +694,20 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
             {/* AI Magic Section */}
             {
                 editMode && (
-                    <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
                         <div className="flex items-center gap-3">
                             <span className="text-2xl">🪄</span>
                             <div>
-                                <h3 className="text-xl font-bold italic tracking-tight">AI Content Assistant</h3>
-                                <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">Automate your content creation with Local AI</p>
+                                <h3 className="text-xl font-bold italic tracking-tight text-slate-900 dark:text-white">AI Content Assistant</h3>
+                                <p className="text-xs text-slate-500 dark:text-gray-400 mt-1 uppercase tracking-widest font-bold">Automate your content creation with Local AI</p>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
                             <button
                                 onClick={handleSummarize}
                                 disabled={isGeneratingSummary}
-                                className={`p-6 rounded-2xl border transition-all text-left flex flex-col gap-2 ${isGeneratingSummary ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300 animate-pulse' : summary ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:border-indigo-500/60'}`}
+                                className={`p-6 rounded-2xl border transition-all text-left flex flex-col gap-2 shadow-sm ${isGeneratingSummary ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-600 dark:text-indigo-300 animate-pulse' : summary ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400' : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:border-indigo-500/60'}`}
                             >
                                 <span className="text-xl">{isGeneratingSummary ? '⏳' : '✍️'}</span>
                                 <div className="text-[10px] font-black uppercase tracking-widest opacity-80">Summarization</div>
@@ -719,7 +717,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                             <button
                                 onClick={handleGenerateQuiz}
                                 disabled={isGeneratingQuiz}
-                                className={`p-6 border rounded-2xl transition-all text-left flex flex-col gap-2 ${isGeneratingQuiz ? 'bg-purple-500/20 border-purple-500/50 text-purple-300 animate-pulse' : 'bg-purple-500/10 border-purple-500/30 hover:border-purple-500/60 text-purple-400'}`}
+                                className={`p-6 border rounded-2xl transition-all text-left flex flex-col gap-2 shadow-sm ${isGeneratingQuiz ? 'bg-purple-500/20 border-purple-500/50 text-purple-600 dark:text-purple-300 animate-pulse' : 'bg-purple-500/10 border-purple-500/30 hover:border-purple-500/60 text-purple-600 dark:text-purple-400'}`}
                             >
                                 <span className="text-xl">{isGeneratingQuiz ? '⏳' : '💡'}</span>
                                 <div className="text-[10px] font-black uppercase tracking-widest opacity-80">Assessments</div>
@@ -738,8 +736,8 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                             <div className="flex items-center gap-3">
                                 <span className="text-2xl">✨</span>
                                 <div>
-                                    <h3 className="text-xl font-bold font-black italic tracking-tight">AI Lesson Summary</h3>
-                                    <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">Key insights generated from content</p>
+                                    <h3 className="text-xl font-bold font-black italic tracking-tight text-slate-900 dark:text-white">AI Lesson Summary</h3>
+                                    <p className="text-xs text-slate-500 dark:text-gray-400 mt-1 uppercase tracking-widest font-bold">Key insights generated from content</p>
                                 </div>
                             </div>
                         </div>
@@ -749,10 +747,10 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 value={summary}
                                 onChange={(e) => setSummary(e.target.value)}
                                 placeholder="A concise summary of the lesson content..."
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-sm text-gray-300 focus:outline-none focus:border-blue-500/50 min-h-[120px] transition-all"
+                                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6 text-sm text-slate-700 dark:text-gray-300 focus:outline-none focus:border-blue-500/50 min-h-[120px] transition-all"
                             />
                         ) : (
-                            <div className="text-sm text-gray-400 leading-relaxed italic border-l-2 border-indigo-500/30 pl-6 py-2">
+                            <div className="text-sm text-slate-600 dark:text-gray-400 leading-relaxed italic border-l-2 border-indigo-500/30 pl-6 py-2">
                                 &quot;{summary}&quot;
                             </div>
                         )}
@@ -765,11 +763,11 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                     <div key={block.id} className="relative group/block animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${index * 100}ms` }}>
                         {editMode && (
                             <div className="absolute -left-16 top-0 h-full flex flex-col items-center gap-2 opacity-100 transition-all">
-                                <span className="text-[10px] font-black text-gray-700 uppercase vertical-text mb-2">Move</span>
+                                <span className="text-[10px] font-black text-slate-300 dark:text-gray-700 uppercase vertical-text mb-2">Move</span>
                                 <button
                                     onClick={() => moveBlock(index, 'up')}
                                     disabled={index === 0}
-                                    className="w-10 h-10 rounded-xl bg-white/5 text-gray-400 flex items-center justify-center hover:bg-blue-500 hover:text-gray-900 dark:text-white transition-all border border-white/10 disabled:opacity-20 disabled:cursor-not-allowed group-hover/block:scale-110"
+                                    className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-gray-400 flex items-center justify-center hover:bg-blue-600 dark:hover:bg-blue-500 hover:text-white transition-all border border-slate-200 dark:border-white/10 disabled:opacity-20 disabled:cursor-not-allowed group-hover/block:scale-110 shadow-sm"
                                     title="Move Up"
                                 >
                                     <ChevronUp className="w-5 h-5" />
@@ -777,7 +775,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 <button
                                     onClick={() => moveBlock(index, 'down')}
                                     disabled={index === blocks.length - 1}
-                                    className="w-10 h-10 rounded-xl bg-white/5 text-gray-400 flex items-center justify-center hover:bg-blue-500 hover:text-gray-900 dark:text-white transition-all border border-white/10 disabled:opacity-20 disabled:cursor-not-allowed group-hover/block:scale-110"
+                                    className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-gray-400 flex items-center justify-center hover:bg-blue-600 dark:hover:bg-blue-500 hover:text-white transition-all border border-slate-200 dark:border-white/10 disabled:opacity-20 disabled:cursor-not-allowed group-hover/block:scale-110 shadow-sm"
                                     title="Move Down"
                                 >
                                     <ChevronDown className="w-5 h-5" />
@@ -785,14 +783,14 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 <div className="h-4"></div>
                                 <button
                                     onClick={() => openSaveToLibraryModal(block)}
-                                    className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-gray-900 dark:text-white transition-all border border-emerald-500/20 group-hover/block:scale-110"
+                                    className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all border border-emerald-500/20 group-hover/block:scale-110 shadow-sm"
                                     title="Save to Library"
                                 >
                                     <BookMarked className="w-5 h-5" />
                                 </button>
                                 <button
                                     onClick={() => removeBlock(block.id)}
-                                    className="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-gray-900 dark:text-white transition-all border border-red-500/20 group-hover/block:scale-110"
+                                    className="w-10 h-10 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-500/20 group-hover/block:scale-110 shadow-sm"
                                     title="Remove Block"
                                 >
                                     <Trash2 className="w-5 h-5" />

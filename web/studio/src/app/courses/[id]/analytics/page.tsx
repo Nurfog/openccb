@@ -66,12 +66,12 @@ export default function AnalyticsPage() {
     );
 
     if (authError) return (
-        <div className="min-h-screen bg-transparent text-gray-900 dark:text-white flex flex-col items-center justify-center p-20 text-center gap-6">
-            <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center text-red-500">
+        <div className="min-h-screen bg-transparent text-slate-900 dark:text-white flex flex-col items-center justify-center p-20 text-center gap-6">
+            <div className="w-20 h-20 bg-red-600/10 rounded-full flex items-center justify-center text-red-600 dark:text-red-500">
                 <AlertTriangle size={40} />
             </div>
-            <h2 className="text-2xl font-bold">Access Denied</h2>
-            <p className="text-gray-600 dark:text-gray-400 max-w-md">{authError}</p>
+            <h2 className="text-2xl font-black">Access Denied</h2>
+            <p className="text-slate-500 dark:text-gray-400 max-w-md font-medium">{authError}</p>
             <button onClick={() => router.back()} className="btn-premium px-8 py-3">Go Back</button>
         </div>
     );
@@ -96,7 +96,7 @@ export default function AnalyticsPage() {
                     <select
                         value={selectedCohortId}
                         onChange={(e) => setSelectedCohortId(e.target.value)}
-                        className="bg-white/5 text-gray-900 dark:text-white border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-w-[160px]"
+                        className="bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-w-[160px]"
                     >
                         <option value="">Todos los Estudiantes</option>
                         {cohorts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -107,7 +107,7 @@ export default function AnalyticsPage() {
                     >
                         <Layers size={14} /> Insights Avanzados
                     </button>
-                    <div className="bg-blue-500/10 text-blue-400 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border border-blue-500/20">
+                    <div className="bg-blue-600/10 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border border-blue-600/20">
                         {user?.role} View
                     </div>
                 </div>
@@ -115,61 +115,61 @@ export default function AnalyticsPage() {
         >
             <div className="space-y-12">
                 {/* Tab Selector */}
-                <div className="flex items-center gap-1 mb-10 p-1 bg-white/5 rounded-2xl w-fit">
+                <div className="flex items-center gap-1 mb-10 p-1.5 bg-slate-100 dark:bg-white/5 rounded-2xl w-fit border border-slate-200 dark:border-white/5">
                     <button
                         onClick={() => setActiveAnalyticsTab("overview")}
-                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeAnalyticsTab === "overview" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
+                        className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeAnalyticsTab === "overview" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-white/5"}`}
                     >
-                        <BarChart3 size={16} /> Overview
+                        <BarChart3 size={14} /> Overview
                     </button>
                     <button
                         onClick={() => setActiveAnalyticsTab("risks")}
-                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeAnalyticsTab === "risks" ? "bg-red-600 text-white shadow-lg shadow-red-500/20" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
+                        className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeAnalyticsTab === "risks" ? "bg-red-600 text-white shadow-lg shadow-red-500/20" : "text-slate-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-white hover:bg-white/5"}`}
                     >
-                        <ShieldAlert size={16} /> Predictive Risks
+                        <ShieldAlert size={14} /> Predictive Risks
                     </button>
                     <button
                         onClick={() => setActiveAnalyticsTab("live")}
-                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeAnalyticsTab === "live" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-gray-400 hover:text-white hover:bg-white/5"}`}
+                        className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeAnalyticsTab === "live" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-white/5"}`}
                     >
-                        <Video size={16} /> Live Sessions
+                        <Video size={14} /> Live Sessions
                     </button>
                 </div>
 
                 {activeAnalyticsTab === "overview" && (
                     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 group hover:bg-white/[0.07] transition-all">
+                            <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-8 group hover:bg-white transition-all shadow-sm">
                                 <div className="flex items-center gap-4 mb-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
                                         <Users size={24} />
                                     </div>
-                                    <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Enrollments</span>
+                                    <span className="text-xs font-black text-slate-400 dark:text-gray-400 uppercase tracking-[0.2em]">Enrollments</span>
                                 </div>
-                                <div className="text-4xl font-black">{analytics.total_enrollments}</div>
-                                <div className="text-xs text-green-400 font-bold mt-2">Active Learners</div>
+                                <div className="text-4xl font-black text-slate-900 dark:text-white">{analytics.total_enrollments}</div>
+                                <div className="text-xs text-green-600 dark:text-green-400 font-black uppercase mt-2 tracking-wider">Active Learners</div>
                             </div>
 
-                            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 group hover:bg-white/[0.07] transition-all">
+                            <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-8 group hover:bg-white transition-all shadow-sm">
                                 <div className="flex items-center gap-4 mb-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400">
+                                    <div className="w-12 h-12 rounded-2xl bg-purple-600/10 flex items-center justify-center text-purple-600 dark:text-purple-400">
                                         <TrendingUp size={24} />
                                     </div>
-                                    <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Average Score</span>
+                                    <span className="text-xs font-black text-slate-400 dark:text-gray-400 uppercase tracking-[0.2em]">Average Score</span>
                                 </div>
-                                <div className="text-4xl font-black">{Math.round(analytics.average_score * 100)}%</div>
-                                <div className="text-xs text-gray-500 font-bold mt-2">Across all assessments</div>
+                                <div className="text-4xl font-black text-slate-900 dark:text-white">{Math.round(analytics.average_score * 100)}%</div>
+                                <div className="text-xs text-slate-500 dark:text-gray-500 font-black uppercase mt-2 tracking-wider">Across all assessments</div>
                             </div>
 
-                            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 group hover:bg-white/[0.07] transition-all">
+                            <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-8 group hover:bg-white transition-all shadow-sm">
                                 <div className="flex items-center gap-4 mb-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-400">
+                                    <div className="w-12 h-12 rounded-2xl bg-orange-600/10 flex items-center justify-center text-orange-600 dark:text-orange-400">
                                         <AlertTriangle size={24} />
                                     </div>
-                                    <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Attention Needed</span>
+                                    <span className="text-xs font-black text-slate-400 dark:text-gray-400 uppercase tracking-[0.2em]">Attention Needed</span>
                                 </div>
-                                <div className="text-4xl font-black">{difficultLessons.length}</div>
-                                <div className="text-xs text-orange-400 font-bold mt-2">Struggling Lessons</div>
+                                <div className="text-4xl font-black text-slate-900 dark:text-white">{difficultLessons.length}</div>
+                                <div className="text-xs text-orange-600 dark:text-orange-400 font-black uppercase mt-2 tracking-wider">Struggling Lessons</div>
                             </div>
                         </div>
 
@@ -181,19 +181,19 @@ export default function AnalyticsPage() {
                                 </h2>
                                 <div className="space-y-4">
                                     {analytics.lessons.map((lesson) => (
-                                        <div key={lesson.lesson_id} className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl p-6 hover:bg-black/[0.07] dark:hover:bg-white/[0.07] transition-all">
+                                        <div key={lesson.lesson_id} className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6 hover:bg-slate-50 dark:hover:bg-white/[0.07] transition-all shadow-sm">
                                             <div className="flex items-start justify-between mb-4">
                                                 <div>
-                                                    <h3 className="font-bold">{lesson.lesson_title}</h3>
-                                                    <p className="text-xs text-gray-500 mt-1">{lesson.submission_count} submissions</p>
+                                                    <h3 className="font-bold text-slate-800 dark:text-white">{lesson.lesson_title}</h3>
+                                                    <p className="text-xs text-slate-500 dark:text-gray-500 mt-1 font-medium">{lesson.submission_count} submissions</p>
                                                 </div>
-                                                <div className={`text-xl font-black ${lesson.average_score < 0.6 ? "text-red-400" : lesson.average_score < 0.8 ? "text-orange-400" : "text-green-400"}`}>
+                                                <div className={`text-xl font-black ${lesson.average_score < 0.6 ? "text-red-500" : lesson.average_score < 0.8 ? "text-orange-500" : "text-emerald-500"}`}>
                                                     {Math.round(lesson.average_score * 100)}%
                                                 </div>
                                             </div>
-                                            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                            <div className="h-2 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
                                                 <div
-                                                    className={`h-full rounded-full transition-all duration-1000 ${lesson.average_score < 0.6 ? "bg-red-500" : lesson.average_score < 0.8 ? "bg-orange-500" : "bg-green-500"}`}
+                                                    className={`h-full rounded-full transition-all duration-1000 ${lesson.average_score < 0.6 ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]" : lesson.average_score < 0.8 ? "bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.4)]" : "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]"}`}
                                                     style={{ width: `${lesson.average_score * 100}%` }}
                                                 />
                                             </div>
@@ -211,14 +211,14 @@ export default function AnalyticsPage() {
                                     {difficultLessons.length > 0 ? (
                                         <div className="space-y-4">
                                             {difficultLessons.map(l => (
-                                                <div key={l.lesson_id} className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 flex items-center justify-between">
+                                                <div key={l.lesson_id} className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl p-6 flex items-center justify-between shadow-sm">
                                                     <div>
-                                                        <h4 className="font-bold text-red-400">{l.lesson_title}</h4>
-                                                        <p className="text-xs text-red-300/60 mt-1 text-balance max-w-xs">
+                                                        <h4 className="font-bold text-red-600 dark:text-red-400">{l.lesson_title}</h4>
+                                                        <p className="text-xs text-red-700/60 dark:text-red-300/60 mt-1 text-balance max-w-xs font-medium">
                                                             Average score is below 70%. Consider reviewing the material or difficulty of questions.
                                                         </p>
                                                     </div>
-                                                    <div className="text-2xl font-black text-red-500">{Math.round(l.average_score * 100)}%</div>
+                                                    <div className="text-2xl font-black text-red-600 dark:text-red-500">{Math.round(l.average_score * 100)}%</div>
                                                 </div>
                                             ))}
                                         </div>
@@ -230,12 +230,12 @@ export default function AnalyticsPage() {
                                         </div>
                                     )}
                                 </div>
-                                <div className="bg-blue-600/10 border border-blue-500/20 rounded-3xl p-8">
-                                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                                        <BookOpen className="text-blue-400" />
+                                <div className="bg-blue-50 dark:bg-blue-600/10 border border-blue-200 dark:border-blue-500/20 rounded-3xl p-8 shadow-sm">
+                                    <h3 className="text-lg font-black mb-4 flex items-center gap-2 uppercase tracking-wide text-blue-700 dark:text-white">
+                                        <BookOpen className="text-blue-600 dark:text-blue-400" />
                                         Content Strategy Tip
                                     </h3>
-                                    <p className="text-sm text-blue-200/70 leading-relaxed">
+                                    <p className="text-sm text-blue-800/70 dark:text-blue-200/70 leading-relaxed font-medium">
                                         High submission counts with low average scores often indicate that the assessment might be misleading or the prerequisites aren&apos;t clearly explained in previous lessons.
                                     </p>
                                 </div>
