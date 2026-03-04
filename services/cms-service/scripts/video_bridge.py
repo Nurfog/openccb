@@ -74,14 +74,31 @@ async def generate_image(request: ImageRequest):
                 progress = int((step / num_steps) * 100)
                 conn = psycopg2.connect(request.database_url)
                 cur = conn.cursor()
-                # Use psycopg2.sql for safe table/column names if possible, 
-                # but here we'll just format since we control the backend values
+                
+                # Check for cancellation
+                status_query = f"SELECT {request.table_name.replace('generation_progress', 'generation_status')} FROM {request.table_name} WHERE id = %s"
+                # Wait, the column name is fixed based on table. 
+                # courses -> generation_status
+                # lessons -> video_generation_status
+                status_col = "generation_status" if request.table_name == "courses" else "video_generation_status"
+                cur.execute(f"SELECT {status_col} FROM {request.table_name} WHERE id = %s", (request.lesson_id,))
+                status = cur.fetchone()[0]
+                
+                if status == 'idle':
+                    print(f"Generation for {request.lesson_id} was cancelled. Aborting.")
+                    cur.close()
+                    conn.close()
+                    raise Exception("Generation cancelled by user")
+
+                # Update progress
                 query = f"UPDATE {request.table_name} SET {request.progress_column} = %s WHERE id = %s"
                 cur.execute(query, (progress, request.lesson_id))
                 conn.commit()
                 cur.close()
                 conn.close()
             except Exception as db_e:
+                if "cancelled" in str(db_e).lower():
+                    raise db_e
                 print(f"Database update error: {db_e}")
 
     def callback_dynamic_cfg(pipe, step_index, timestep, callback_kwargs):

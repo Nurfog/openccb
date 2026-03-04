@@ -20,7 +20,8 @@ import {
     Maximize,
     Monitor,
     Square,
-    Smartphone
+    Smartphone,
+    X
 } from "lucide-react";
 
 interface MarketingTabProps {
@@ -131,6 +132,19 @@ export default function MarketingTab({ courseId }: MarketingTabProps) {
         }
     };
 
+    const handleCancelGeneration = async () => {
+        try {
+            await cmsApi.updateCourse(courseId, {
+                generation_status: 'idle'
+            } as any);
+            setIsGenerating(false);
+            setCourse(prev => prev ? { ...prev, generation_status: 'idle' } : null);
+        } catch (err) {
+            console.error("Cancel failed", err);
+            alert("Failed to cancel generation.");
+        }
+    };
+
     if (loading) return (
         <div className="flex items-center justify-center py-20">
             <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
@@ -171,9 +185,17 @@ export default function MarketingTab({ courseId }: MarketingTabProps) {
                                             style={{ width: `${course?.generation_progress || 0}%` }}
                                         />
                                     </div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 mb-8">
                                         Analysis Phase: {course?.generation_progress || 0}% Complete
                                     </p>
+
+                                    <button
+                                        onClick={handleCancelGeneration}
+                                        className="flex items-center gap-2 px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-full border border-red-500/20 transition-all active:scale-95 group/cancel"
+                                    >
+                                        <X size={14} className="group-hover/cancel:rotate-90 transition-transform" />
+                                        <span className="text-[10px] font-black uppercase tracking-[0.1em]">Abort Mission</span>
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -220,8 +242,8 @@ export default function MarketingTab({ courseId }: MarketingTabProps) {
                                             key={res.label}
                                             onClick={() => setSelectedRes(res)}
                                             className={`p-5 rounded-3xl border transition-all flex items-center gap-4 group ${isSelected
-                                                    ? "bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-500/20 active:scale-95"
-                                                    : "bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-white/10 active:scale-95 shadow-sm"
+                                                ? "bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-500/20 active:scale-95"
+                                                : "bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-white/10 active:scale-95 shadow-sm"
                                                 }`}
                                         >
                                             <div className={`p-2 rounded-xl ${isSelected ? "bg-white/20" : "bg-slate-100 dark:bg-white/10 group-hover:scale-110 transition-transform"}`}>
