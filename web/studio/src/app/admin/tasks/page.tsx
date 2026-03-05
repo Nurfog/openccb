@@ -54,8 +54,8 @@ export default function BackgroundTasksPage() {
     };
 
     const getStatusBadge = (task: BackgroundTask) => {
-        const status = task.video_generation_status || task.transcription_status;
-        const progress = task.generation_progress || 0;
+        const status = task.status;
+        const progress = task.progress;
 
         switch (status) {
             case 'processing':
@@ -64,7 +64,7 @@ export default function BackgroundTasksPage() {
                         <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 w-fit">
                             <Loader2 className="w-3 h-3 animate-spin" /> Processing
                         </span>
-                        {task.video_generation_status === 'processing' && (
+                        {task.task_type !== 'lesson_transcription' && (
                             <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1 max-w-[150px]">
                                 <div
                                     className="bg-blue-600 h-1.5 rounded-full transition-all duration-500 ease-out"
@@ -78,12 +78,37 @@ export default function BackgroundTasksPage() {
             case 'queued':
                 return <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-semibold w-fit">Queued</span>;
             case 'failed':
+            case 'error':
                 return <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-semibold w-fit">Failed</span>;
             case 'completed':
                 return <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold w-fit">Completed</span>;
+            case 'idle':
+                return <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-semibold w-fit">Idle</span>;
             default:
                 return <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-semibold w-fit">{status}</span>;
         }
+    };
+
+    const getTaskTypeBadge = (type: string) => {
+        let label = 'Unknown';
+        let color = 'bg-slate-100 text-slate-800';
+
+        switch (type) {
+            case 'lesson_transcription':
+                label = 'Transcription';
+                color = 'bg-purple-100 text-purple-800';
+                break;
+            case 'lesson_image':
+                label = 'Lesson Image';
+                color = 'bg-blue-100 text-blue-800';
+                break;
+            case 'course_image':
+                label = 'Course Cover';
+                color = 'bg-emerald-100 text-emerald-800';
+                break;
+        }
+
+        return <span className={`${color} px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider`}>{label}</span>;
     };
 
     return (
@@ -114,7 +139,8 @@ export default function BackgroundTasksPage() {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lesson / Context</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task / Context</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
                                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -129,6 +155,9 @@ export default function BackgroundTasksPage() {
                                             <div className="text-xs text-gray-400 font-mono mt-1">{task.id}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
+                                            {getTaskTypeBadge(task.task_type)}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
                                             {getStatusBadge(task)}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-500">
@@ -136,7 +165,7 @@ export default function BackgroundTasksPage() {
                                             <div className="text-xs text-gray-400">({format(new Date(task.updated_at), 'yyyy')})</div>
                                         </td>
                                         <td className="px-6 py-4 text-right space-x-2">
-                                            {task.transcription_status === 'failed' && (
+                                            {task.status === 'failed' && (
                                                 <button
                                                     onClick={() => handleRetry(task.id)}
                                                     disabled={actionLoading === task.id}

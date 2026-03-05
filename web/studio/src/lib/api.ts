@@ -974,8 +974,8 @@ export interface BackgroundTask {
     id: string;
     title: string;
     course_title?: string;
-    transcription_status?: 'idle' | 'queued' | 'processing' | 'failed' | 'completed';
-    video_generation_status?: 'idle' | 'queued' | 'processing' | 'failed' | 'completed';
-    generation_progress?: number;
+    task_type: 'lesson_transcription' | 'lesson_image' | 'course_image';
+    status: 'idle' | 'queued' | 'processing' | 'failed' | 'completed' | 'error';
+    progress: number;
     updated_at: string;
 }

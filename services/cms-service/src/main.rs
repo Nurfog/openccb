@@ -104,6 +104,36 @@ async fn main() {
                 }
             }
 
+            // Check for queued course image generations
+            let queued_course_ids: Vec<sqlx::types::Uuid> = match sqlx::query_scalar(
+                "SELECT id FROM courses WHERE generation_status = 'queued' LIMIT 5",
+            )
+            .fetch_all(&worker_pool)
+            .await
+            {
+                Ok(ids) => ids,
+                Err(e) => {
+                    tracing::error!("Failed to fetch queued course images: {}", e);
+                    tokio::time::sleep(Duration::from_secs(10)).await;
+                    continue;
+                }
+            };
+
+            for course_id in queued_course_ids {
+                tracing::info!("Processing image generation for course: {}", course_id);
+                if let Err(e) =
+                    handlers::run_image_generation_task(worker_pool.clone(), course_id, None, None, true, None, None).await
+                {
+                    tracing::error!("Course image generation failed for {}: {}", course_id, e);
+                    let _ = sqlx::query(
+                        "UPDATE courses SET generation_status = 'failed' WHERE id = $1",
+                    )
+                    .bind(course_id)
+                    .execute(&worker_pool)
+                    .await;
+                }
+            }
+
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
     });

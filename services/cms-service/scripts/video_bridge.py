@@ -54,11 +54,11 @@ import psycopg2
 class ImageRequest(BaseModel):
     prompt: str
     lesson_id: str
-    database_url: str = None
+    database_url: Optional[str] = None
     table_name: str = "lessons"
     progress_column: str = "generation_progress"
-    width: int = 512
-    height: int = 512
+    width: Optional[int] = 512
+    height: Optional[int] = 512
 
 @app.post("/generate")
 async def generate_image(request: ImageRequest):

@@ -1482,21 +1482,28 @@ pub async fn run_image_generation_task(
     let database_url = std::env::var("BRIDGE_DATABASE_URL")
         .unwrap_or_else(|_| std::env::var("DATABASE_URL").unwrap_or_default());
 
+    let mut payload = serde_json::json!({
+        "prompt": final_prompt,
+        "lesson_id": id.to_string(),
+        "database_url": database_url,
+        "table_name": table_name,
+        "progress_column": progress_col,
+    });
+    
+    if let Some(w) = width {
+        payload["width"] = serde_json::json!(w);
+    }
+    if let Some(h) = height {
+        payload["height"] = serde_json::json!(h);
+    }
+
     let mut retry_count = 0;
     let max_retries = 3; // Initial quick retries
     let long_retry_delay = tokio::time::Duration::from_secs(600); // 10 minutes
 
     loop {
         let response_result = client.post(&bridge_url)
-            .json(&serde_json::json!({
-                "prompt": final_prompt,
-                "lesson_id": id.to_string(),
-                "database_url": database_url,
-                "table_name": table_name,
-                "progress_column": progress_col,
-                "width": width,
-                "height": height
-            }))
+            .json(&payload)
             .send()
             .await;
 
