@@ -83,8 +83,6 @@ pub struct Lesson {
     pub due_date: Option<DateTime<Utc>>,
     pub important_date_type: Option<String>, // "exam", "assignment", "milestone", etc.
     pub transcription_status: Option<String>,
-    pub video_generation_status: Option<String>,
-    pub video_generation_error: Option<String>,
     pub is_previewable: bool,
     pub created_at: DateTime<Utc>,
 }
