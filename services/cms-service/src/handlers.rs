@@ -1204,7 +1204,15 @@ pub async fn generate_quiz(
         )
     };
 
-    let mut system_prompt = "You are an expert English Teacher. Generate 3 questions based on the lesson content to test the student's understanding of English grammar, vocabulary, or comprehension. Instructions can be in Spanish or English. Return ONLY a JSON object with a field 'blocks' which is an array of content blocks. Each block in the array must follow this exact structure: { \"id\": \"string-uuid\", \"type\": \"quiz\", \"title\": \"Quiz: Concept Check\", \"quiz_data\": { \"questions\": [ { \"id\": \"q-string\", \"type\": \"multiple-choice\", \"question\": \"String\", \"options\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"correct\": [0], \"explanation\": \"Explain why the answer is correct.\" } ] } }. Important: 'correct' MUST be an array of integers.".to_string();
+    let mut system_prompt = if let Some(qtype) = &quiz_req.quiz_type {
+        if qtype == "memory-match" {
+            "You are an expert English Teacher. Generate a Memory Match game (Memory match concepts) based on the lesson content. Extract 6 important concepts or vocabulary terms and their corresponding definitions or translations. Return ONLY a JSON object with a field 'blocks' which is an array. The array must contain ONE block with this structure: { \"id\": \"string-uuid\", \"type\": \"memory-match\", \"title\": \"Memory Match: Concept Review\", \"pairs\": [ { \"id\": \"1\", \"left\": \"Concept 1\", \"right\": \"Definition/Match 1\" }, { \"id\": \"2\", \"left\": \"Concept 2\", \"right\": \"Definition/Match 2\" } ] }. Provide 6 pairs in total.".to_string()
+        } else {
+            "You are an expert English Teacher. Generate 3 questions based on the lesson content to test the student's understanding of English grammar, vocabulary, or comprehension. Instructions can be in Spanish or English. Return ONLY a JSON object with a field 'blocks' which is an array of content blocks. Each block in the array must follow this exact structure: { \"id\": \"string-uuid\", \"type\": \"quiz\", \"title\": \"Quiz: Concept Check\", \"quiz_data\": { \"questions\": [ { \"id\": \"q-string\", \"type\": \"multiple-choice\", \"question\": \"String\", \"options\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"correct\": [0], \"explanation\": \"Explain why the answer is correct.\" } ] } }. Important: 'correct' MUST be an array of integers.".to_string()
+        }
+    } else {
+        "You are an expert English Teacher. Generate 3 questions based on the lesson content to test the student's understanding of English grammar, vocabulary, or comprehension. Instructions can be in Spanish or English. Return ONLY a JSON object with a field 'blocks' which is an array of content blocks. Each block in the array must follow this exact structure: { \"id\": \"string-uuid\", \"type\": \"quiz\", \"title\": \"Quiz: Concept Check\", \"quiz_data\": { \"questions\": [ { \"id\": \"q-string\", \"type\": \"multiple-choice\", \"question\": \"String\", \"options\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"], \"correct\": [0], \"explanation\": \"Explain why the answer is correct.\" } ] } }. Important: 'correct' MUST be an array of integers.".to_string()
+    };
 
     if let Some(ctx) = &quiz_req.context {
         if !ctx.is_empty() {
@@ -1213,7 +1221,7 @@ pub async fn generate_quiz(
     }
 
     if let Some(qtype) = &quiz_req.quiz_type {
-        if !qtype.is_empty() {
+        if !qtype.is_empty() && qtype != "memory-match" {
             system_prompt.push_str(&format!(" Question Type to use: {}. If the type is 'multiple-choice', follow the structure above. If it's something else, adapt the block 'type' (e.g., 'true-false') accordingly, but keep it within the 'blocks' array.", qtype));
         }
     }

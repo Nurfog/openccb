@@ -126,7 +126,6 @@ export interface Lesson {
         cues?: { start: number; end: number; text: string }[];
     } | null;
     transcription_status?: 'idle' | 'queued' | 'processing' | 'completed' | 'failed';
-    video_generation_status?: 'idle' | 'queued' | 'processing' | 'completed' | 'failed';
     is_previewable: boolean;
     created_at: string;
 }

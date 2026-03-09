@@ -21,8 +21,7 @@ import {
     Brain,
     Library,
     BookMarked,
-    ArrowLeft,
-    ImageIcon
+    ArrowLeft
 } from 'lucide-react';
 import DescriptionBlock from "@/components/blocks/DescriptionBlock";
 import MediaBlock from "@/components/blocks/MediaBlock";
@@ -80,42 +79,10 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
     const [isAIQuizModalOpen, setIsAIQuizModalOpen] = useState(false);
     const [aiQuizContext, setAiQuizContext] = useState("");
     const [aiQuizType, setAiQuizType] = useState("multiple-choice");
-    const [aiImagePrompt, setAiImagePrompt] = useState("");
-    const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
     const [editValue, setEditValue] = useState("");
 
 
-    // Polling for AI status
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
-
-        if (lesson && (
-            lesson.video_generation_status === 'queued' ||
-            lesson.video_generation_status === 'processing'
-        )) {
-            interval = setInterval(async () => {
-                try {
-                    const updated = await cmsApi.getLesson(params.lessonId);
-                    setLesson(updated);
-
-                    // If it finished, update local states
-                    if (updated.transcription_status === 'completed') {
-                        if (updated.transcription) {
-                            // Automatically update summary if available? No, wait for manual trigger or auto-trigger?
-                            // For now just update lesson
-                        }
-                    }
-                } catch (err) {
-                    console.error("Polling failed", err);
-                }
-            }, 3000);
-        }
-
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [lesson, lesson?.transcription_status, params.lessonId]);
 
 
     useEffect(() => {
@@ -369,31 +336,6 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
         }
     };
 
-    const handleGenerateImage = async () => {
-        if (!lesson) return;
-        setIsGeneratingImage(true);
-        try {
-            // Option 2: Use lesson content (blocks) as script if no prompt
-            const scriptFromBlocks = blocks
-                .map(b => b.content || b.description || b.title || "")
-                .filter(txt => txt.trim().length > 0)
-                .join(". ");
-
-            // Option 3: Prioritize manual prompt, then script
-            const finalPrompt = aiImagePrompt.trim() || scriptFromBlocks;
-
-            const updated = await cmsApi.generateImage(lesson.id, {
-                prompt: finalPrompt
-            });
-            setLesson(updated);
-            setAiImagePrompt("");
-            alert("Generación de imagen iniciada con el prompt/guion detectado.");
-        } catch (err: any) {
-            alert(err.message || "Failed to initiate image generation.");
-        } finally {
-            setIsGeneratingImage(false);
-        }
-    };
 
     if (loading) return <div className="py-20 text-center text-gray-500 animate-pulse font-medium">Initializing Activity Builder...</div>;
     if (!lesson) return <div className="py-20 text-center text-red-400">Activity not found.</div>;
@@ -906,34 +848,6 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 </div>
                             </button>
 
-                            <div className="col-span-full space-y-3 mt-4">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                                    <ImageIcon size={14} className="text-amber-500" />
-                                    Custom Image Prompt (Optional)
-                                </label>
-                                <textarea
-                                    value={aiImagePrompt}
-                                    onChange={(e) => setAiImagePrompt(e.target.value)}
-                                    placeholder="Describe what you want to see in the image, or leave blank to use the lesson script..."
-                                    className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all min-h-[100px] text-slate-700 dark:text-gray-300"
-                                />
-                            </div>
-
-                            <button
-                                onClick={handleGenerateImage}
-                                disabled={isGeneratingImage || lesson.video_generation_status === 'queued' || lesson.video_generation_status === 'processing'}
-                                className={`group/btn p-8 border rounded-[2rem] transition-all text-left flex flex-col gap-4 shadow-sm relative overflow-hidden ${isGeneratingImage || lesson.video_generation_status === 'queued' || lesson.video_generation_status === 'processing' ? 'bg-amber-50 dark:bg-amber-500/20 border-amber-200 dark:border-amber-500/50 text-amber-600 dark:text-amber-300 animate-pulse' : 'bg-white dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-400 dark:text-amber-400 hover:border-amber-500/50 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-500/10'}`}
-                            >
-                                <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-sm group-hover/btn:scale-110 transition-transform">
-                                    {(isGeneratingImage || lesson.video_generation_status === 'queued' || lesson.video_generation_status === 'processing') ? '⏳' : <ImageIcon />}
-                                </div>
-                                <div className="space-y-1">
-                                    <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Generative AI</div>
-                                    <div className="font-black text-xl tracking-tight">
-                                        {(isGeneratingImage || lesson.video_generation_status === 'queued' || lesson.video_generation_status === 'processing') ? 'Generating Image...' : 'Generate AI Image'}
-                                    </div>
-                                </div>
-                            </button>
                         </div>
                     </div>
                 )
@@ -1282,6 +1196,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 <option value="true-false">Binary Validation (T/F)</option>
                                 <option value="vocabulary">Lexical Focus / Vocab</option>
                                 <option value="grammar">Structural / Grammar Focus</option>
+                                <option value="memory-match">Conceptual Memory Match</option>
                             </select>
                             <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                                 <ChevronDown size={18} />
