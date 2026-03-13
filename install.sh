@@ -241,13 +241,13 @@ if [ "$ADMIN_EXISTS" != "t" ]; then
     echo "👤 Configurar Administrador Inicial"
     read -p "Nombre Completo [Administrador del Sistema]: " ADMIN_NAME
     ADMIN_NAME=${ADMIN_NAME:-Administrador del Sistema}
-    read -p "Email del Administrador [admin@example.com]: " ADMIN_EMAIL
-    ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
-    read -s -p "Contraseña del Administrador [password123]: " ADMIN_PASS
-    ADMIN_PASS=${ADMIN_PASS:-password123}
+    read -p "Email del Administrador [admin@norteamericano.cl]: " ADMIN_EMAIL
+    ADMIN_EMAIL=${ADMIN_EMAIL:-admin@norteamericano.cl}
+    read -s -p "Contraseña del Administrador [Admin123!]: " ADMIN_PASS
+    ADMIN_PASS=${ADMIN_PASS:-Admin123!}
     echo ""
-    read -p "Nombre de la Organización [OpenCCB]: " ORG_NAME
-    ORG_NAME=${ORG_NAME:-OpenCCB}
+    read -p "Nombre de la Organización [Norteamericano]: " ORG_NAME
+    ORG_NAME=${ORG_NAME:-Norteamericano}
 fi
 
 # Selective Build/Rebuild
@@ -269,22 +269,12 @@ fi
 if [ "$ADMIN_EXISTS" != "t" ]; then
     echo "⏳ Esperando a que el API CMS esté listo..."
     API_URL="http://localhost:3001"
-    PAYLOAD=$(cat <<EOF
-{
-  "email": "$ADMIN_EMAIL",
-  "password": "$ADMIN_PASS",
-  "full_name": "$ADMIN_NAME",
-  "organization_name": "$ORG_NAME",
-  "role": "admin"
-}
-EOF
-)
 
     # Wait until the API actually responds (not just the port being open)
     MAX_RETRIES=30
     count=0
     echo -n "Esperando API"
-    until curl -s -o /dev/null "$API_URL/auth/login" -H "Content-Type: application/json" -d '{}' 2>/dev/null; do
+    until curl -s -o /dev/null "$API_URL/health" 2>/dev/null; do
         echo -n "."
         sleep 2
         count=$((count+1))
@@ -296,14 +286,50 @@ EOF
     done
     echo ""
 
-    RESPONSE=$(curl -s -X POST "$API_URL/auth/register" -H "Content-Type: application/json" -d "$PAYLOAD")
+    # Create admin user directly in database using pgcrypto
+    echo "🔐 Creando administrador en la base de datos..."
+    docker exec openccb-db-1 psql -U user -d openccb_cms -c "
+        CREATE EXTENSION IF NOT EXISTS pgcrypto;
+        SELECT * FROM fn_register_user(
+            '$ADMIN_EMAIL',
+            crypt('$ADMIN_PASS', gen_salt('bf', 12)),
+            '$ADMIN_NAME',
+            'admin',
+            '$ORG_NAME'
+        );
+    " 2>/dev/null
 
-    if echo "$RESPONSE" | grep -q "token"; then
+    if [ $? -eq 0 ]; then
         echo "✅ ¡Éxito! Administrador creado."
-        API_KEY=$(docker exec openccb-db-1 psql -U user -d openccb_cms -t -c "SELECT api_key FROM organizations LIMIT 1;" | xargs)
+        API_KEY=$(docker exec openccb-db-1 psql -U user -d openccb_cms -t -c "SELECT api_key FROM organizations LIMIT 1;" | xargs 2>/dev/null)
         echo "🔑 API Key Inicial: $API_KEY"
+        echo ""
+        echo "📋 Credenciales de acceso:"
+        echo "   Email: $ADMIN_EMAIL"
+        echo "   Contraseña: $ADMIN_PASS"
     else
-        echo "⚠️  Fallo al crear el administrador. Respuesta: $RESPONSE"
+        echo "⚠️  Fallo al crear el administrador. Intentando con método alternativo..."
+
+        # Fallback: Try API endpoint
+        PAYLOAD=$(cat <<EOF
+{
+  "email": "$ADMIN_EMAIL",
+  "password": "$ADMIN_PASS",
+  "full_name": "$ADMIN_NAME",
+  "organization_name": "$ORG_NAME",
+  "role": "admin"
+}
+EOF
+)
+        RESPONSE=$(curl -s -X POST "$API_URL/auth/register" -H "Content-Type: application/json" -d "$PAYLOAD")
+
+        if echo "$RESPONSE" | grep -q "token"; then
+            echo "✅ ¡Éxito! Administrador creado vía API."
+            API_KEY=$(docker exec openccb-db-1 psql -U user -d openccb_cms -t -c "SELECT api_key FROM organizations LIMIT 1;" | xargs 2>/dev/null)
+            echo "🔑 API Key Inicial: $API_KEY"
+        else
+            echo "⚠️  Fallo al crear el administrador. Respuesta: $RESPONSE"
+        fi
     fi
 else
     echo "✅ El administrador ya existe. Saltando registro."
@@ -315,4 +341,9 @@ echo "        ✨ ¡Instalación de OpenCCB Completa!"
 echo "===================================================="
 echo "Studio (Admin/CMS): http://localhost:3000"
 echo "Experience (LMS):   http://localhost:3003"
+echo "===================================================="
+echo ""
+echo "📋 Notas:"
+echo "   - Rate limiter: DESHABILITADO (problemas de compatibilidad)"
+echo "   - Para producción, configura tower_governor en services/cms-service/src/main.rs"
 echo "===================================================="

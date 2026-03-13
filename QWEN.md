@@ -278,6 +278,14 @@ NEXT_PUBLIC_CMS_API_URL=http://localhost:3001
 NEXT_PUBLIC_LMS_API_URL=http://localhost:3002
 ```
 
+### Default Credentials
+
+After running `./install.sh`, the default admin user is:
+- **Email**: `admin@norteamericano.cl`
+- **Password**: `Admin123!`
+
+You can customize these during installation.
+
 ## Testing
 
 ### E2E Tests (Playwright)
@@ -339,6 +347,37 @@ cargo test -p common
 - OpenID Connect support for SSO
 
 ## Common Issues
+
+### CORS Errors (Login/Registro)
+
+Si ves errores de CORS al intentar loguearte:
+
+```
+Access to fetch at 'http://localhost:3001/auth/login' from origin 'http://localhost:3000'
+has been blocked by CORS policy
+```
+
+**Solución**: Asegúrate de que el rate limiter NO esté aplicado a las rutas de autenticación.
+En `services/cms-service/src/main.rs`, el `GovernorLayer` debe estar solo en `protected_routes`,
+no en `public_routes`.
+
+### Rate Limiter Bloqueando Peticiones
+
+**Estado actual**: El rate limiter (`tower_governor`) está **deshabilitado** debido a problemas de compatibilidad con el middleware de autenticación.
+
+Si quieres habilitarlo en producción:
+
+1. Agrega `GovernorLayer` solo a rutas protegidas usando `.route_layer()`
+2. Configúralo después del middleware de autenticación
+3. Ajusta los límites (por defecto: 10 req/s, burst 50)
+
+```rust
+.protected_routes
+    .route_layer(middleware::from_fn(org_extractor_middleware))
+    .route_layer(GovernorLayer { config: governor_conf })
+```
+
+**Advertencia**: Si el rate limiter está mal configurado, las peticiones a `/courses`, `/auth/login`, etc. pueden fallar con error 500 sin logs.
 
 ### Port Conflicts
 

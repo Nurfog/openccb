@@ -20,10 +20,7 @@ use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use std::time::Duration;
-use tower_governor::governor::GovernorConfigBuilder;
-use tower_governor::GovernorLayer;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
@@ -99,14 +96,8 @@ async fn main() {
         .allow_methods(Any)
         .allow_headers(Any);
 
-    // Rate limiting configuration
-    let governor_conf = Arc::new(
-        GovernorConfigBuilder::default()
-            .per_second(10)
-            .burst_size(50)
-            .finish()
-            .unwrap(),
-    );
+    // Rate limiting: Deshabilitado temporalmente por problemas de compatibilidad con tower-governor
+    // Para habilitar en producción, configurar con GovernorLayer y ajustar los límites apropiadamente
 
     // Rutas protegidas que requieren autenticación y contexto de organización
     let protected_routes = Router::new()
