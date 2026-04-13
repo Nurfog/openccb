@@ -13,6 +13,7 @@ interface MermaidBlockProps {
     editMode: boolean;
     courseId: string;
     lessonId: string;
+    aiGenerationEnabled?: boolean;
     onChange: (updates: { title?: string; description?: string; mermaid_code?: string }) => void;
 }
 
@@ -23,6 +24,7 @@ export default function MermaidBlock({
     mermaid_code = "",
     editMode,
     lessonId,
+    aiGenerationEnabled = true,
     onChange
 }: MermaidBlockProps) {
     const [isGenerating, setIsGenerating] = useState(false);
@@ -59,6 +61,10 @@ export default function MermaidBlock({
     }, [mermaid_code, editMode]);
 
     const handleGenerateAI = async () => {
+        if (!aiGenerationEnabled) {
+            alert("La generación de diagramas Mermaid está desactivada para esta organización.");
+            return;
+        }
         setIsGenerating(true);
         try {
             const data = await cmsApi.generateMermaidDiagram(lessonId, { prompt_hint: promptHint || undefined });
@@ -135,17 +141,23 @@ export default function MermaidBlock({
 
                         <div className="space-y-4 pt-6 border-t border-slate-100 dark:border-white/5">
                             <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">Generación con IA</h4>
+                            {!aiGenerationEnabled && (
+                                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+                                    Mermaid está desactivado para esta organización. Puedes conservar o editar código existente manualmente.
+                                </div>
+                            )}
                             <div className="space-y-3">
                                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500 pl-1">Instrucciones extra (Opcional)</label>
                                 <textarea
                                     value={promptHint}
                                     onChange={(e) => setPromptHint(e.target.value)}
                                     placeholder="Ej. Crea un mapa mental sobre los conceptos clave..."
-                                    className="w-full bg-slate-50 dark:bg-black/40 border border-slate-100 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-medium text-slate-700 dark:text-gray-300 min-h-[100px] resize-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none"
+                                    className="w-full bg-slate-50 dark:bg-black/40 border border-slate-100 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-medium text-slate-700 dark:text-gray-300 min-h-[100px] resize-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none disabled:opacity-60"
+                                    disabled={!aiGenerationEnabled}
                                 />
                                 <button
                                     onClick={handleGenerateAI}
-                                    disabled={isGenerating}
+                                    disabled={isGenerating || !aiGenerationEnabled}
                                     className="flex w-full justify-center items-center gap-2 px-6 py-4 bg-indigo-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-50 shadow-xl shadow-indigo-500/20 active:scale-95"
                                 >
                                     {isGenerating ? <Loader2 className="animate-spin" size={16} /> : <Wand2 size={16} />}

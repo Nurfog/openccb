@@ -23,6 +23,7 @@ interface HotspotBlockProps {
     editMode: boolean;
     courseId: string;
     lessonId: string;
+    aiGenerationEnabled?: boolean;
     onChange: (updates: { title?: string; description?: string; imageUrl?: string; hotspots?: Hotspot[] }) => void;
 }
 
@@ -35,6 +36,7 @@ export default function HotspotBlock({
     editMode,
     courseId,
     lessonId,
+    aiGenerationEnabled = true,
     onChange
 }: HotspotBlockProps) {
     const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
@@ -42,10 +44,14 @@ export default function HotspotBlock({
     const containerRef = useRef<HTMLDivElement>(null);
 
     const handleGenerateAI = async () => {
+        if (!aiGenerationEnabled) {
+            alert("Hotspot está desactivado para esta organización.");
+            return;
+        }
         if (!imageUrl) return;
         setIsGenerating(true);
         try {
-            const data = await cmsApi.generateHotspots(lessonId, { image_url: imageUrl });
+            const data = await cmsApi.generateHotspots(lessonId, { image_url: getImageUrl(imageUrl) });
             // Handle different response formats from AI
             const raw: any = data;
             let hotspotsArray = Array.isArray(raw) ? raw : (raw.hotspots || raw.items || []);
@@ -160,7 +166,7 @@ export default function HotspotBlock({
                                 {imageUrl && (
                                     <button
                                         onClick={handleGenerateAI}
-                                        disabled={isGenerating}
+                                        disabled={isGenerating || !aiGenerationEnabled}
                                         className="flex items-center gap-2 px-3 py-1.5 bg-amber-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all disabled:opacity-50 shadow-lg shadow-amber-500/20 active:scale-95"
                                     >
                                         {isGenerating ? <Loader2 className="animate-spin" size={12} /> : <Wand2 size={12} />}

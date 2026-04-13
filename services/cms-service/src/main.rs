@@ -3,6 +3,7 @@ pub mod exporter;
 mod external_handlers;
 mod handlers;
 mod handlers_branding;
+mod handlers_exercise_settings;
 mod handlers_assets;
 mod handlers_dependencies;
 mod handlers_library;
@@ -295,6 +296,11 @@ async fn main() {
         .route(
             "/organization/branding",
             axum::routing::put(handlers_branding::update_organization_branding),
+        )
+        .route(
+            "/organization/exercise-settings",
+            get(handlers_exercise_settings::get_organization_exercise_settings)
+                .put(handlers_exercise_settings::update_organization_exercise_settings),
         )
         // Rutas de librerías de contenido
         .route(

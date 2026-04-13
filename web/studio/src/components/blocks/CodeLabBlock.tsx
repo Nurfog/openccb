@@ -14,6 +14,7 @@ interface CodeLabBlockProps {
     test_cases?: { description: string; expected: string }[];
     editMode: boolean;
     lessonId: string;
+    aiGenerationEnabled?: boolean;
     onChange: (updates: {
         title?: string;
         language?: string;
@@ -34,12 +35,17 @@ export default function CodeLabBlock({
     test_cases = [],
     editMode,
     lessonId,
+    aiGenerationEnabled = true,
     onChange
 }: CodeLabBlockProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [promptHint, setPromptHint] = useState("");
 
     const handleGenerateAI = async () => {
+        if (!aiGenerationEnabled) {
+            alert("Code Lab está desactivado para esta organización.");
+            return;
+        }
         setIsGenerating(true);
         try {
             const data = await cmsApi.generateCodeLab(lessonId, {
@@ -157,15 +163,21 @@ export default function CodeLabBlock({
 
                         <div className="pt-6 border-t border-slate-100 dark:border-white/5 space-y-4">
                             <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">Generación con IA</h4>
+                            {!aiGenerationEnabled && (
+                                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+                                    Code Lab está desactivado para esta organización. Puedes seguir editando el bloque manualmente.
+                                </div>
+                            )}
                             <textarea
                                 value={promptHint}
                                 onChange={(e) => setPromptHint(e.target.value)}
                                 placeholder="Ej. Crea un ejercicio sobre bucles for que use una lista de tareas..."
-                                className="w-full bg-slate-50 dark:bg-black/40 border border-slate-100 dark:border-white/10 rounded-2xl px-6 py-4 text-sm text-slate-700 dark:text-gray-300 min-h-[80px] outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                                className="w-full bg-slate-50 dark:bg-black/40 border border-slate-100 dark:border-white/10 rounded-2xl px-6 py-4 text-sm text-slate-700 dark:text-gray-300 min-h-[80px] outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all disabled:opacity-60"
+                                disabled={!aiGenerationEnabled}
                             />
                             <button
                                 onClick={handleGenerateAI}
-                                disabled={isGenerating}
+                                disabled={isGenerating || !aiGenerationEnabled}
                                 className="flex w-full justify-center items-center gap-2 px-6 py-4 bg-indigo-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-50 shadow-xl shadow-indigo-500/20"
                             >
                                 {isGenerating ? <Loader2 className="animate-spin" size={16} /> : <Wand2 size={16} />}

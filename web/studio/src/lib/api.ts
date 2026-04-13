@@ -269,6 +269,17 @@ export interface BrandingResponse {
     secondary_color: string;
 }
 
+export interface OrganizationExerciseSettings {
+    organization_id: string;
+    audio_response_enabled: boolean;
+    hotspot_enabled: boolean;
+    memory_match_enabled: boolean;
+    peer_review_enabled: boolean;
+    role_playing_enabled: boolean;
+    mermaid_enabled: boolean;
+    code_lab_enabled: boolean;
+}
+
 export interface User {
     id: string;
     email: string;
@@ -863,6 +874,9 @@ export const cmsApi = {
     },
     getSSOConfig: (): Promise<OrganizationSSOConfig> => apiFetch('/organization/sso'),
     updateSSOConfig: (payload: Partial<OrganizationSSOConfig>): Promise<void> => apiFetch('/organization/sso', { method: 'PUT', body: JSON.stringify(payload) }),
+    getOrganizationExerciseSettings: (): Promise<OrganizationExerciseSettings> => apiFetch('/organization/exercise-settings'),
+    updateOrganizationExerciseSettings: (payload: Omit<OrganizationExerciseSettings, 'organization_id'>): Promise<OrganizationExerciseSettings> =>
+        apiFetch('/organization/exercise-settings', { method: 'PUT', body: JSON.stringify(payload) }),
 
     // Auth
     register: (payload: AuthPayload): Promise<AuthResponse> => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),

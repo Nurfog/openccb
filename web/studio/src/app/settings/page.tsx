@@ -1,6 +1,7 @@
 "use client";
 
 import BrandingSettings from "@/components/BrandingSettings";
+import ExerciseFeatureSettings from "@/components/ExerciseFeatureSettings";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -22,10 +23,13 @@ export default function SettingsPage() {
     return (
         <PageLayout
             title="Configuración de Organización"
-            description="Gestiona el branding y la identidad de tu plataforma."
+            description="Gestiona el branding y la disponibilidad de ejercicios de tu plataforma."
             maxWidth="narrow"
         >
-            <BrandingSettings />
+            <div className="space-y-8">
+                <BrandingSettings />
+                <ExerciseFeatureSettings />
+            </div>
         </PageLayout>
     );
 }

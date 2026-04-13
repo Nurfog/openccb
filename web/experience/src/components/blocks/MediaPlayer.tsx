@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Play, Lock, AlertCircle } from "lucide-react";
-import { lmsApi, getCmsApiUrl } from "@/lib/api";
+import { lmsApi, getCmsApiUrl, getImageUrl } from "@/lib/api";
 
 interface MediaPlayerProps {
     id: string;
@@ -49,7 +49,9 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
 
 
     const getFullUrl = (path: string) => {
-        if (path.startsWith('http')) return path;
+        if (path.startsWith('http') || path.startsWith('s3://') || path.startsWith('org/')) {
+            return getImageUrl(path);
+        }
         // Map /uploads to /assets for the backend
         const cleanPath = path.startsWith('/uploads') ? path.replace('/uploads', '/assets') : path;
         const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;

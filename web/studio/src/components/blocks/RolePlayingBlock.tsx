@@ -8,12 +8,17 @@ interface RolePlayingBlockProps {
     block: Block;
     onUpdate: (updates: Partial<Block>) => void;
     lessonId: string;
+    aiGenerationEnabled?: boolean;
 }
 
-export default function RolePlayingBlock({ block, onUpdate, lessonId }: RolePlayingBlockProps) {
+export default function RolePlayingBlock({ block, onUpdate, lessonId, aiGenerationEnabled = true }: RolePlayingBlockProps) {
     const [isGenerating, setIsGenerating] = useState(false);
 
     const handleGenerateAI = async () => {
+        if (!aiGenerationEnabled) {
+            alert("Role Playing está desactivado para esta organización.");
+            return;
+        }
         setIsGenerating(true);
         try {
             const data = await cmsApi.generateRolePlay(lessonId, {});
@@ -47,7 +52,7 @@ export default function RolePlayingBlock({ block, onUpdate, lessonId }: RolePlay
                 </div>
                 <button
                     onClick={handleGenerateAI}
-                    disabled={isGenerating}
+                    disabled={isGenerating || !aiGenerationEnabled}
                     className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-all disabled:opacity-50 shadow-lg shadow-indigo-500/20"
                 >
                     {isGenerating ? <Loader2 className="animate-spin" size={14} /> : <Wand2 size={14} />}

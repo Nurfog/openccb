@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { cmsApi, Lesson, Block, GradingCategory, LibraryBlock, Rubric, RubricLevel, RubricCriterion, LessonDependency, getImageUrl, generateUUID } from '@/lib/api';
+import { cmsApi, Lesson, Block, GradingCategory, LibraryBlock, Rubric, RubricLevel, RubricCriterion, LessonDependency, OrganizationExerciseSettings, getImageUrl, generateUUID } from '@/lib/api';
 import {
     Layout,
     CheckCircle2,
@@ -45,6 +45,17 @@ import Modal from "@/components/Modal";
 import MediaPlayer from "@/components/MediaPlayer";
 
 export default function LessonEditor({ params }: { params: { id: string; lessonId: string } }) {
+    const defaultExerciseSettings: OrganizationExerciseSettings = {
+        organization_id: "",
+        audio_response_enabled: true,
+        hotspot_enabled: true,
+        memory_match_enabled: true,
+        peer_review_enabled: true,
+        role_playing_enabled: true,
+        mermaid_enabled: false,
+        code_lab_enabled: true,
+    };
+
     const [lesson, setLesson] = useState<Lesson | null>(null);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -82,6 +93,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
     const [isAIQuizModalOpen, setIsAIQuizModalOpen] = useState(false);
     const [aiQuizContext, setAiQuizContext] = useState("");
     const [aiQuizType, setAiQuizType] = useState("multiple-choice");
+    const [exerciseSettings, setExerciseSettings] = useState<OrganizationExerciseSettings>(defaultExerciseSettings);
 
     const [editValue, setEditValue] = useState("");
 
@@ -92,8 +104,12 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
         const loadData = async () => {
             try {
                 // Use cmsApi for consistency
-                const lessonData = await cmsApi.getLesson(params.lessonId);
+                const [lessonData, orgExerciseSettings] = await Promise.all([
+                    cmsApi.getLesson(params.lessonId),
+                    cmsApi.getOrganizationExerciseSettings(),
+                ]);
                 setLesson(lessonData);
+                setExerciseSettings(orgExerciseSettings);
                 setSummary(lessonData.summary || "");
                 setIsGraded(lessonData.is_graded || false);
                 setSelectedCategoryId(lessonData.grading_category_id || "");
@@ -150,6 +166,12 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
         };
         loadData();
     }, [params.id, params.lessonId]);
+
+    useEffect(() => {
+        if (!exerciseSettings.role_playing_enabled && aiQuizType === 'role-playing') {
+            setAiQuizType('multiple-choice');
+        }
+    }, [exerciseSettings.role_playing_enabled, aiQuizType]);
 
     const handleSaveLessonTitle = async () => {
         if (!lesson || !editValue) return;
@@ -220,6 +242,20 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
     };
 
     const addBlock = (type: Block['type']) => {
+        const blockedBySettings =
+            (type === 'audio-response' && !exerciseSettings.audio_response_enabled) ||
+            (type === 'hotspot' && !exerciseSettings.hotspot_enabled) ||
+            (type === 'memory-match' && !exerciseSettings.memory_match_enabled) ||
+            (type === 'peer-review' && !exerciseSettings.peer_review_enabled) ||
+            (type === 'role-playing' && !exerciseSettings.role_playing_enabled) ||
+            (type === 'mermaid' && !exerciseSettings.mermaid_enabled) ||
+            (type === 'code-lab' && !exerciseSettings.code_lab_enabled);
+
+        if (blockedBySettings) {
+            alert('Este tipo de ejercicio está desactivado para tu organización.');
+            return;
+        }
+
         const newBlock: Block = {
             id: generateUUID(),
             type,
@@ -338,6 +374,9 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
         setIsGeneratingQuiz(true);
         try {
             if (aiQuizType === 'role-playing') {
+                if (!exerciseSettings.role_playing_enabled) {
+                    throw new Error('Role Playing está desactivado para esta organización.');
+                }
                 const data = await cmsApi.generateRolePlay(lesson.id, {
                     prompt_hint: aiQuizContext
                 });
@@ -1074,6 +1113,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                     editMode={editMode}
                                     courseId={params.id}
                                     lessonId={params.lessonId}
+                                    aiGenerationEnabled={exerciseSettings.hotspot_enabled}
                                     onChange={(updates) => updateBlock(block.id, updates)}
                                 />
                             )}
@@ -1105,6 +1145,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                     editMode={editMode}
                                     lessonId={lesson.id}
                                     courseId={params.id}
+                                    aiGenerationEnabled={exerciseSettings.mermaid_enabled}
                                     onChange={(updates) => updateBlock(block.id, updates)}
                                 />
                             )}
@@ -1112,6 +1153,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 <RolePlayingBlock
                                     block={block}
                                     lessonId={params.lessonId}
+                                    aiGenerationEnabled={exerciseSettings.role_playing_enabled}
                                     onUpdate={(updates) => updateBlock(block.id, updates)}
                                 />
                             )}
@@ -1126,6 +1168,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                     test_cases={block.test_cases}
                                     editMode={editMode}
                                     lessonId={params.lessonId}
+                                    aiGenerationEnabled={exerciseSettings.code_lab_enabled}
                                     onChange={(updates) => updateBlock(block.id, updates)}
                                 />
                             )}
@@ -1167,12 +1210,13 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                     { type: 'matching', icon: '🔗', label: 'Relations', color: 'violet' },
                                     { type: 'ordering', icon: '🔢', label: 'Sequence', color: 'blue' },
                                     { type: 'short-answer', icon: '💬', label: 'Open-Ended', color: 'indigo' },
-                                    { type: 'hotspot', icon: '🎯', label: 'Hotspot', color: 'amber' },
-                                    { type: 'audio-response', icon: '🎤', label: 'Oral Practice', color: 'blue' },
-                                    { type: 'memory-match', icon: '🧩', label: 'Logic Game', color: 'indigo' },
-                                    { type: 'peer-review', icon: '👥', label: 'Peer Review', color: 'slate' },
-                                    { type: 'mermaid', icon: '📊', label: 'Mermaid Diagram', color: 'indigo' },
-                                    { type: 'role-playing', icon: '🎭', label: 'Role-Playing AI', color: 'purple' },
+                                    ...(exerciseSettings.hotspot_enabled ? [{ type: 'hotspot', icon: '🎯', label: 'Hotspot', color: 'amber' }] : []),
+                                    ...(exerciseSettings.audio_response_enabled ? [{ type: 'audio-response', icon: '🎤', label: 'Oral Practice', color: 'blue' }] : []),
+                                    ...(exerciseSettings.memory_match_enabled ? [{ type: 'memory-match', icon: '🧩', label: 'Logic Game', color: 'indigo' }] : []),
+                                    ...(exerciseSettings.peer_review_enabled ? [{ type: 'peer-review', icon: '👥', label: 'Peer Review', color: 'slate' }] : []),
+                                    ...(exerciseSettings.mermaid_enabled ? [{ type: 'mermaid', icon: '📊', label: 'Mermaid Diagram', color: 'indigo' }] : []),
+                                    ...(exerciseSettings.role_playing_enabled ? [{ type: 'role-playing', icon: '🎭', label: 'Role-Playing AI', color: 'purple' }] : []),
+                                    ...(exerciseSettings.code_lab_enabled ? [{ type: 'code-lab', icon: '💻', label: 'Code Lab', color: 'slate' }] : []),
                                 ].map((item) => (
                                     <button
                                         key={item.type}
@@ -1265,7 +1309,9 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                 <option value="vocabulary">Lexical Focus / Vocab</option>
                                 <option value="grammar">Structural / Grammar Focus</option>
                                 <option value="memory-match">Conceptual Memory Match</option>
-                                <option value="role-playing">AI Role-Playing Simulation</option>
+                                {exerciseSettings.role_playing_enabled && (
+                                    <option value="role-playing">AI Role-Playing Simulation</option>
+                                )}
                             </select>
                             <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                                 <ChevronDown size={18} />

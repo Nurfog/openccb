@@ -15,7 +15,7 @@ import {
     Mic,
     FileArchive,
     Gauge,
-    MessageSquareQuestion
+    MessageSquare
 } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -26,7 +26,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { icon: Building2, label: "Organizations", href: "/admin" },
         { icon: Users, label: "Users", href: "/admin/users" },
         { icon: Gauge, label: "Tokens IA", href: "/admin/token-usage" },
-        { icon: MessageSquareQuestion, label: "FAQ Moderation", href: "/admin/faq-review" },
+        { icon: MessageSquare, label: "FAQ Moderation", href: "/admin/faq-review" },
         { icon: FileArchive, label: "Material Compartido", href: "/admin/materials" },
         { icon: Mic, label: "Audio Evaluations", href: "/admin/audio-evaluations" },
         { icon: ClipboardList, label: "Audit Logs", href: "/admin/audit" },

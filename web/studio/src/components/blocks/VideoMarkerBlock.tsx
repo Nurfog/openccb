@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Clock, Plus, Trash2, Play, AlertCircle } from "lucide-react";
 import MediaPlayer from "../MediaPlayer";
+import FileUpload from "../FileUpload";
+import { getImageUrl } from "@/lib/api";
 
 interface VideoMarker {
     timestamp: number;
@@ -15,7 +17,7 @@ interface VideoMarkerBlockProps {
     title: string;
     videoUrl: string;
     markers: VideoMarker[];
-    onChange: (updates: { title?: string; markers?: VideoMarker[] }) => void;
+    onChange: (updates: { title?: string; url?: string; markers?: VideoMarker[] }) => void;
     editMode: boolean;
     isGraded?: boolean;
 }
@@ -30,6 +32,13 @@ export default function VideoMarkerBlock({
 }: VideoMarkerBlockProps) {
     const [currentTime, setCurrentTime] = useState(0);
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
+    const [sourceType, setSourceType] = useState<"url" | "upload">(
+        (videoUrl.startsWith("/assets/") || videoUrl.includes("/assets/") || videoUrl.startsWith("s3://") || /^org\/.+/.test(videoUrl))
+            ? "upload"
+            : "url"
+    );
+
+    const displayVideoUrl = getImageUrl(videoUrl);
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -46,6 +55,11 @@ export default function VideoMarkerBlock({
     };
 
     const addMarker = () => {
+        if (!videoUrl) {
+            alert("Primero agrega o sube un video para poder insertar marcadores.");
+            return;
+        }
+
         const newMarker: VideoMarker = {
             timestamp: currentTime,
             question: "Nueva pregunta",
@@ -119,6 +133,45 @@ export default function VideoMarkerBlock({
                 />
             </div>
 
+            <div className="space-y-6 p-8 bg-white dark:bg-white/5 border border-indigo-500/10 dark:border-indigo-500/20 rounded-[2rem] shadow-sm">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setSourceType("url")}
+                        className={`px-6 py-2 text-[10px] uppercase font-black tracking-[0.2em] rounded-xl transition-all border ${sourceType === "url" ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/30" : "bg-slate-50 dark:bg-white/5 text-slate-400 dark:text-gray-500 border-slate-100 hover:border-slate-200"}`}
+                    >
+                        External Stream
+                    </button>
+                    <button
+                        onClick={() => setSourceType("upload")}
+                        className={`px-6 py-2 text-[10px] uppercase font-black tracking-[0.2em] rounded-xl transition-all border ${sourceType === "upload" ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/30" : "bg-slate-50 dark:bg-white/5 text-slate-400 dark:text-gray-500 border-slate-100 hover:border-slate-200"}`}
+                    >
+                        Direct Asset
+                    </button>
+                </div>
+
+                {sourceType === "url" ? (
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest pl-1">Video Source</label>
+                        <input
+                            type="text"
+                            value={videoUrl.startsWith("/") ? "" : videoUrl}
+                            onChange={(e) => onChange({ url: e.target.value })}
+                            placeholder="YouTube, Vimeo or direct video URL"
+                            className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none shadow-inner"
+                        />
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest pl-1">Video Upload</label>
+                        <FileUpload
+                            currentUrl={videoUrl.startsWith("/") ? videoUrl : undefined}
+                            accept="video/*"
+                            onUploadComplete={(newUrl) => onChange({ url: newUrl })}
+                        />
+                    </div>
+                )}
+            </div>
+
             {/* Video Preview with Timeline */}
             <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 p-6 rounded-[3rem] space-y-6 shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2"></div>
@@ -132,7 +185,7 @@ export default function VideoMarkerBlock({
 
                 <div className="rounded-[2rem] overflow-hidden border border-slate-100 dark:border-white/10 shadow-2xl relative z-10">
                     <MediaPlayer
-                        src={videoUrl}
+                        src={displayVideoUrl}
                         type="video"
                         isGraded={isGraded}
                         showInteractive={false}

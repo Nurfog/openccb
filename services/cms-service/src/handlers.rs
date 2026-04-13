@@ -1,10 +1,17 @@
 use crate::exporter;
+use crate::handlers_exercise_settings::load_organization_exercise_settings;
 use crate::webhooks::WebhookService;
 pub mod tasks;
 use axum::{
     Json,
     extract::{Path, Query, State},
     http::StatusCode,
+};
+use aws_config::BehaviorVersion;
+use aws_config::meta::region::RegionProviderChain;
+use aws_sdk_s3::{
+    Client as S3Client,
+    config::{Credentials, Region},
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
 use chrono::{DateTime, Utc};
@@ -29,6 +36,21 @@ use openidconnect::{
     AuthenticationFlow, AuthorizationCode, ClientId, ClientSecret, CsrfToken, IssuerUrl, Nonce,
     RedirectUrl, Scope, TokenResponse,
 };
+
+async fn is_org_exercise_enabled(
+    pool: &PgPool,
+    organization_id: Uuid,
+    feature: &str,
+) -> Result<bool, StatusCode> {
+    let settings = load_organization_exercise_settings(pool, organization_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to load exercise settings for org {}: {}", organization_id, e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(settings.is_enabled(feature))
+}
 
 #[derive(Deserialize)]
 pub struct SSOCallbackParams {
@@ -61,6 +83,126 @@ fn count_tokens(text: &str) -> i32 {
     let char_count = text.len();
     // Estimación de OpenAI: ~4 caracteres por token
     ((char_count as f64) / 4.0).ceil() as i32
+}
+
+#[derive(Debug, Clone)]
+struct HotspotS3Settings {
+    region: String,
+    endpoint: Option<String>,
+    force_path_style: bool,
+}
+
+fn get_hotspot_s3_settings() -> Option<HotspotS3Settings> {
+    let enabled = env::var("ASSETS_STORAGE")
+        .unwrap_or_else(|_| "local".to_string())
+        .to_lowercase();
+
+    if enabled != "s3" {
+        return None;
+    }
+
+    let region = env::var("S3_REGION").unwrap_or_else(|_| "us-east-2".to_string());
+    let endpoint = env::var("S3_ENDPOINT").ok().filter(|v| !v.trim().is_empty());
+    let force_path_style = env::var("S3_FORCE_PATH_STYLE")
+        .map(|v| {
+            let lower = v.to_lowercase();
+            lower == "1" || lower == "true" || lower == "yes"
+        })
+        .unwrap_or(false);
+
+    Some(HotspotS3Settings {
+        region,
+        endpoint,
+        force_path_style,
+    })
+}
+
+async fn build_hotspot_s3_client(settings: &HotspotS3Settings) -> Result<S3Client, StatusCode> {
+    let region_provider = RegionProviderChain::first_try(Some(Region::new(settings.region.clone())))
+        .or_default_provider();
+
+    let mut loader = aws_config::defaults(BehaviorVersion::latest()).region(region_provider);
+
+    let access_key = env::var("AWS_ACCESS_KEY_ID").ok();
+    let secret_key = env::var("AWS_SECRET_ACCESS_KEY").ok();
+    if let (Some(ak), Some(sk)) = (access_key, secret_key) {
+        let creds = Credentials::new(ak, sk, None, None, "env");
+        loader = loader.credentials_provider(creds);
+    }
+
+    let shared_config = loader.load().await;
+    let mut s3_builder = aws_sdk_s3::config::Builder::from(&shared_config);
+    if let Some(endpoint) = &settings.endpoint {
+        s3_builder = s3_builder.endpoint_url(endpoint);
+    }
+    if settings.force_path_style {
+        s3_builder = s3_builder.force_path_style(true);
+    }
+
+    Ok(S3Client::from_conf(s3_builder.build()))
+}
+
+fn parse_hotspot_s3_proxy_path(path: &str) -> Option<(String, String)> {
+    let normalized = path.trim_start_matches('/');
+    let remainder = normalized
+        .strip_prefix("cms-api/api/assets/s3-proxy/")
+        .or_else(|| normalized.strip_prefix("api/assets/s3-proxy/"))?;
+
+    let mut parts = remainder.splitn(2, '/');
+    let bucket = parts.next()?.trim();
+    let key = parts.next()?.trim();
+    if bucket.is_empty() || key.is_empty() {
+        return None;
+    }
+
+    Some((bucket.to_string(), key.to_string()))
+}
+
+fn parse_hotspot_s3_uri(path: &str) -> Option<(String, String)> {
+    let remainder = path.strip_prefix("s3://")?;
+    let mut parts = remainder.splitn(2, '/');
+    let bucket = parts.next()?.trim();
+    let key = parts.next()?.trim();
+    if bucket.is_empty() || key.is_empty() {
+        return None;
+    }
+
+    Some((bucket.to_string(), key.to_string()))
+}
+
+async fn read_hotspot_s3_proxy_bytes(path: &str) -> Result<Option<(Vec<u8>, String)>, StatusCode> {
+    let s3_ref = parse_hotspot_s3_proxy_path(path).or_else(|| parse_hotspot_s3_uri(path));
+    let Some((bucket, key)) = s3_ref else {
+        return Ok(None);
+    };
+
+    let Some(settings) = get_hotspot_s3_settings() else {
+        tracing::warn!("Hotspot received S3 proxy path but ASSETS_STORAGE is not configured for S3: {}", path);
+        return Err(StatusCode::NOT_FOUND);
+    };
+
+    let client = build_hotspot_s3_client(&settings).await?;
+    let output = client
+        .get_object()
+        .bucket(&bucket)
+        .key(&key)
+        .send()
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to read hotspot image from S3 {}/{}: {}", bucket, key, e);
+            StatusCode::BAD_GATEWAY
+        })?;
+
+    let bytes = output.body.collect().await.map_err(|e| {
+        tracing::error!("Failed to collect hotspot image body from S3 {}/{}: {}", bucket, key, e);
+        StatusCode::BAD_GATEWAY
+    })?;
+
+    let mime = mime_guess::from_path(&key)
+        .first_or_octet_stream()
+        .to_string();
+
+    Ok(Some((bytes.into_bytes().to_vec(), mime)))
 }
 
 pub async fn publish_course(
@@ -1879,19 +2021,29 @@ pub async fn reorder_lessons(
 
 #[derive(Deserialize)]
 pub struct GenerateMermaidPayload {
+    #[allow(dead_code)]
     pub prompt_hint: Option<String>,
 }
 
 pub async fn generate_mermaid_diagram(
     Org(org_ctx): Org,
-    _claims: Claims,
+    claims: Claims,
     State(pool): State<PgPool>,
     Path(lesson_id): Path<Uuid>,
     Json(payload): Json<GenerateMermaidPayload>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    if !is_org_exercise_enabled(&pool, org_ctx.id, "mermaid")
+        .await
+        .map_err(|status| (status, "No se pudo validar la configuración de Mermaid".to_string()))?
+    {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "La generación de diagramas Mermaid está desactivada para esta organización".to_string(),
+        ));
+    }
+
     tracing::info!("Generating Mermaid Diagram for lesson_id={}", lesson_id);
 
-    // Fetch lesson for context
     let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
         .bind(lesson_id)
         .bind(org_ctx.id)
@@ -1972,19 +2124,17 @@ pub async fn generate_mermaid_diagram(
         .unwrap_or("")
         .trim();
 
-    // Clean any accidental markdown backticks the LLM might have still inserted
     let cleaned_response = ai_response
         .strip_prefix("```mermaid\n").unwrap_or(ai_response)
         .strip_prefix("```\n").unwrap_or(ai_response)
         .strip_suffix("```").unwrap_or(ai_response).trim();
 
-    // Calculate and log token usage
     let input_tokens = count_tokens(&system_prompt) + count_tokens("Genera el código Mermaid directamente.");
     let output_tokens = count_tokens(cleaned_response);
     let total_tokens = input_tokens + output_tokens;
 
     let _ = sqlx::query("SELECT log_ai_usage($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)")
-        .bind(_claims.sub)
+        .bind(claims.sub)
         .bind(org_ctx.id)
         .bind(total_tokens)
         .bind(input_tokens)
@@ -1996,8 +2146,8 @@ pub async fn generate_mermaid_diagram(
             "lesson_id": lesson_id,
             "hint": payload.prompt_hint,
         }))
-        .bind(&system_prompt)  // prompt
-        .bind(cleaned_response)  // response
+        .bind(&system_prompt)
+        .bind(cleaned_response)
         .execute(&pool)
         .await;
 
@@ -2019,6 +2169,16 @@ pub async fn generate_code_lab(
     Path(lesson_id): Path<Uuid>,
     Json(payload): Json<GenerateCodeLabPayload>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    if !is_org_exercise_enabled(&pool, org_ctx.id, "code-lab")
+        .await
+        .map_err(|status| (status, "No se pudo validar la configuración de Code Lab".to_string()))?
+    {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Code Lab está desactivado para esta organización".to_string(),
+        ));
+    }
+
     tracing::info!("Generating Code Lab for lesson_id={}", lesson_id);
 
     let lesson = sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = $1 AND organization_id = $2")
@@ -2159,28 +2319,128 @@ pub async fn generate_hotspots(
     Path(lesson_id): Path<Uuid>,
     Json(payload): Json<GenerateHotspotsPayload>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
+    if !is_org_exercise_enabled(&pool, org_ctx.id, "hotspot").await? {
+        return Err(StatusCode::SERVICE_UNAVAILABLE);
+    }
+
     // Check token limit before proceeding (estimate 2000 tokens for hotspots)
     if let Err(_) = common::token_limits::check_ai_token_limit(&pool, claims.sub, 2000).await {
         return Err(StatusCode::TOO_MANY_REQUESTS);
     }
     
     // 1. Resolve image path
-    // imageUrl in frontend is like "/assets/filename.ext"
-    // We need to map it to "uploads/filename.ext"
-    let filename = payload.image_url.split('/').last().unwrap_or_default();
-    if filename.is_empty() {
+    // Accept common formats used by Studio:
+    // - /assets/<key>
+    // - /uploads/<key>
+    // - assets/<key>
+    // - uploads/<key>
+    // - absolute URLs (we use only their path component)
+    let raw_input = payload.image_url.trim();
+    if raw_input.is_empty() {
         return Err(StatusCode::BAD_REQUEST);
     }
-    let storage_path = format!("uploads/{}", filename);
+
+    let is_absolute_url = raw_input.starts_with("http://") || raw_input.starts_with("https://");
+    let mut path_only = if is_absolute_url {
+        match reqwest::Url::parse(raw_input) {
+            Ok(url) => url.path().to_string(),
+            Err(_) => raw_input.to_string(),
+        }
+    } else {
+        raw_input.to_string()
+    };
+
+    if let Some((without_query, _)) = path_only.split_once('?') {
+        path_only = without_query.to_string();
+    }
+
+    let mut storage_path = if let Some(rest) = path_only.strip_prefix("/assets/") {
+        format!("uploads/{}", rest)
+    } else if let Some(rest) = path_only.strip_prefix("assets/") {
+        format!("uploads/{}", rest)
+    } else if let Some(rest) = path_only.strip_prefix("/uploads/") {
+        format!("uploads/{}", rest)
+    } else if path_only.starts_with("uploads/") {
+        path_only.clone()
+    } else {
+        let filename = path_only.split('/').last().unwrap_or_default();
+        if filename.is_empty() {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+        format!("uploads/{}", filename)
+    };
+
+    storage_path = storage_path.replace('\\', "/");
+    if storage_path.contains("..") {
+        tracing::warn!("Invalid hotspot image path traversal attempt: {}", storage_path);
+        return Err(StatusCode::BAD_REQUEST);
+    }
 
     // 2. Read and encode image
-    let image_data = tokio::fs::read(&storage_path).await.map_err(|e| {
-        tracing::error!("Failed to read image at {}: {}", storage_path, e);
-        StatusCode::NOT_FOUND
-    })?;
+    // Prefer direct HTTP fetch for absolute URLs (e.g. /api/assets/s3-proxy),
+    // and fallback to local disk resolution for legacy /assets/* and uploads/* paths.
+    let (image_data, mime_type) = if is_absolute_url {
+        match reqwest::get(raw_input).await {
+            Ok(response) if response.status().is_success() => {
+                let content_type = response
+                    .headers()
+                    .get(reqwest::header::CONTENT_TYPE)
+                    .and_then(|h| h.to_str().ok())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| {
+                        mime_guess::from_path(&path_only)
+                            .first_or_octet_stream()
+                            .to_string()
+                    });
+
+                let bytes = response.bytes().await.map_err(|e| {
+                    tracing::error!("Failed to read hotspot image bytes from {}: {}", raw_input, e);
+                    StatusCode::BAD_GATEWAY
+                })?;
+
+                (bytes.to_vec(), content_type)
+            }
+            Ok(response) => {
+                tracing::warn!(
+                    "Hotspot image URL {} returned non-success status {}. Falling back to local path {}",
+                    raw_input,
+                    response.status(),
+                    storage_path
+                );
+                let bytes = tokio::fs::read(&storage_path).await.map_err(|e| {
+                    tracing::error!("Failed to read image at {}: {}", storage_path, e);
+                    StatusCode::NOT_FOUND
+                })?;
+                let mime = mime_guess::from_path(&storage_path).first_or_octet_stream().to_string();
+                (bytes, mime)
+            }
+            Err(err) => {
+                tracing::warn!(
+                    "Hotspot image URL fetch failed for {}: {}. Falling back to local path {}",
+                    raw_input,
+                    err,
+                    storage_path
+                );
+                let bytes = tokio::fs::read(&storage_path).await.map_err(|e| {
+                    tracing::error!("Failed to read image at {}: {}", storage_path, e);
+                    StatusCode::NOT_FOUND
+                })?;
+                let mime = mime_guess::from_path(&storage_path).first_or_octet_stream().to_string();
+                (bytes, mime)
+            }
+        }
+    } else if let Some((bytes, mime)) = read_hotspot_s3_proxy_bytes(&path_only).await? {
+        (bytes, mime)
+    } else {
+        let bytes = tokio::fs::read(&storage_path).await.map_err(|e| {
+            tracing::error!("Failed to read image at {}: {}", storage_path, e);
+            StatusCode::NOT_FOUND
+        })?;
+        let mime = mime_guess::from_path(&storage_path).first_or_octet_stream().to_string();
+        (bytes, mime)
+    };
 
     let base64_image = general_purpose::STANDARD.encode(image_data);
-    let mime_type = mime_guess::from_path(&storage_path).first_or_octet_stream().to_string();
     let image_url_data = format!("data:{};base64,{}", mime_type, base64_image);
 
     // 3. Fetch lesson context (optional but helpful for AI)
@@ -2372,6 +2632,10 @@ pub async fn generate_role_play(
     Path(lesson_id): Path<Uuid>,
     Json(payload): Json<GenerateRolePlayPayload>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
+    if !is_org_exercise_enabled(&pool, org_ctx.id, "role-playing").await? {
+        return Err(StatusCode::SERVICE_UNAVAILABLE);
+    }
+
     // Check token limit before proceeding (estimate 2500 tokens for role-play)
     if let Err(_) = common::token_limits::check_ai_token_limit(&pool, claims.sub, 2500).await {
         return Err(StatusCode::TOO_MANY_REQUESTS);

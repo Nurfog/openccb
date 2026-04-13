@@ -27,7 +27,59 @@ export const getCmsApiUrl = () => {
 
 export const getImageUrl = (path?: string) => {
     if (!path) return '';
-    if (path.startsWith('http')) return path;
+    if (path.startsWith('http')) {
+        // Avoid browser CORS issues with private S3 objects by proxying through CMS.
+        try {
+            const parsed = new URL(path);
+            const host = parsed.hostname;
+            const isAwsS3 = host.includes('.s3.') || host.endsWith('.amazonaws.com');
+            if (isAwsS3) {
+                const key = parsed.pathname.replace(/^\//, '');
+                let bucket = '';
+
+                // virtual-host style: <bucket>.s3.<region>.amazonaws.com
+                if (host.includes('.s3.')) {
+                    bucket = host.split('.s3.')[0];
+                } else {
+                    // path-style: s3.<region>.amazonaws.com/<bucket>/<key>
+                    const [first, ...rest] = key.split('/');
+                    if (first && rest.length) {
+                        bucket = first;
+                        const normalizedKey = rest.join('/');
+                        return `${getCmsApiUrl()}/api/assets/s3-proxy/${encodeURIComponent(bucket)}/${normalizedKey}`;
+                    }
+                }
+
+                if (bucket && key) {
+                    return `${getCmsApiUrl()}/api/assets/s3-proxy/${encodeURIComponent(bucket)}/${key}`;
+                }
+            }
+        } catch {
+            // Ignore URL parsing errors and fallback to original path.
+        }
+
+        return path;
+    }
+
+    // Handle persisted S3 URI format: s3://bucket/key
+    if (path.startsWith('s3://')) {
+        const withoutScheme = path.slice(5);
+        const firstSlash = withoutScheme.indexOf('/');
+        if (firstSlash > 0) {
+            const bucket = withoutScheme.slice(0, firstSlash);
+            const key = withoutScheme.slice(firstSlash + 1);
+            if (bucket && key) {
+                return `${getCmsApiUrl()}/api/assets/s3-proxy/${encodeURIComponent(bucket)}/${key}`;
+            }
+        }
+    }
+
+    // Handle plain object keys when stored directly in DB.
+    if (/^org\/.+/.test(path)) {
+        const defaultBucket = process.env.NEXT_PUBLIC_S3_BUCKET || 'openccb-802726101181-us-east-2-an';
+        return `${getCmsApiUrl()}/api/assets/s3-proxy/${encodeURIComponent(defaultBucket)}/${path.replace(/^\//, '')}`;
+    }
+
     const cleanPath = path.startsWith('/uploads') ? path.replace('/uploads', '/assets') : path;
     const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
     return `${getCmsApiUrl()}${finalPath}`;
