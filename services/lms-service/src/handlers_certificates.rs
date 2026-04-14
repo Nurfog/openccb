@@ -39,6 +39,17 @@ pub struct IssueCertificateRequest {
     pub force_reissue: Option<bool>, // Para re-emitir si ya existe
 }
 
+#[derive(sqlx::FromRow)]
+struct CertificateRecord {
+    id: Uuid,
+    user_id: Uuid,
+    course_id: Uuid,
+    certificate_html: String,
+    issued_at: chrono::DateTime<chrono::Utc>,
+    verification_code: String,
+    metadata: serde_json::Value,
+}
+
 // ============= Handlers =============
 
 /// GET /courses/{id}/certificate
@@ -52,12 +63,12 @@ pub async fn get_certificate(
     let user_id = claims.sub;
 
     // 1. Verificar si la organización tiene certificados habilitados
-    let org_certificates_enabled = sqlx::query!(
+    let org_certificates_enabled = sqlx::query(
         "SELECT certificates_enabled FROM organizations WHERE id = (
             SELECT organization_id FROM courses WHERE id = $1
-        )",
-        course_id
+        )"
     )
+    .bind(course_id)
     .fetch_optional(&pool)
     .await
     .map_err(|e| {
@@ -81,7 +92,7 @@ pub async fn get_certificate(
     }
 
     // 2. Verificar si ya existe un certificado emitido
-    let existing_cert = sqlx::query!(
+    let existing_cert = sqlx::query_as::<_, CertificateRecord>(
         r#"
         SELECT 
             ic.id,
@@ -93,10 +104,10 @@ pub async fn get_certificate(
             ic.metadata
         FROM issued_certificates ic
         WHERE ic.user_id = $1 AND ic.course_id = $2
-        "#,
-        user_id,
-        course_id
+        "#
     )
+    .bind(user_id)
+    .bind(course_id)
     .fetch_optional(&pool)
     .await
     .map_err(|e| {
@@ -516,23 +527,24 @@ async fn issue_certificate_internal(
         "organization_id": course_data.organization_id.to_string(),
     });
 
-    let issued_cert = sqlx::query!(
+    use sqlx::Row;
+    let issued_cert = sqlx::query(
         r#"
         INSERT INTO issued_certificates 
             (user_id, course_id, certificate_html, certificate_hash, verification_code, metadata)
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING id, issued_at
-        "#,
-        user_id,
-        course_id,
-        certificate_html,
-        certificate_hash,
-        verification_code,
-        metadata
+        "#
     )
+    .bind(user_id)
+    .bind(course_id)
+    .bind(certificate_html)
+    .bind(certificate_hash)
+    .bind(verification_code)
+    .bind(metadata)
     .fetch_one(pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Error al emitir certificado: {}", e);
         // Manejar unique constraint violation
         if e.to_string().contains("issued_certificates_user_course_unique") {
@@ -548,13 +560,13 @@ async fn issue_certificate_internal(
     })?;
 
     Ok(Json(CertificateResponse {
-        id: issued_cert.id,
+        id: issued_cert.get("id"),
         user_id,
         course_id,
         course_title: course_data.title,
         student_name: user_name,
         certificate_html,
-        issued_at: issued_cert.issued_at.to_string(),
+        issued_at: issued_cert.get::<chrono::DateTime<chrono::Utc>, _>("issued_at").to_string(),
         verification_code,
         metadata,
     }))
