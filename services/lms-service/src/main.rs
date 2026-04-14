@@ -119,7 +119,8 @@ async fn main() {
         ])
         .expose_headers([header::CONTENT_LENGTH, header::CONTENT_TYPE]);
 
-    use tower_governor::{GovernorConfigBuilder, GovernorLayer};
+    use tower_governor::governor::GovernorConfigBuilder;
+    use tower_governor::GovernorLayer;
     use std::sync::Arc;
 
     let governor_conf = Arc::new(
