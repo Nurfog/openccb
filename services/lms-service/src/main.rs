@@ -8,6 +8,7 @@ mod handlers_payments;
 mod handlers_peer_review;
 mod handlers_embeddings;
 mod handlers_faq;
+mod handlers_certificates;
 mod lti;
 mod jwks;
 mod predictive;
@@ -177,6 +178,10 @@ async fn main() {
         .route("/profile/{user_id}", get(portfolio::get_public_profile))
         .route("/my/badges", get(portfolio::get_my_badges))
         .route("/badges/award", post(portfolio::award_badge))
+        // Certificados
+        .route("/courses/{id}/certificate", get(handlers_certificates::get_certificate))
+        .route("/courses/{id}/certificate/issue", post(handlers_certificates::issue_certificate))
+        .route("/certificates/verify/{code}", get(handlers_certificates::verify_certificate))
         .route(
             "/users/{id}/gamification",
             get(handlers::get_user_gamification),

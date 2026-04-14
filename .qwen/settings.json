@@ -16,7 +16,18 @@
       "Bash(git push *)",
       "Bash(scp *)",
       "Bash(curl *)",
-      "Bash(sudo *)"
+      "Bash(sudo *)",
+      "Bash(grep *)",
+      "Bash(python3)",
+      "Bash(with)",
+      "Bash(as *)",
+      "Bash(content *)",
+      "Bash(old_text *)",
+      "Bash(new_text *)",
+      "Bash(old_text, *)",
+      "Bash(f.write)",
+      "Bash(print)",
+      "Bash(eof)"
     ]
   },
   "$version": 3

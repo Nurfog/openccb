@@ -21,6 +21,7 @@ pub struct OrganizationExerciseSettings {
     pub role_playing_enabled: bool,
     pub mermaid_enabled: bool,
     pub code_lab_enabled: bool,
+    pub certificates_enabled: bool,
 }
 
 impl OrganizationExerciseSettings {
@@ -34,6 +35,7 @@ impl OrganizationExerciseSettings {
             role_playing_enabled: true,
             mermaid_enabled: false,
             code_lab_enabled: true,
+            certificates_enabled: true,
         }
     }
 
@@ -46,6 +48,7 @@ impl OrganizationExerciseSettings {
             "role-playing" => self.role_playing_enabled,
             "mermaid" => self.mermaid_enabled,
             "code-lab" => self.code_lab_enabled,
+            "certificates" => self.certificates_enabled,
             _ => true,
         }
     }
@@ -60,6 +63,7 @@ pub struct UpdateOrganizationExerciseSettingsPayload {
     pub role_playing_enabled: bool,
     pub mermaid_enabled: bool,
     pub code_lab_enabled: bool,
+    pub certificates_enabled: bool,
 }
 
 pub async fn load_organization_exercise_settings(
@@ -76,7 +80,8 @@ pub async fn load_organization_exercise_settings(
             peer_review_enabled,
             role_playing_enabled,
             mermaid_enabled,
-            code_lab_enabled
+            code_lab_enabled,
+            certificates_enabled
         FROM organization_exercise_settings
         WHERE organization_id = $1
         "#,
@@ -104,9 +109,10 @@ async fn upsert_organization_exercise_settings(
             role_playing_enabled,
             mermaid_enabled,
             code_lab_enabled,
+            certificates_enabled,
             updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
         ON CONFLICT (organization_id) DO UPDATE SET
             audio_response_enabled = EXCLUDED.audio_response_enabled,
             hotspot_enabled = EXCLUDED.hotspot_enabled,
@@ -115,6 +121,7 @@ async fn upsert_organization_exercise_settings(
             role_playing_enabled = EXCLUDED.role_playing_enabled,
             mermaid_enabled = EXCLUDED.mermaid_enabled,
             code_lab_enabled = EXCLUDED.code_lab_enabled,
+            certificates_enabled = EXCLUDED.certificates_enabled,
             updated_at = NOW()
         RETURNING
             organization_id,
@@ -124,7 +131,8 @@ async fn upsert_organization_exercise_settings(
             peer_review_enabled,
             role_playing_enabled,
             mermaid_enabled,
-            code_lab_enabled
+            code_lab_enabled,
+            certificates_enabled
         "#,
     )
     .bind(organization_id)
@@ -135,6 +143,7 @@ async fn upsert_organization_exercise_settings(
     .bind(payload.role_playing_enabled)
     .bind(payload.mermaid_enabled)
     .bind(payload.code_lab_enabled)
+    .bind(payload.certificates_enabled)
     .fetch_one(pool)
     .await
 }
@@ -189,6 +198,7 @@ pub async fn update_organization_exercise_settings(
             "role_playing_enabled": settings.role_playing_enabled,
             "mermaid_enabled": settings.mermaid_enabled,
             "code_lab_enabled": settings.code_lab_enabled,
+            "certificates_enabled": settings.certificates_enabled,
         }),
     )
     .await;

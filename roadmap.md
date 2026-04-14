@@ -253,3 +253,242 @@
 1. **Accesibilidad Universal**: Auditoría y ajustes de contraste para cumplimiento WCAG 2.1.
 2. **Integraciones Empresariales**: Conectividad con HRIS y ERPs externos.
 3. **Optimización de Performance**: Refactorización de componentes críticos y carga diferida (lazy loading).
+
+---
+
+## Fase 22: Finalización de Funcionalidades Pendientes 🛠️
+- [ ] **Generación de Certificados**: Implementación de lógica de generación automática al completar curso.
+  - [ ] Backend: Endpoint para verificar completitud y generar certificado (PDF)
+  - [ ] Frontend: UI para configurar templates de certificados en Studio
+  - [ ] Frontend: Botón de descarga en Experience al completar curso
+  - [ ] Schema de BD ya existe (`certificate_template`), solo falta implementación
+- [ ] **Tracking de Progreso Real**: Cálculo y visualización de progreso real del estudiante.
+  - [ ] Backend: Endpoint para calcular % de completitud basado en lecciones completadas
+  - [ ] Frontend: Reemplazar hardcoded `progress = 0` en `my-learning/page.tsx`
+  - [ ] Frontend: Barra de progreso real en catálogo de cursos
+- [ ] **Notificaciones de Foros**: Despacho de alertas cuando hay respuestas en hilos suscritos.
+  - [ ] Backend: Implementar lógica de notificación en `handlers_discussions.rs` (línea 352 tiene TODO)
+  - [ ] Frontend: Ver que las notificaciones se muestran correctamente en NotificationCenter
+- [ ] **Importación Excel para Question Bank**: Fix del código comentado.
+  - [ ] Backend: Descomentar y implementar `import_from_excel` en `handlers_question_bank.rs`
+  - [ ] Frontend: Agregar botón de importación Excel en UI de Question Bank
+  - [ ] Documentación: Formato esperado del archivo Excel
+- [ ] **Re-habilitar Rate Limiting**: Solución de incompatibilidad con middleware de auth.
+  - [ ] Backend: Fix de `GovernorLayer` para que funcione después del middleware de auth
+  - [ ] Backend: Configurar límites apropiados por tipo de ruta (pública vs protegida)
+  - [ ] Testing: Verificar que no bloquea peticiones legítimas
+
+---
+
+## Fase 23: Integración de Email/SMTP 📧
+- [ ] **Configuración SMTP**: Variables de entorno para configuración de servidor de correo.
+  - [ ] `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`
+  - [ ] Soporte para providers: SendGrid, AWS SES, SMTP genérico
+- [ ] **Notificaciones por Email**:
+  - [ ] Recordatorios de deadlines próximos
+  - [ ] Alertas de respuestas en foros suscritos
+  - [ ] Notificaciones de nuevas calificaciones
+  - [ ] Anuncios de curso de instructores
+- [ ] **Autenticación por Email**:
+  - [ ] Password reset vía link de email
+  - [ ] Verificación de email al registrar cuenta
+  - [ ] Magic link login (opcional)
+- [ ] **Emails Transaccionales**:
+  - [ ] Welcome email para nuevos usuarios
+  - [ ] Notificación de inscripción exitosa
+  - [ ] Certificado de completación por email
+  - [ ] Recibo de pago de Mercado Pago
+- [ ] **Template de Emails**:
+  - [ ] Templates HTML responsivos con branding personalizado
+  - [ ] Soporte multi-idioma (EN, ES, PT)
+  - [ ] Preview de templates en panel de administración
+
+---
+
+## Fase 24: Búsqueda Global 🔍
+- [ ] **Search Endpoint Unificado**: API de búsqueda across cursos, lecciones, contenidos.
+  - [ ] Backend: Endpoint `/search` con filtros por tipo, categoría, instructor
+  - [ ] Backend: Búsqueda full-text con PostgreSQL (tsvector)
+  - [ ] Backend: Opcionalmente agregar búsqueda semántica con embeddings (similar a question bank)
+- [ ] **UI de Búsqueda**:
+  - [ ] Frontend: Barra de búsqueda global en navbar de Studio y Experience
+  - [ ] Frontend: Resultados en tiempo real con autocompletado
+  - [ ] Frontend: Filtros avanzados (fecha, instructor, tipo de contenido, nivel)
+- [ ] **Búsqueda en Contenidos**:
+  - [ ] Indexación de transcripciones de video para búsqueda
+  - [ ] Búsqueda en documentos PDF y DOCX
+  - [ ] Búsqueda en preguntas de quizzes
+
+---
+
+## Fase 25: Soporte SCORM/xAPI 📦
+- [ ] **SCORM 1.2/2004 Player**:
+  - [ ] Backend: Endpoint para subir paquetes SCORM (.zip)
+  - [ ] Backend: Extracción y almacenamiento de metadatos SCORM
+  - [ ] Frontend: Player SCORM embebido en Experience
+  - [ ] Frontend: Preview de paquetes SCORM en Studio
+- [ ] **xAPI (Tin Can) Tracking**:
+  - [ ] Backend: Endpoint para recibir statements xAPI
+  - [ ] Backend: Almacenamiento de statements en base de datos separada
+  - [ ] Backend: Endpoint para consultar historial xAPI por usuario/curso
+  - [ ] Frontend: Dashboard de analíticas xAPI para instructores
+- [ ] **Import/Export SCORM**:
+  - [ ] Backend: Generador de paquetes SCORM desde cursos OpenCCB
+  - [ ] Backend: Validador de paquetes SCORM importados
+  - [ ] Frontend: UI para import/export SCORM en Studio
+- [ ] **Compatibilidad con Contenidos de Terceros**:
+  - [ ] Soporte para H5P, Articulate, Adobe Captivate
+  - [ ] Tracking de progreso y calificaciones desde contenidos SCORM
+
+---
+
+## Fase 26: Accesibilidad WCAG 2.1 ♿
+- [ ] **Auditoría de Accesibilidad**:
+  - [ ] Herramientas: axe-core, Lighthouse, WAVE
+  - [ ] Reporte de problemas de contraste de color
+  - [ ] Verificación de navegación por teclado
+  - [ ] Testing con screen readers (NVDA, VoiceOver, JAWS)
+- [ ] **Correcciones de Accesibilidad**:
+  - [ ] Ajustes de contraste para cumplir WCAG AA (4.5:1 para texto normal)
+  - [ ] Labels ARIA en todos los componentes interactivos
+  - [ ] Navegación por teclado completa (Tab, Enter, Escape, flechas)
+  - [ ] Focus indicators visibles en todos los elementos
+  - [ ] Skip links para saltar a contenido principal
+- [ ] **Accesibilidad de Formularios**:
+  - [ ] Labels asociados correctamente a inputs
+  - [ ] Mensajes de error accesibles por screen reader
+  - [ ] Autocomplete en campos apropiados
+- [ ] **Accesibilidad de Multimedia**:
+  - [ ] Subtítulos obligatorios para videos
+  - [ ] Transcripciones para contenido de audio
+  - [ ] Alt text para imágenes importantes
+- [ ] **Testing Continuo**:
+  - [ ] Integración de axe-core en CI/CD
+  - [ ] Testing manual regular con usuarios de screen readers
+  - [ ] Documentación de accesibilidad para contribuidores
+
+---
+
+## Fase 27: PWA y Soporte Offline 📱
+- [ ] **Progressive Web App (PWA)**:
+  - [ ] Service worker para caching de assets estáticos
+  - [ ] Manifest.json para instalación en móviles/desktop
+  - [ ] Offline fallback page
+  - [ ] Push notifications para alertas críticas
+- [ ] **Descarga de Lecciones**:
+  - [ ] Frontend: Botón de descarga por lección en Experience
+  - [ ] Frontend: UI para gestionar descargas (ver/eliminar)
+  - [ ] Service worker: Caching de contenido de video/audio
+  - [ ] IndexedDB: Almacenamiento de progreso offline
+- [ ] **Sincronización Offline**:
+  - [ ] Service worker: Queue de acciones offline (calificaciones, notas, progreso)
+  - [ ] Frontend: Sync automático al reconectar
+  - [ ] Backend: Endpoint para recibir sync data y reconciliar
+  - [ ] Manejo de conflictos (última escritura gana, o merge)
+- [ ] **Experiencia Offline**:
+  - [ ] Indicador de estado de conexión en UI
+  - [ ] Contenido disponible sin conexión claramente marcado
+  - [ ] Límite de almacenamiento configurable
+  - [ ] Limpieza automática de caché antiguo
+
+---
+
+## Fase 28: Sistema de Mentoría 🎓
+- [ ] **Gestión de Mentores**:
+  - [ ] Backend: CRUD de asignaciones mentor-estudiante
+  - [ ] Backend: Endpoints para disponibilidad de mentores
+  - [ ] Frontend: UI para asignar mentores en panel de administración
+  - [ ] Frontend: Perfil de mentor con bio, especialidades, disponibilidad
+- [ ] **Sesiones 1-a-1**:
+  - [ ] Backend: Sistema de agendamiento de sesiones
+  - [ ] Backend: Integración con Jitsi para sesiones virtuales
+  - [ ] Frontend: Calendario de sesiones para mentores y estudiantes
+  - [ ] Frontend: Recordatorios por email/notificación
+- [ ] **Seguimiento Personalizado**:
+  - [ ] Backend: Notas de mentor por estudiante
+  - [ ] Backend: Plan de aprendizaje personalizado por estudiante
+  - [ ] Frontend: Dashboard de mentor con vista de estudiantes asignados
+  - [ ] Frontend: Reportes de progreso para mentores
+
+---
+
+## Fase 29: Integraciones Empresariales 🏢
+- [ ] **HRIS Connectors**:
+  - [ ] Integración con Workday (API REST)
+  - [ ] Integración con SAP SuccessFactors (OData)
+  - [ ] Integración con BambooHR
+  - [ ] Sync automático de usuarios, departamentos, managers
+- [ ] **LDAP/Active Directory**:
+  - [ ] Backend: Autenticación vía LDAP
+  - [ ] Backend: Sync de atributos de usuario desde AD
+  - [ ] Frontend: Configuración de LDAP en panel de administración
+  - [ ] Soporte para SSO híbrido (LDAP + OIDC)
+- [ ] **Webhooks Salientes**:
+  - [ ] Backend: Sistema de webhooks configurables por evento
+  - [ ] Backend: Retry logic con exponential backoff
+  - [ ] Backend: Dashboard de entrega de webhooks (éxito/fallo)
+  - [ ] Frontend: UI para gestionar webhooks en Studio
+  - [ ] Frontend: Test de webhook desde UI
+- [ ] **ERP Integrations**:
+  - [ ] Integración con sistemas de facturación
+  - [ ] Sync de inscripciones y pagos con ERP
+  - [ ] Reportes financieros para administradores
+
+---
+
+## Fase 30: Reportes Avanzados y Business Intelligence 📊
+- [ ] **Reportes para Estudiantes**:
+  - [ ] Dashboard de analíticas personales (tiempo de estudio, skills, tendencias)
+  - [ ] Reporte de progreso semanal/mensual por email
+  - [ ] Exportación de historial de aprendizaje (PDF, Excel)
+- [ ] **Reportes para Instructores**:
+  - [ ] Reportes automáticos programables (diario, semanal, mensual)
+  - [ ] Exportación en múltiples formatos (PDF, Excel, CSV)
+  - [ ] Reportes comparativos entre cohortes
+  - [ ] Análisis de efectividad de contenido (qué funciona mejor)
+- [ ] **Reportes para Administradores**:
+  - [ ] Dashboard de uso de la plataforma (DAU, WAU, MAU)
+  - [ ] Análisis de ROI de cursos (costo vs completitud)
+  - [ ] Reportes de uso de IA (tokens, costo, efectividad)
+  - [ ] Exportación de datos completos de la plataforma
+- [ ] **Business Intelligence**:
+  - [ ] Integración con herramientas BI externas (Metabase, Tableau)
+  - [ ] API de datos para dashboards externos
+  - [ ] Data warehouse schema optimizado para queries analíticos
+
+---
+
+## Fase 31: Mejoras de Seguridad y GDPR 🛡️
+- [ ] **Two-Factor Authentication (2FA)**:
+  - [ ] Backend: Soporte para TOTP (Google Authenticator, Authy)
+  - [ ] Backend: Backup codes para recuperación
+  - [ ] Frontend: Setup de 2FA en perfil de usuario
+  - [ ] Frontend: Login con 2FA
+- [ ] **GDPR Compliance**:
+  - [ ] Backend: Endpoint para exportar todos los datos de un usuario
+  - [ ] Backend: Endpoint para eliminar todos los datos de un usuario (right to be forgotten)
+  - [ ] Frontend: UI para solicitar exportación/eliminación
+  - [ ] Frontend: Consent management para cookies y tracking
+- [ ] **Audit Logs Mejorados**:
+  - [ ] Backend: Exportación de audit logs (CSV, JSON)
+  - [ ] Backend: Alertas de actividad sospechosa
+  - [ ] Frontend: Filtros avanzados de audit logs
+  - [ ] Frontend: Dashboard de seguridad
+- [ ] **Mejoras de Seguridad**:
+  - [ ] CSRF protection en todos los endpoints
+  - [ ] Content Security Policy headers
+  - [ ] Rate limiting por IP y por usuario
+  - [ ] IP allowlisting para admin endpoints
+
+---
+
+**Estado Actual**: La plataforma cuenta con un motor de IA avanzado, gestión multi-tenant completa, tutoría inteligente con memoria histórica, una **interfaz 100% responsiva**, flujos de autenticación diferenciados, **sistema de foros de discusión funcional**, **gestión de anuncios segmentados**, **monetización integrada con Mercado Pago**, **Inscripción Masiva de Usuarios**, **Exportación Avanzada de Calificaciones**, **Librerías de Contenido reutilizables**, **Sistema de Rúbricas Avanzado**, **Secuencias de Aprendizaje**, **Gestión de Equipos Docentes**, **Vista Previa de Cursos**, **Dashboard de Progreso Estudiantil**, **Sistema de Marcadores**, **Biblioteca Global de Activos**, **Interoperabilidad LTI 1.3**, **Analíticas Predictivas**, **Integración de Jitsi**, **Portafolios con Perfiles Públicos**, **Landing Pages de Cursos (Marketing) automatizadas**, **Diagramas de Mermaid Dinámicos**, **Laboratorios de Código con Hints de IA**, y **Búsqueda Semántica con PGVector**.
+
+**Próximas Prioridades**:
+1. **Finalización de Funcionalidades Pendientes**: Certificados, progreso real, notificaciones de foros, importación Excel, rate limiting.
+2. **Integración de Email/SMTP**: Notificaciones por email, password reset, emails transaccionales.
+3. **Accesibilidad Universal**: Auditoría y ajustes de contraste para cumplimiento WCAG 2.1.
+4. **Búsqueda Global**: Search unificado en cursos, lecciones y contenidos.
+5. **Integraciones Empresariales**: Conectividad con HRIS, LDAP/Active Directory, webhooks salientes.
+6. **PWA y Offline**: Service workers, descarga de lecciones, sync offline.
+7. **Seguridad**: 2FA, GDPR compliance, rate limiting re-habilitado.

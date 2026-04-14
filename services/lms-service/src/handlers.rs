@@ -764,8 +764,8 @@ pub async fn ingest_course(
     // 1. Insertar o actualizar (Upsert) Organización
     let org_id = payload.course.organization_id;
     sqlx::query(
-        "INSERT INTO organizations (id, name, domain, logo_url, primary_color, secondary_color, certificate_template, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        "INSERT INTO organizations (id, name, domain, logo_url, primary_color, secondary_color, certificate_template, certificates_enabled, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
             domain = EXCLUDED.domain,
@@ -773,6 +773,7 @@ pub async fn ingest_course(
             primary_color = EXCLUDED.primary_color,
             secondary_color = EXCLUDED.secondary_color,
             certificate_template = EXCLUDED.certificate_template,
+            certificates_enabled = EXCLUDED.certificates_enabled,
             updated_at = EXCLUDED.updated_at"
     )
     .bind(payload.organization.id)
@@ -782,6 +783,7 @@ pub async fn ingest_course(
     .bind(&payload.organization.primary_color)
     .bind(&payload.organization.secondary_color)
     .bind(&payload.organization.certificate_template)
+    .bind(payload.organization.certificates_enabled)
     .bind(payload.organization.created_at)
     .bind(payload.organization.updated_at)
     .execute(&mut *tx)

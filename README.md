@@ -622,6 +622,54 @@ OpenCCB está diseñado como un módulo premium single-tenant. Todas las operaci
 
 ---
 
+## 📊 Estado de Funcionalidades
+
+OpenCCB es una plataforma madura con la mayoría de sus funcionalidades core implementadas y operativas. Esta sección documenta transparentemente el estado actual de las características principales para que desarrolladores y administradores puedan planificar su uso.
+
+### ✅ Completamente Implementado
+
+| Categoría | Funcionalidades |
+|-----------|-----------------|
+| **Gestión de Cursos** | CRUD completo, AI generation, export/import JSON, templates, marketing metadata, teams, preview tokens |
+| **Contenidos** | 16 tipos de bloques (video, quiz, hotspot, memory, mermaid, code lab, etc.) |
+| **IA Integrada** | Transcripción, traducción, resúmenes, quiz generation, tutor RAG, audio evaluation, diagramas |
+| **Question Bank** | CRUD completo, semantic search (PGVector), duplicate detection, AI generation con 4 skills |
+| **Calificaciones** | Rubrics, weighted categories, drop-lowest policy, gradebook con cohortes, export CSV |
+| **Foros** | Hilos, respuestas anidadas, votos, endorsements, moderación, suscripciones |
+| **Gamificación** | XP, niveles, badges, leaderboards, Open Badges |
+| **Monetización** | Mercado Pago integration, pricing, webhooks, auto-enrollment |
+| **LTI 1.3** | Tool Provider con Deep Linking, JWKS, autoprovisionamiento |
+| **Live Learning** | Integración Jitsi, scheduling desde Studio |
+| **Analíticas** | Dashboard instructores, heatmaps, dropout risk prediction, advanced analytics |
+| **Single-Tenant** | White-label branding, SSO/OIDC, exercise settings |
+| **Responsive UI** | Mobile-first, dynamic API resolution, fluid typography |
+
+### ⚠️ En Progreso / Pendiente de Finalización
+
+| Funcionalidad | Estado Actual | Impacto |
+|---------------|---------------|---------|
+| **Generación de Certificados** | Schema de BD existe, falta implementación de generación y UI | Los estudiantes que completan cursos no reciben certificado |
+| **Tracking de Progreso** | Hardcodeado a 0% en `my-learning/page.tsx` | Los estudiantes no ven su progreso real en el catálogo |
+| **Notificaciones de Foros** | Suscripciones existen pero no se envían alertas | Usuarios suscritos no reciben notificaciones de respuestas |
+| **Importación Excel (Question Bank)** | Código comentado con `unimplemented!()` | Solo se puede importar manualmente o vía AI |
+| **Rate Limiting** | Deshabilitado por compatibilidad con middleware | APIs sin protección contra abuso en producción |
+
+### 📋 Planned (Ver roadmap.md para detalles)
+
+| Funcionalidad | Descripción |
+|---------------|-------------|
+| **Email/SMTP Integration** | Notificaciones por email, password reset, welcome emails |
+| **Búsqueda Global** | Search unificado en cursos, lecciones, contenidos |
+| **SCORM/xAPI Support** | Importación de paquetes SCORM, tracking xAPI |
+| **Accesibilidad WCAG 2.1** | Auditoría y correcciones de contraste, navegación por teclado |
+| **PWA y Offline** | Service workers, descarga de lecciones, sync offline |
+| **Integraciones Empresariales** | HRIS (Workday, SAP), LDAP/Active Directory, webhooks salientes |
+
+> [!NOTE]
+> Si encuentras alguna funcionalidad marcada como "En Progreso" que necesitas urgentemente, por favor abre un issue en el repositorio o contribuye con un PR. ¡Las contribuciones son bienvenidas!
+
+---
+
 ## 📚 Documentación
 
 ### Guías Principales
