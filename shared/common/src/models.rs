@@ -188,6 +188,7 @@ pub struct Enrollment {
     pub organization_id: Uuid,
     pub course_id: Uuid,
     pub external_id: Option<i32>, // idDetalleContrato del sistema externo
+    pub progress: f32,
     pub enrolled_at: DateTime<Utc>,
 }
 

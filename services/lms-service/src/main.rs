@@ -119,15 +119,16 @@ async fn main() {
         ])
         .expose_headers([header::CONTENT_LENGTH, header::CONTENT_TYPE]);
 
-    // Rate limiter DESHABILITADO debido a problemas de compatibilidad con el middleware de autenticación
-    // Ver QWEN.md para más detalles
-    // let governor_conf = Arc::new(
-    //     GovernorConfigBuilder::default()
-    //         .per_second(10)
-    //         .burst_size(50)
-    //         .finish()
-    //         .unwrap(),
-    // );
+    use tower_governor::{GovernorConfigBuilder, GovernorLayer};
+    use std::sync::Arc;
+
+    let governor_conf = Arc::new(
+        GovernorConfigBuilder::default()
+            .per_second(10)
+            .burst_size(50)
+            .finish()
+            .unwrap(),
+    );
 
     // Rate limiter solo para rutas protegidas (después del middleware de autenticación)
     let protected_routes = Router::new()
@@ -343,7 +344,10 @@ async fn main() {
         )
         .route_layer(middleware::from_fn(
             common::middleware::org_extractor_middleware,
-        ));
+        ))
+        .route_layer(GovernorLayer {
+            config: governor_conf,
+        });
 
     let public_routes = Router::new()
         .route("/api-docs/openapi.json", get(|| async {

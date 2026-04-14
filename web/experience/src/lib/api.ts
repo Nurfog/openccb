@@ -142,6 +142,30 @@ export interface PaymentPreferenceResponse {
     init_point: string;
 }
 
+export interface CertificateResponse {
+    id: string;
+    user_id: string;
+    course_id: string;
+    course_title: string;
+    student_name: string;
+    certificate_html: string;
+    issued_at: string;
+    verification_code: string;
+    metadata: any;
+}
+
+export interface CertificateResponse {
+    id: string;
+    user_id: string;
+    course_id: string;
+    course_title: string;
+    student_name: string;
+    certificate_html: string;
+    issued_at: string;
+    verification_code: string;
+    metadata: any;
+}
+
 export interface QuizQuestion {
     id: string;
     question: string;
@@ -371,6 +395,7 @@ export interface Enrollment {
     id: string;
     user_id: string;
     course_id: string;
+    progress: number;
     enrolled_at: string;
 }
 
@@ -862,5 +887,19 @@ export const lmsApi = {
 
     async getMyBadges(): Promise<Badge[]> {
         return apiFetch(`/my/badges`, {}, false);
+    },
+
+    // Certificates
+    async getCertificate(courseId: string): Promise<CertificateResponse> {
+        return apiFetch(`/courses/${courseId}/certificate`);
+    },
+    async issueCertificate(courseId: string, forceReissue = false): Promise<CertificateResponse> {
+        return apiFetch(`/courses/${courseId}/certificate/issue`, {
+            method: 'POST',
+            body: JSON.stringify({ force_reissue: forceReissue })
+        });
+    },
+    async verifyCertificate(code: string): Promise<any> {
+        return apiFetch(`/certificates/verify/${code}`);
     }
 };

@@ -389,6 +389,12 @@ echo "   SSL Staging: $LETSENCRYPT_STAGING"
 echo "   Preservar SSL: $PRESERVE_SSL_CERTS"
 echo "   Reiniciar DB: $RESET_DATABASE"
 echo "   Compilar local: $BUILD_LOCAL"
+
+# Detectar variables de integración desde .env local para el resumen
+_SAM_URL=$(grep '^SAM_DIAGNOSTICO_DATABASE_URL=' .env | cut -d'=' -f2-)
+_MYSQL_URL=$(grep '^MYSQL_DATABASE_URL=' .env | cut -d'=' -f2-)
+echo "   SAM Integration: ${_SAM_URL:-(No configurada)}"
+echo "   MySQL Legacy: ${_MYSQL_URL:-(No configurada)}"
 echo ""
 
 # Crear script remoto en un archivo temporal
@@ -526,6 +532,15 @@ if ! grep -q "^AWS_ACCESS_KEY_ID=" .env; then
 fi
 if ! grep -q "^AWS_SECRET_ACCESS_KEY=" .env; then
     echo "AWS_SECRET_ACCESS_KEY=" >> .env
+fi
+
+# Conservar o inicializar variables de integración
+echo "   Configurando variables de integración (SAM/MySQL)..."
+if ! grep -q "^SAM_DIAGNOSTICO_DATABASE_URL=" .env; then
+    echo "SAM_DIAGNOSTICO_DATABASE_URL=" >> .env
+fi
+if ! grep -q "^MYSQL_DATABASE_URL=" .env; then
+    echo "MYSQL_DATABASE_URL=" >> .env
 fi
 
 # Asegurar dominios públicos para nginx-proxy y certificados SSL
@@ -961,7 +976,8 @@ sleep 10
 # Intentar crear el usuario via API
 echo "Creando usuario administrador..."
 
-ADMIN_RESPONSE=$($DOCKER_CMD exec \
+if [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASS" ]; then
+    ADMIN_RESPONSE=$($DOCKER_CMD exec \
         -e ADMIN_EMAIL="$ADMIN_EMAIL" \
         -e ADMIN_PASS="$ADMIN_PASS" \
         -e ADMIN_NAME="$ADMIN_NAME" \
@@ -1003,6 +1019,7 @@ else
         if [ -n "$ADMIN_BODY" ]; then
                 echo "Detalle: $ADMIN_BODY"
         fi
+fi
 fi
 
 echo ""

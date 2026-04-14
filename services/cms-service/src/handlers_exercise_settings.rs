@@ -98,7 +98,9 @@ async fn upsert_organization_exercise_settings(
     organization_id: Uuid,
     payload: &UpdateOrganizationExerciseSettingsPayload,
 ) -> Result<OrganizationExerciseSettings, sqlx::Error> {
-    sqlx::query_as::<_, OrganizationExerciseSettings>(
+    let mut tx = pool.begin().await?;
+
+    let settings = sqlx::query_as::<_, OrganizationExerciseSettings>(
         r#"
         INSERT INTO organization_exercise_settings (
             organization_id,
@@ -144,8 +146,21 @@ async fn upsert_organization_exercise_settings(
     .bind(payload.mermaid_enabled)
     .bind(payload.code_lab_enabled)
     .bind(payload.certificates_enabled)
-    .fetch_one(pool)
-    .await
+    .fetch_one(&mut *tx)
+    .await?;
+
+    // Sincronizar con la tabla organizations para que el LMS reciba el valor correcto al publicar
+    sqlx::query(
+        "UPDATE organizations SET certificates_enabled = $1, updated_at = NOW() WHERE id = $2"
+    )
+    .bind(payload.certificates_enabled)
+    .bind(organization_id)
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+
+    Ok(settings)
 }
 
 pub async fn get_organization_exercise_settings(

@@ -22,6 +22,7 @@ const DEFAULT_CERTIFICATE_TEMPLATE = `
 
 import CourseEditorLayout from "@/components/CourseEditorLayout";
 import TeamManagementSection from "./TeamManagementSection";
+import IntegrationsSection from "./IntegrationsSection";
 
 export default function CourseSettingsPage() {
     const { id } = useParams() as { id: string };
@@ -147,6 +148,7 @@ export default function CourseSettingsPage() {
         >
             <div className="space-y-8">
                 <TeamManagementSection courseId={id} />
+                <IntegrationsSection courseId={id} />
 
                 {/* Passing Percentage Section */}
                 <section className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-8 shadow-sm">

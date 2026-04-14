@@ -161,8 +161,16 @@ async fn main() {
         ])
         .expose_headers([header::CONTENT_LENGTH, header::CONTENT_TYPE, header::CONTENT_RANGE, header::ACCEPT_RANGES]);
 
-    // Rate limiting: Deshabilitado temporalmente por problemas de compatibilidad con tower-governor
-    // Para habilitar en producción, configurar con GovernorLayer y ajustar los límites apropiadamente
+    use tower_governor::{GovernorConfigBuilder, GovernorLayer};
+    use std::sync::Arc;
+
+    let governor_conf = Arc::new(
+        GovernorConfigBuilder::default()
+            .per_second(5) // CMS usually has more complex operations, slightly lower limit
+            .burst_size(20)
+            .finish()
+            .unwrap(),
+    );
 
     // Rutas protegidas que requieren autenticación y contexto de organización
     let protected_routes = Router::new()
@@ -500,7 +508,10 @@ async fn main() {
         )
         .route_layer(middleware::from_fn(
             common::middleware::org_extractor_middleware,
-        ));
+        ))
+        .route_layer(GovernorLayer {
+            config: governor_conf,
+        });
 
     let api_routes = Router::new()
         .route(

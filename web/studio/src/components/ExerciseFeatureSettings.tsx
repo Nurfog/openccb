@@ -43,6 +43,11 @@ const featureCards: Array<{
         title: "Code Lab",
         description: "Permite laboratorios de código generados o editados manualmente.",
     },
+    {
+        key: "certificates_enabled",
+        title: "Generación de Certificados",
+        description: "Habilita la emisión automática de certificados al completar cursos.",
+    },
 ];
 
 const defaultSettings: OrganizationExerciseSettings = {
@@ -54,6 +59,7 @@ const defaultSettings: OrganizationExerciseSettings = {
     role_playing_enabled: true,
     mermaid_enabled: false,
     code_lab_enabled: true,
+    certificates_enabled: true,
 };
 
 export default function ExerciseFeatureSettings() {
@@ -94,6 +100,7 @@ export default function ExerciseFeatureSettings() {
                 role_playing_enabled: settings.role_playing_enabled,
                 mermaid_enabled: settings.mermaid_enabled,
                 code_lab_enabled: settings.code_lab_enabled,
+                certificates_enabled: settings.certificates_enabled,
             };
             const updated = await cmsApi.updateOrganizationExerciseSettings(payload);
             setSettings(updated);

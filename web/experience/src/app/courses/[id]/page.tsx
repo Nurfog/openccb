@@ -9,6 +9,8 @@ import { useAuth } from "@/context/AuthContext";
 import DiscussionBoard from "@/components/DiscussionBoard";
 import { AnnouncementsList } from "@/components/AnnouncementsList";
 import AboutCourse from "@/components/AboutCourse";
+import CertificateModal from "@/components/CertificateModal";
+import { CertificateResponse } from "@/lib/api";
 
 export default function CourseOutlinePage({ params }: { params: { id: string } }) {
     const { user } = useAuth();
@@ -22,6 +24,11 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
     const [instructors, setInstructors] = useState<any[]>([]);
     const [meetings, setMeetings] = useState<Meeting[]>([]);
     const [activeTab, setActiveTab] = useState<'outline' | 'about'>('outline');
+    const [progress, setProgress] = useState(0);
+    const [certificate, setCertificate] = useState<CertificateResponse | null>(null);
+    const [showCertificateModal, setShowCertificateModal] = useState(false);
+    const [loadingCertificate, setLoadingCertificate] = useState(false);
+    const [orgSettings, setOrgSettings] = useState<any>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -37,11 +44,15 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                     setUserGrades(grades);
 
                     const enrollmentData = await lmsApi.getEnrollments(user.id);
-                    const enrolled = enrollmentData.some(e => e.course_id === params.id);
-
+                    const enrollment = enrollmentData.find(e => e.course_id === params.id);
+                    
                     // Allow preview token to override enrollment status
                     const isPreview = typeof window !== 'undefined' && !!sessionStorage.getItem('preview_token');
-                    setIsEnrolled(enrolled || isPreview);
+                    setIsEnrolled(!!enrollment || isPreview);
+
+                    if (enrollment) {
+                        setProgress(enrollment.progress * 100);
+                    }
                 } else {
                     // Even if not logged in, if there's a preview token, consider "enrolled" for UI
                     const isPreview = typeof window !== 'undefined' && !!sessionStorage.getItem('preview_token');
@@ -64,6 +75,11 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
 
         lmsApi.getMeetings(params.id)
             .then(setMeetings)
+            .catch(console.error);
+
+        // Load organization settings (branding includes the certificates_enabled flag)
+        lmsApi.getBranding()
+            .then(res => setOrgSettings(res.organization))
             .catch(console.error);
     }, [params.id, user]);
 
@@ -118,6 +134,38 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
             if (dep.min_score_percentage && (prereqGrade.score * 100) < dep.min_score_percentage) return true;
             return false;
         });
+    };
+
+    const handleViewCertificate = async () => {
+        if (certificate) {
+            setShowCertificateModal(true);
+            return;
+        }
+
+        setLoadingCertificate(true);
+        try {
+            const data = await lmsApi.getCertificate(params.id);
+            setCertificate(data);
+            setShowCertificateModal(true);
+        } catch (error: any) {
+            console.error("No se pudo obtener el certificado", error);
+            if (error.status === 404 || error.status === 403) {
+                // Try to issue it if completed but not issued
+                if (progress >= 100) {
+                    try {
+                        const issued = await lmsApi.issueCertificate(params.id);
+                        setCertificate(issued);
+                        setShowCertificateModal(true);
+                    } catch (issueError) {
+                        alert("No se pudo generar el certificado. Asegúrate de haber aprobado todas las lecciones.");
+                    }
+                } else {
+                    alert("Aún no has completado este curso.");
+                }
+            }
+        } finally {
+            setLoadingCertificate(false);
+        }
     };
 
     const getStatusIcon = (lessonId: string, isGraded: boolean, allowRetry: boolean) => {
@@ -274,6 +322,17 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                                         📊 Progreso
                                     </button>
                                 </Link>
+
+                                {isEnrolled && orgSettings?.certificates_enabled !== false && progress >= 100 && (
+                                    <button
+                                        onClick={handleViewCertificate}
+                                        disabled={loadingCertificate}
+                                        className="btn-premium px-8 py-3 !bg-emerald-600 !text-white shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center gap-2"
+                                    >
+                                        <Award size={16} />
+                                        {loadingCertificate ? "Preparando..." : "Mi Certificado"}
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -485,6 +544,13 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                     </div>
                 )}
             </div>
+
+            {showCertificateModal && certificate && (
+                <CertificateModal 
+                    certificate={certificate} 
+                    onClose={() => setShowCertificateModal(false)} 
+                />
+            )}
         </div>
     );
 }

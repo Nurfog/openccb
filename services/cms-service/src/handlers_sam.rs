@@ -60,8 +60,8 @@ pub async fn sync_sam_students(
     State(pool): State<PgPool>,
 ) -> Result<Json<SamSyncResponse>, (StatusCode, String)> {
     // Conectar a la base de datos externa de SAM
-    let sam_url = std::env::var("SAM_DATABASE_URL")
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "SAM_DATABASE_URL no configurada".to_string()))?;
+    let sam_url = std::env::var("SAM_DIAGNOSTICO_DATABASE_URL")
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "SAM_DIAGNOSTICO_DATABASE_URL no configurada".to_string()))?;
 
     let sam_pool = sqlx::PgPool::connect(&sam_url)
         .await
@@ -191,8 +191,8 @@ pub async fn sync_sam_assignments(
     State(pool): State<PgPool>,
 ) -> Result<Json<SamSyncResponse>, (StatusCode, String)> {
     // Conectar a la base de datos externa de SAM
-    let sam_url = std::env::var("SAM_DATABASE_URL")
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "SAM_DATABASE_URL no configurada".to_string()))?;
+    let sam_url = std::env::var("SAM_DIAGNOSTICO_DATABASE_URL")
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "SAM_DIAGNOSTICO_DATABASE_URL no configurada".to_string()))?;
 
     let sam_pool = sqlx::PgPool::connect(&sam_url)
         .await
@@ -382,8 +382,8 @@ pub async fn sync_all_sam(
     let mut assignments_synced = 0;
 
     // Conectar a la base de datos externa de SAM
-    let sam_url = std::env::var("SAM_DATABASE_URL")
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "SAM_DATABASE_URL no configurada".to_string()))?;
+    let sam_url = std::env::var("SAM_DIAGNOSTICO_DATABASE_URL")
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "SAM_DIAGNOSTICO_DATABASE_URL no configurada".to_string()))?;
 
     let sam_pool = sqlx::PgPool::connect(&sam_url)
         .await

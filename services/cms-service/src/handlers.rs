@@ -2779,6 +2779,13 @@ pub async fn register(
     State(pool): State<PgPool>,
     Json(payload): Json<AuthPayload>,
 ) -> Result<Json<AuthResponse>, (StatusCode, String)> {
+    if payload.email.trim().is_empty() || payload.password.trim().is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "El email y la contraseña son obligatorios".into(),
+        ));
+    }
+
     let password_hash = hash(payload.password, DEFAULT_COST)
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Hashing failed".into()))?;
 
