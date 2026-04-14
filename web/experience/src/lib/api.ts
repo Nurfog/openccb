@@ -25,6 +25,14 @@ export const getCmsApiUrl = () => {
     return getApiBaseUrl("3001", process.env.NEXT_PUBLIC_CMS_API_URL);
 };
 
+// Enrollment progress has existed in two formats historically:
+// legacy ratio [0..1] and current percentage [0..100].
+export const normalizeProgressPercent = (raw?: number) => {
+    if (typeof raw !== 'number' || Number.isNaN(raw)) return 0;
+    const pct = raw <= 1 ? raw * 100 : raw;
+    return Math.max(0, Math.min(100, pct));
+};
+
 export const getImageUrl = (path?: string) => {
     if (!path) return '';
     if (path.startsWith('http')) {

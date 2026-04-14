@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { lmsApi, Course, Module, Recommendation, UserGrade, Meeting } from "@/lib/api";
+import { lmsApi, Course, Module, Recommendation, UserGrade, Meeting, normalizeProgressPercent } from "@/lib/api";
 import { Sparkles, AlertTriangle, ArrowRight, CheckCircle2, XCircle, Circle, Video, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { BookOpen, ChevronRight, PlayCircle, Calendar, Clock, Info, Lock } from "lucide-react";
@@ -51,7 +51,7 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                     setIsEnrolled(!!enrollment || isPreview);
 
                     if (enrollment) {
-                        setProgress(enrollment.progress * 100);
+                        setProgress(normalizeProgressPercent(enrollment.progress));
                     }
                 } else {
                     // Even if not logged in, if there's a preview token, consider "enrolled" for UI

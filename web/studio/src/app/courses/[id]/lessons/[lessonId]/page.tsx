@@ -54,6 +54,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
         role_playing_enabled: true,
         mermaid_enabled: false,
         code_lab_enabled: true,
+        certificates_enabled: true,
     };
 
     const [lesson, setLesson] = useState<Lesson | null>(null);

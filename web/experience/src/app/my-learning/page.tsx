@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { lmsApi, Course, Module } from "@/lib/api";
+import { lmsApi, Course, Module, normalizeProgressPercent } from "@/lib/api";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { BookOpen, TrendingUp, Clock, CheckCircle2, Award, Target } from "lucide-react";
@@ -40,7 +40,7 @@ export default function MyLearningPage() {
                     try {
                         const { course, modules } = await lmsApi.getCourseOutline(enrollment.course_id);
 
-                        const progress = enrollment.progress || 0;
+                        const progress = normalizeProgressPercent(enrollment.progress);
 
                         enrichedEnrollments.push({
                             course: { ...course, modules },

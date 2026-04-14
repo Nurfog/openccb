@@ -56,6 +56,25 @@ echo "   📁 Destino: $REMOTE_PATH"
 echo "   🔑 SSH Key: $PEM_PATH"
 echo ""
 
+echo ""
+echo "----------------------------------------"
+echo "Dónde compilar las imágenes Docker"
+echo "----------------------------------------"
+echo ""
+echo "¿Compilar imágenes en esta máquina y enviar al servidor?"
+echo "  - local: Compilar aquí y transferir vía SSH (recomendado)"
+echo "  - remote: El servidor compila (más lento)"
+echo ""
+read -p "¿Compilar localmente? [Y/n]: " BUILD_LOCAL_CHOICE
+BUILD_LOCAL_CHOICE=${BUILD_LOCAL_CHOICE:-Y}
+if [[ "$BUILD_LOCAL_CHOICE" =~ ^[Yy]$ ]]; then
+    BUILD_LOCAL="true"
+    echo "✅ Compilación local - imágenes se streamearan via SSH"
+else
+    BUILD_LOCAL="false"
+    echo "✅ El servidor compilará las imágenes"
+fi
+
 # Preguntar si continuar
 read -p "¿Desea continuar con el despliegue? [y/N]: " CONFIRM
 if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
@@ -357,24 +376,7 @@ else
     echo "✅ Configuración: HTTP (sin SSL)"
 fi
 
-echo ""
-echo "----------------------------------------"
-echo "Dónde compilar las imágenes Docker"
-echo "----------------------------------------"
-echo ""
-echo "¿Compilar imágenes en esta máquina y enviar al servidor?"
-echo "  - local: Compilar aquí y transferir vía SSH (recomendado - CPU i7 >> t3a.large)"
-echo "  - remote: El servidor compila (más lento en t3a.large 2vCPU/8GB)"
-echo ""
-read -p "¿Compilar localmente? [Y/n]: " BUILD_LOCAL_CHOICE
-BUILD_LOCAL_CHOICE=${BUILD_LOCAL_CHOICE:-Y}
-if [[ "$BUILD_LOCAL_CHOICE" =~ ^[Yy]$ ]]; then
-    BUILD_LOCAL="true"
-    echo "✅ Compilación local - imágenes se streamearan via SSH"
-else
-    BUILD_LOCAL="false"
-    echo "✅ El servidor compilará las imágenes"
-fi
+
 
 echo ""
 echo "========================================"

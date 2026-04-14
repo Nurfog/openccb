@@ -6,7 +6,7 @@ use axum::{
 use common::auth::Claims;
 use serde::{Deserialize, Serialize};
 use sha2::{Sha256, Digest};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 // Macro para usar json!() sin importar serde_json
@@ -80,7 +80,7 @@ pub async fn get_certificate(
     })?;
 
     if let Some(org_config) = org_certificates_enabled {
-        if !org_config.certificates_enabled {
+        if !org_config.get::<bool, _>("certificates_enabled") {
             return Err((
                 StatusCode::NOT_IMPLEMENTED,
                 Json(json!({
@@ -120,13 +120,13 @@ pub async fn get_certificate(
 
     if let Some(cert) = existing_cert {
         // Obtener título del curso y nombre del estudiante
-        let course_info = sqlx::query!(
-            "SELECT title FROM courses WHERE id = $1",
-            course_id
+        let course_info = sqlx::query(
+            "SELECT title FROM courses WHERE id = $1"
         )
+        .bind(course_id)
         .fetch_optional(&pool)
         .await
-        .map_err(|e| {
+        .map_err(|e: sqlx::Error| {
             tracing::error!("Error al obtener info del curso: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -134,13 +134,13 @@ pub async fn get_certificate(
             )
         })?;
 
-        let user_info = sqlx::query!(
-            "SELECT full_name FROM users WHERE id = $1",
-            user_id
+        let user_info = sqlx::query(
+            "SELECT full_name FROM users WHERE id = $1"
         )
+        .bind(user_id)
         .fetch_optional(&pool)
         .await
-        .map_err(|e| {
+        .map_err(|e: sqlx::Error| {
             tracing::error!("Error al obtener info del usuario: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -152,8 +152,8 @@ pub async fn get_certificate(
             id: cert.id,
             user_id: cert.user_id,
             course_id: cert.course_id,
-            course_title: course_info.map(|c| c.title).unwrap_or_default(),
-            student_name: user_info.map(|u| u.full_name).unwrap_or_default(),
+            course_title: course_info.map(|c| c.get::<String, _>("title")).unwrap_or_default(),
+            student_name: user_info.map(|u| u.get::<String, _>("full_name")).unwrap_or_default(),
             certificate_html: cert.certificate_html,
             issued_at: cert.issued_at.to_string(),
             verification_code: cert.verification_code,
@@ -194,15 +194,15 @@ pub async fn issue_certificate(
     let force_reissue = payload.and_then(|p| p.force_reissue).unwrap_or(false);
 
     // Verificar si la organización tiene certificados habilitados
-    let org_certificates_enabled = sqlx::query!(
+    let org_certificates_enabled = sqlx::query(
         "SELECT certificates_enabled FROM organizations WHERE id = (
             SELECT organization_id FROM courses WHERE id = $1
-        )",
-        course_id
+        )"
     )
+    .bind(course_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Error al verificar configuración de certificados: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -211,7 +211,7 @@ pub async fn issue_certificate(
     })?;
 
     if let Some(org_config) = org_certificates_enabled {
-        if !org_config.certificates_enabled {
+        if !org_config.get::<bool, _>("certificates_enabled") {
             return Err((
                 StatusCode::NOT_IMPLEMENTED,
                 Json(json!({
@@ -223,14 +223,14 @@ pub async fn issue_certificate(
     }
 
     // Verificar si ya existe
-    let existing = sqlx::query!(
-        "SELECT id FROM issued_certificates WHERE user_id = $1 AND course_id = $2",
-        user_id,
-        course_id
+    let existing = sqlx::query(
+        "SELECT id FROM issued_certificates WHERE user_id = $1 AND course_id = $2"
     )
+    .bind(user_id)
+    .bind(course_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Error al verificar certificado existente: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -274,7 +274,7 @@ pub async fn verify_certificate(
     Path(code): Path<String>,
     State(pool): State<PgPool>,
 ) -> Result<Json<CertificateVerificationResponse>, StatusCode> {
-    let cert = sqlx::query!(
+    let cert = sqlx::query(
         r#"
         SELECT 
             ic.id,
@@ -290,29 +290,29 @@ pub async fn verify_certificate(
         JOIN courses c ON c.id = ic.course_id
         JOIN users u ON u.id = ic.user_id
         WHERE ic.verification_code = $1
-        "#,
-        code
+        "#
     )
+    .bind(code)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Error al verificar certificado: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
     match cert {
-        Some(cert) => Ok(Json(CertificateVerificationResponse {
+        Some(row) => Ok(Json(CertificateVerificationResponse {
             valid: true,
             certificate: Some(CertificateResponse {
-                id: cert.id,
-                user_id: cert.user_id,
-                course_id: cert.course_id,
-                course_title: cert.course_title,
-                student_name: cert.student_name,
-                certificate_html: cert.certificate_html,
-                issued_at: cert.issued_at.to_string(),
-                verification_code: cert.verification_code,
-                metadata: cert.metadata,
+                id: row.get("id"),
+                user_id: row.get("user_id"),
+                course_id: row.get("course_id"),
+                course_title: row.get("course_title"),
+                student_name: row.get("student_name"),
+                certificate_html: row.get("certificate_html"),
+                issued_at: row.get::<chrono::DateTime<chrono::Utc>, _>("issued_at").to_string(),
+                verification_code: row.get("verification_code"),
+                metadata: row.get("metadata"),
             }),
             message: "Certificado válido".to_string(),
         })),
@@ -337,18 +337,18 @@ async fn check_course_completion(
     pool: &PgPool,
 ) -> Result<CourseCompletion, (StatusCode, Json<serde_json::Value>)> {
     // Obtener todas las lecciones graduables del curso
-    let gradable_lessons = sqlx::query!(
+    let gradable_lessons = sqlx::query(
         r#"
         SELECT l.id, l.is_graded, l.passing_percentage
         FROM lessons l
         JOIN modules m ON m.id = l.module_id
         WHERE m.course_id = $1 AND l.is_graded = true
-        "#,
-        course_id
+        "#
     )
+    .bind(course_id)
     .fetch_all(pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Error al obtener lecciones graduables: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -358,14 +358,14 @@ async fn check_course_completion(
 
     if gradable_lessons.is_empty() {
         // Si no hay lecciones graduables, considerar completado si está inscrito
-        let enrolled = sqlx::query!(
-            "SELECT id FROM enrollments WHERE user_id = $1 AND course_id = $2",
-            user_id,
-            course_id
+        let enrolled = sqlx::query(
+            "SELECT id FROM enrollments WHERE user_id = $1 AND course_id = $2"
         )
+        .bind(user_id)
+        .bind(course_id)
         .fetch_optional(pool)
         .await
-        .map_err(|e| {
+        .map_err(|e: sqlx::Error| {
             tracing::error!("Error al verificar inscripción: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -384,20 +384,21 @@ async fn check_course_completion(
     let mut passed_lessons = 0.0;
 
     for lesson in gradable_lessons {
-        let passing_pct = lesson.passing_percentage.unwrap_or(60.0);
+        let passing_pct = lesson.get::<Option<i32>, _>("passing_percentage").unwrap_or(60) as f64;
+        let lesson_id: Uuid = lesson.get("id");
 
-        let best_score = sqlx::query!(
+        let best_score = sqlx::query(
             r#"
             SELECT MAX(score_percentage) as max_score
             FROM grades
             WHERE user_id = $1 AND lesson_id = $2
-            "#,
-            user_id,
-            lesson.id
+            "#
         )
+        .bind(user_id)
+        .bind(lesson_id)
         .fetch_optional(pool)
         .await
-        .map_err(|e| {
+        .map_err(|e: sqlx::Error| {
             tracing::error!("Error al obtener calificaciones: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -405,8 +406,8 @@ async fn check_course_completion(
             )
         })?;
 
-        if let Some(score) = best_score {
-            if score.max_score.unwrap_or(0.0) >= passing_pct {
+        if let Some(row) = best_score {
+            if row.get::<Option<f64>, _>("max_score").unwrap_or(0.0) >= passing_pct {
                 passed_lessons += 1.0;
             }
         }
@@ -427,17 +428,17 @@ async fn issue_certificate_internal(
     _certificate_template_override: Option<&str>,
 ) -> Result<Json<CertificateResponse>, (StatusCode, Json<serde_json::Value>)> {
     // Obtener datos necesarios
-    let course_data = sqlx::query!(
+    let course_row = sqlx::query(
         r#"
         SELECT title, certificate_template, organization_id
         FROM courses
         WHERE id = $1
-        "#,
-        course_id
+        "#
     )
+    .bind(course_id)
     .fetch_optional(pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Error al obtener datos del curso: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -445,37 +446,38 @@ async fn issue_certificate_internal(
         )
     })?;
 
-    let course_data = course_data.ok_or((
+    let course_row = course_row.ok_or((
         StatusCode::NOT_FOUND,
         Json(json!({"error": "Curso no encontrado"})),
     ))?;
 
-    let user_name = sqlx::query!(
-        "SELECT full_name FROM users WHERE id = $1",
-        user_id
+    let user_name = sqlx::query(
+        "SELECT full_name FROM users WHERE id = $1"
     )
+    .bind(user_id)
     .fetch_one(pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Error al obtener nombre del usuario: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({"error": "Error interno del servidor"})),
         )
     })?
-    .full_name;
+    .get::<String, _>("full_name");
 
-    let org_data = sqlx::query!(
+    let organization_id: Uuid = course_row.get("organization_id");
+    let org_data = sqlx::query(
         r#"
         SELECT name, certificate_template
         FROM organizations
         WHERE id = $1
-        "#,
-        course_data.organization_id
+        "#
     )
+    .bind(organization_id)
     .fetch_optional(pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         tracing::error!("Error al obtener datos de la organización: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -484,16 +486,19 @@ async fn issue_certificate_internal(
     })?;
 
     // Determinar template a usar (curso > organización > default)
-    let template = course_data
-        .certificate_template
-        .or_else(|| org_data.and_then(|o| o.certificate_template))
+    let course_title = course_row.get::<String, _>("title");
+    let template = course_row
+        .get::<Option<String>, _>("certificate_template")
+        .or_else(|| org_data.as_ref().and_then(|o| o.get::<Option<String>, _>("certificate_template")))
         .unwrap_or_else(|| get_default_certificate_template());
+
+    let _org_name = org_data.as_ref().map(|o| o.get::<String, _>("name")).unwrap_or_else(|| "OpenCCB".to_string());
 
     // Reemplazar variables en el template
     let now = chrono::Utc::now();
     let certificate_html = template
         .replace("{{student_name}}", &user_name)
-        .replace("{{course_title}}", &course_data.title)
+        .replace("{{course_title}}", &course_title)
         .replace("{{date}}", &now.format("%d/%m/%Y").to_string())
         .replace("{{score}}", "Aprobado")
         .replace("{{verification_code}}", "VER-PLACEHOLDER");
@@ -524,10 +529,9 @@ async fn issue_certificate_internal(
     let metadata = serde_json::json!({
         "completion_date": now.to_rfc3339(),
         "final_score": course_completion.progress,
-        "organization_id": course_data.organization_id.to_string(),
+        "organization_id": organization_id.to_string(),
     });
 
-    use sqlx::Row;
     let issued_cert = sqlx::query(
         r#"
         INSERT INTO issued_certificates 
@@ -536,12 +540,12 @@ async fn issue_certificate_internal(
         RETURNING id, issued_at
         "#
     )
-    .bind(user_id)
-    .bind(course_id)
-    .bind(certificate_html)
-    .bind(certificate_hash)
-    .bind(verification_code)
-    .bind(metadata)
+    .bind(user_id.clone())
+    .bind(course_id.clone())
+    .bind(certificate_html.clone())
+    .bind(certificate_hash.clone())
+    .bind(verification_code.clone())
+    .bind(metadata.clone())
     .fetch_one(pool)
     .await
     .map_err(|e: sqlx::Error| {
@@ -563,7 +567,7 @@ async fn issue_certificate_internal(
         id: issued_cert.get("id"),
         user_id,
         course_id,
-        course_title: course_data.title,
+        course_title: course_title,
         student_name: user_name,
         certificate_html,
         issued_at: issued_cert.get::<chrono::DateTime<chrono::Utc>, _>("issued_at").to_string(),

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { cmsApi, Course } from "@/lib/api";
-import { Save, Settings as SettingsIcon, BookOpen, Calendar, Clock, Download, Upload } from "lucide-react";
+import { Save, Settings as SettingsIcon, BookOpen, Calendar, Clock, Download, Upload, Copy, Wand2 } from "lucide-react";
 
 const DEFAULT_CERTIFICATE_TEMPLATE = `
 <div style="width: 800px; height: 600px; padding: 40px; text-align: center; border: 10px solid #787878; font-family: 'Times New Roman', serif; background-color: #fff; color: #333;">
@@ -16,9 +16,52 @@ const DEFAULT_CERTIFICATE_TEMPLATE = `
        <span style="font-size: 20px; display: block; margin-bottom: 40px;">with a score of <b>{{score}}%</b></span>
        <span style="font-size: 25px; display: block; margin-bottom: 10px;"><i>Dated</i></span>
        <span style="font-size: 20px; display: block;">{{date}}</span>
+       <span style="font-size: 14px; display: block; margin-top: 24px; color: #666;">Verification: {{verification_code}}</span>
     </div>
 </div>
 `;
+
+const MODERN_CERTIFICATE_TEMPLATE = `
+<div style="width: 900px; height: 620px; padding: 0; font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); color: #fff; border-radius: 24px; overflow: hidden;">
+  <div style="padding: 48px; height: 100%; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.15);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+      <span style="font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase; color: #93c5fd;">OpenCCB</span>
+      <span style="font-size: 12px; color: #94a3b8;">{{date}}</span>
+    </div>
+    <h1 style="font-size: 54px; margin: 0 0 12px 0; line-height: 1;">Certificate</h1>
+    <p style="margin: 0 0 44px 0; color: #cbd5e1;">of Achievement</p>
+    <p style="font-size: 16px; color: #94a3b8; margin-bottom: 12px;">This certifies that</p>
+    <p style="font-size: 38px; margin: 0 0 24px 0; font-weight: 800;">{{student_name}}</p>
+    <p style="font-size: 16px; color: #94a3b8; margin-bottom: 8px;">has successfully completed</p>
+    <p style="font-size: 28px; margin: 0 0 34px 0; font-weight: 700; color: #bae6fd;">{{course_title}}</p>
+    <p style="margin: 0; color: #cbd5e1;">Final score: <strong>{{score}}%</strong></p>
+    <p style="margin-top: 40px; font-size: 12px; color: #64748b;">Verification: {{verification_code}}</p>
+  </div>
+</div>
+`;
+
+const MINIMAL_CERTIFICATE_TEMPLATE = `
+<div style="width: 850px; height: 600px; padding: 56px; box-sizing: border-box; font-family: 'Georgia', serif; background: #ffffff; color: #111827; border: 2px solid #e5e7eb;">
+  <h1 style="font-size: 44px; margin: 0 0 28px 0;">Certificate of Completion</h1>
+  <p style="font-size: 20px; margin: 0 0 12px 0;">Awarded to</p>
+  <p style="font-size: 36px; margin: 0 0 26px 0; text-decoration: underline;">{{student_name}}</p>
+  <p style="font-size: 18px; margin: 0 0 12px 0;">for completing</p>
+  <p style="font-size: 30px; margin: 0 0 26px 0; font-weight: bold;">{{course_title}}</p>
+  <p style="font-size: 18px; margin: 0 0 40px 0;">with a final score of {{score}}%</p>
+  <div style="display: flex; justify-content: space-between; font-size: 14px; color: #6b7280;">
+    <span>{{date}}</span>
+    <span>{{verification_code}}</span>
+  </div>
+</div>
+`;
+
+const TEMPLATE_VARIABLES = [
+    "{{student_name}}",
+    "{{course_title}}",
+    "{{date}}",
+    "{{score}}",
+    "{{verification_code}}",
+];
 
 import CourseEditorLayout from "@/components/CourseEditorLayout";
 import TeamManagementSection from "./TeamManagementSection";
@@ -39,6 +82,51 @@ export default function CourseSettingsPage() {
     const [importing, setImporting] = useState(false);
     const [price, setPrice] = useState(0);
     const [currency, setCurrency] = useState("USD");
+    const [previewStudentName, setPreviewStudentName] = useState("Jane Doe");
+    const [previewScore, setPreviewScore] = useState("95");
+    const [templateWarning, setTemplateWarning] = useState<string | null>(null);
+
+    const buildPreviewCertificate = () => {
+        return certificateTemplate
+            .replace(/{{student_name}}/g, previewStudentName || "Jane Doe")
+            .replace(/{{course_title}}/g, course?.title || "Demo Course")
+            .replace(/{{date}}/g, new Date().toLocaleDateString())
+            .replace(/{{score}}/g, previewScore || "95")
+            .replace(/{{verification_code}}/g, "OPENCCB-VERIFY-2026");
+    };
+
+    const applyTemplatePreset = (preset: "default" | "modern" | "minimal") => {
+        if (preset === "modern") {
+            setCertificateTemplate(MODERN_CERTIFICATE_TEMPLATE);
+            return;
+        }
+        if (preset === "minimal") {
+            setCertificateTemplate(MINIMAL_CERTIFICATE_TEMPLATE);
+            return;
+        }
+        setCertificateTemplate(DEFAULT_CERTIFICATE_TEMPLATE);
+    };
+
+    const insertVariable = (token: string) => {
+        setCertificateTemplate((prev) => `${prev}${prev.endsWith("\n") ? "" : "\n"}${token}`);
+    };
+
+    const copyVariable = async (token: string) => {
+        try {
+            await navigator.clipboard.writeText(token);
+        } catch {
+            // Silently ignore clipboard failures in unsupported browsers.
+        }
+    };
+
+    useEffect(() => {
+        const missingCore = ["{{student_name}}", "{{course_title}}"].filter((token) => !certificateTemplate.includes(token));
+        if (missingCore.length > 0) {
+            setTemplateWarning(`Faltan variables clave: ${missingCore.join(", ")}`);
+            return;
+        }
+        setTemplateWarning(null);
+    }, [certificateTemplate]);
 
     useEffect(() => {
         const fetchCourse = async () => {
@@ -338,9 +426,63 @@ export default function CourseSettingsPage() {
 
                     <div className="space-y-6">
                         <p className="text-slate-500 dark:text-gray-400 font-medium">
-                            Design the HTML certificate that students will receive upon passing the course.
-                            Available variables: <code className="text-blue-600 dark:text-blue-400 font-black">{"{{student_name}}"}</code>, <code className="text-blue-600 dark:text-blue-400 font-black">{"{{course_title}}"}</code>, <code className="text-blue-600 dark:text-blue-400 font-black">{"{{date}}"}</code>, <code className="text-blue-600 dark:text-blue-400 font-black">{"{{score}}"}</code>.
+                            Diseña el HTML del certificado que recibirá el estudiante al aprobar el curso.
                         </p>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="block text-xs font-black text-slate-500 dark:text-gray-400 uppercase tracking-[0.2em]">Presets</label>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        onClick={() => applyTemplatePreset("default")}
+                                        className="px-3 py-1.5 rounded-lg bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest hover:border-blue-500/40 transition-colors"
+                                    >
+                                        Classic
+                                    </button>
+                                    <button
+                                        onClick={() => applyTemplatePreset("modern")}
+                                        className="px-3 py-1.5 rounded-lg bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest hover:border-blue-500/40 transition-colors"
+                                    >
+                                        Modern
+                                    </button>
+                                    <button
+                                        onClick={() => applyTemplatePreset("minimal")}
+                                        className="px-3 py-1.5 rounded-lg bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest hover:border-blue-500/40 transition-colors"
+                                    >
+                                        Minimal
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="block text-xs font-black text-slate-500 dark:text-gray-400 uppercase tracking-[0.2em]">Variables</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {TEMPLATE_VARIABLES.map((token) => (
+                                        <div key={token} className="flex items-center gap-1 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1">
+                                            <button
+                                                onClick={() => insertVariable(token)}
+                                                className="text-[10px] font-black text-blue-600 dark:text-blue-400 hover:text-blue-700"
+                                            >
+                                                {token}
+                                            </button>
+                                            <button
+                                                onClick={() => copyVariable(token)}
+                                                className="text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                                                title="Copiar variable"
+                                            >
+                                                <Copy size={12} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {templateWarning && (
+                            <div className="rounded-xl border border-amber-300/50 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-xs font-bold text-amber-700 dark:text-amber-300">
+                                {templateWarning}
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div className="space-y-2">
@@ -352,23 +494,32 @@ export default function CourseSettingsPage() {
                                     placeholder="Enter HTML code here..."
                                 />
                                 <button
-                                    onClick={() => setCertificateTemplate(DEFAULT_CERTIFICATE_TEMPLATE)}
-                                    className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                                    onClick={() => applyTemplatePreset("default")}
+                                    className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
                                 >
-                                    Reset to Default Template
+                                    <Wand2 size={12} /> Reset to Default Template
                                 </button>
                             </div>
 
                             <div className="space-y-2">
                                 <label className="block text-sm font-black text-slate-700 dark:text-gray-300 uppercase tracking-wider">Live Preview</label>
+                                <div className="grid grid-cols-2 gap-2 mb-2">
+                                    <input
+                                        value={previewStudentName}
+                                        onChange={(e) => setPreviewStudentName(e.target.value)}
+                                        className="bg-slate-100 dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold"
+                                        placeholder="Nombre estudiante"
+                                    />
+                                    <input
+                                        value={previewScore}
+                                        onChange={(e) => setPreviewScore(e.target.value)}
+                                        className="bg-slate-100 dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold"
+                                        placeholder="Score"
+                                    />
+                                </div>
                                 <div className="w-full h-[400px] bg-white rounded-xl overflow-hidden relative group border border-slate-200 shadow-sm">
                                     <iframe
-                                        srcDoc={certificateTemplate
-                                            .replace(/{{student_name}}/g, "Jane Doe")
-                                            .replace(/{{course_title}}/g, course?.title || "Demo Course")
-                                            .replace(/{{date}}/g, new Date().toLocaleDateString())
-                                            .replace(/{{score}}/g, "95")
-                                        }
+                                        srcDoc={buildPreviewCertificate()}
                                         className="w-full h-full transform scale-75 origin-top-left w-[133%] h-[133%]"
                                         style={{ border: "none" }}
                                     />

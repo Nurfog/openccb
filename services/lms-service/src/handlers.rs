@@ -1231,12 +1231,56 @@ pub async fn get_user_enrollments(
         user_id,
         org_ctx.id
     );
-    let enrollments =
-        sqlx::query_as::<_, Enrollment>("SELECT * FROM enrollments WHERE user_id = $1")
-            .bind(user_id)
-            .fetch_all(&pool)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let enrollments = sqlx::query_as::<_, Enrollment>(
+        r#"
+        SELECT
+            e.id,
+            e.user_id,
+            e.organization_id,
+            e.course_id,
+            e.external_id,
+            CASE
+                WHEN totals.total_lessons > 0
+                    THEN ((COALESCE(graded.graded_done, 0) + COALESCE(ungraded.ungraded_done, 0))::float4 / totals.total_lessons::float4) * 100.0
+                ELSE 0.0::float4
+            END AS progress,
+            e.enrolled_at
+        FROM enrollments e
+        JOIN LATERAL (
+            SELECT COUNT(*)::int AS total_lessons
+            FROM lessons l
+            JOIN modules m ON m.id = l.module_id
+            WHERE m.course_id = e.course_id
+              AND l.organization_id = e.organization_id
+        ) totals ON TRUE
+        LEFT JOIN LATERAL (
+            SELECT COUNT(DISTINCT ug.lesson_id)::int AS graded_done
+            FROM user_grades ug
+            JOIN lessons l ON l.id = ug.lesson_id
+            WHERE ug.user_id = e.user_id
+              AND ug.course_id = e.course_id
+              AND l.is_graded = true
+        ) graded ON TRUE
+        LEFT JOIN LATERAL (
+            SELECT COUNT(DISTINCT li.lesson_id)::int AS ungraded_done
+            FROM lesson_interactions li
+            JOIN lessons l ON l.id = li.lesson_id
+            JOIN modules m ON m.id = l.module_id
+            WHERE li.user_id = e.user_id
+              AND li.event_type = 'complete'
+              AND l.is_graded = false
+              AND m.course_id = e.course_id
+        ) ungraded ON TRUE
+        WHERE e.user_id = $1
+          AND e.organization_id = $2
+        ORDER BY e.enrolled_at DESC
+        "#,
+    )
+    .bind(user_id)
+    .bind(org_ctx.id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(enrollments))
 }
@@ -1687,7 +1731,30 @@ pub async fn get_student_progress_stats(
 
     // 2. Lecciones completadas
     let completed_lessons: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM user_grades WHERE user_id = $1 AND course_id = $2 AND organization_id = $3",
+        r#"
+        SELECT COUNT(*)
+        FROM lessons l
+        JOIN modules m ON m.id = l.module_id
+        WHERE m.course_id = $2
+          AND l.organization_id = $3
+          AND (
+              (l.is_graded = true AND EXISTS (
+                  SELECT 1
+                  FROM user_grades ug
+                  WHERE ug.user_id = $1
+                    AND ug.course_id = $2
+                    AND ug.lesson_id = l.id
+              ))
+              OR
+              (l.is_graded = false AND EXISTS (
+                  SELECT 1
+                  FROM lesson_interactions li
+                  WHERE li.user_id = $1
+                    AND li.lesson_id = l.id
+                    AND li.event_type = 'complete'
+              ))
+          )
+        "#,
     )
     .bind(user_id)
     .bind(course_id)
