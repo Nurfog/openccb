@@ -9,7 +9,7 @@ use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::handlers::{Org, log_action};
+use super::handlers::log_action;
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 struct OrganizationEmailTemplateRow {
@@ -53,25 +53,35 @@ pub async fn list_organization_email_templates(
     State(pool): State<PgPool>,
     claims: Claims,
 ) -> Result<Json<Vec<OrganizationEmailTemplateResponse>>, (StatusCode, String)> {
-    let org_id = claims.organization_id.ok_or((
-        StatusCode::BAD_REQUEST,
-        "Organization ID required".to_string(),
-    ))?;
+    let org_id = claims.org;
 
-    let rows = sqlx::query_as!(
-        OrganizationEmailTemplateRow,
+    let rows: Vec<OrganizationEmailTemplateRow> = sqlx::query!(
         "SELECT id, organization_id, template_key, display_name, subject_template, body_template, is_html, is_enabled, created_at, updated_at FROM organization_email_templates WHERE organization_id = $1 ORDER BY template_key",
         org_id
     )
     .fetch_all(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         eprintln!("Error fetching email templates: {:?}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to fetch email templates".to_string(),
         )
-    })?;
+    })?
+    .into_iter()
+    .map(|row| OrganizationEmailTemplateRow {
+        id: row.id,
+        organization_id: row.organization_id,
+        template_key: row.template_key,
+        display_name: row.display_name,
+        subject_template: row.subject_template,
+        body_template: row.body_template,
+        is_html: row.is_html,
+        is_enabled: row.is_enabled,
+        created_at: row.created_at.expect("created_at should not be null"),
+        updated_at: row.updated_at.expect("updated_at should not be null"),
+    })
+    .collect();
 
     let responses = rows
         .into_iter()
@@ -97,15 +107,11 @@ pub async fn create_organization_email_template(
     claims: Claims,
     Json(payload): Json<UpsertOrganizationEmailTemplatePayload>,
 ) -> Result<Json<OrganizationEmailTemplateResponse>, (StatusCode, String)> {
-    let org_id = claims.organization_id.ok_or((
-        StatusCode::BAD_REQUEST,
-        "Organization ID required".to_string(),
-    ))?;
+    let org_id = claims.org;
 
     validate_template_payload(&payload)?;
 
-    let row = sqlx::query_as!(
-        OrganizationEmailTemplateRow,
+    let row = sqlx::query!(
         "INSERT INTO organization_email_templates (organization_id, template_key, display_name, subject_template, body_template, is_html, is_enabled)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING id, organization_id, template_key, display_name, subject_template, body_template, is_html, is_enabled, created_at, updated_at",
@@ -119,7 +125,7 @@ pub async fn create_organization_email_template(
     )
     .fetch_one(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         eprintln!("Error creating email template: {:?}", e);
         if e.to_string().contains("duplicate key") {
             (
@@ -134,12 +140,27 @@ pub async fn create_organization_email_template(
         }
     })?;
 
+    let row = OrganizationEmailTemplateRow {
+        id: row.id,
+        organization_id: row.organization_id,
+        template_key: row.template_key,
+        display_name: row.display_name,
+        subject_template: row.subject_template,
+        body_template: row.body_template,
+        is_html: row.is_html,
+        is_enabled: row.is_enabled,
+        created_at: row.created_at.expect("created_at should not be null"),
+        updated_at: row.updated_at.expect("updated_at should not be null"),
+    };
+
     log_action(
         &pool,
-        claims.user_id,
         org_id,
+        claims.sub,
         "create_email_template",
-        &json!({
+        "email_template",
+        row.id,
+        json!({
             "template_key": payload.template_key,
             "display_name": payload.display_name
         }),
@@ -168,15 +189,11 @@ pub async fn update_organization_email_template(
     Path(template_id): Path<Uuid>,
     Json(payload): Json<UpsertOrganizationEmailTemplatePayload>,
 ) -> Result<Json<OrganizationEmailTemplateResponse>, (StatusCode, String)> {
-    let org_id = claims.organization_id.ok_or((
-        StatusCode::BAD_REQUEST,
-        "Organization ID required".to_string(),
-    ))?;
+    let org_id = claims.org;
 
     validate_template_payload(&payload)?;
 
-    let row = sqlx::query_as!(
-        OrganizationEmailTemplateRow,
+    let row = sqlx::query!(
         "UPDATE organization_email_templates
          SET display_name = $3, subject_template = $4, body_template = $5, is_html = $6, is_enabled = $7, updated_at = NOW()
          WHERE id = $1 AND organization_id = $2
@@ -191,13 +208,25 @@ pub async fn update_organization_email_template(
     )
     .fetch_optional(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         eprintln!("Error updating email template: {:?}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to update email template".to_string(),
         )
     })?
+    .map(|row| OrganizationEmailTemplateRow {
+        id: row.id,
+        organization_id: row.organization_id,
+        template_key: row.template_key,
+        display_name: row.display_name,
+        subject_template: row.subject_template,
+        body_template: row.body_template,
+        is_html: row.is_html,
+        is_enabled: row.is_enabled,
+        created_at: row.created_at.expect("created_at should not be null"),
+        updated_at: row.updated_at.expect("updated_at should not be null"),
+    })
     .ok_or((
         StatusCode::NOT_FOUND,
         "Email template not found".to_string(),
@@ -205,10 +234,12 @@ pub async fn update_organization_email_template(
 
     log_action(
         &pool,
-        claims.user_id,
         org_id,
+        claims.sub,
         "update_email_template",
-        &json!({
+        "email_template",
+        template_id,
+        json!({
             "template_id": template_id,
             "template_key": payload.template_key,
             "display_name": payload.display_name
@@ -237,10 +268,7 @@ pub async fn delete_organization_email_template(
     claims: Claims,
     Path(template_id): Path<Uuid>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let org_id = claims.organization_id.ok_or((
-        StatusCode::BAD_REQUEST,
-        "Organization ID required".to_string(),
-    ))?;
+    let org_id = claims.org;
 
     let result = sqlx::query!(
         "DELETE FROM organization_email_templates WHERE id = $1 AND organization_id = $2",
@@ -249,7 +277,7 @@ pub async fn delete_organization_email_template(
     )
     .execute(&pool)
     .await
-    .map_err(|e| {
+    .map_err(|e: sqlx::Error| {
         eprintln!("Error deleting email template: {:?}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -266,10 +294,12 @@ pub async fn delete_organization_email_template(
 
     log_action(
         &pool,
-        claims.user_id,
         org_id,
+        claims.sub,
         "delete_email_template",
-        &json!({"template_id": template_id}),
+        "email_template",
+        template_id,
+        json!({"template_id": template_id}),
     )
     .await;
 

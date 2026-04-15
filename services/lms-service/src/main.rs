@@ -35,7 +35,7 @@ use utoipa::OpenApi;
 
 #[tokio::main]
 async fn main() {
-    dotenv().ok();
+    dotenvy::from_filename(".env.dev").or_else(|_| dotenv()).ok();
     tracing_subscriber::fmt::init();
 
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL debe estar configurada");

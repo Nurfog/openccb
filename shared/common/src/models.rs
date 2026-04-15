@@ -999,6 +999,7 @@ mod tests {
                 primary_color: None,
                 secondary_color: None,
                 certificate_template: None,
+                certificates_enabled: true,
                 platform_name: None,
                 favicon_url: None,
                 logo_variant: None,

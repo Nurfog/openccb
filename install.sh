@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # ============================================================================
 # PARÁMETROS LOCALES (no editar — se derivan del docker-compose.local.yml)
 # ============================================================================
-LOCAL_DB_PORT="5433"
+LOCAL_DB_PORT="5432"
 LOCAL_DB_USER="user"
 LOCAL_DB_PASS="password"
 LOCAL_CMS_URL="http://localhost:3001"
