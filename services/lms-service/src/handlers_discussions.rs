@@ -3,12 +3,249 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
 };
+use lettre::message::Mailbox;
+use lettre::transport::smtp::authentication::Credentials;
+use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 use common::auth::Claims;
 use common::middleware::Org;
 use common::models::{DiscussionPost, DiscussionThread, PostWithAuthor, ThreadWithAuthor};
 use serde::Deserialize;
 use sqlx::PgPool;
+use std::env;
 use uuid::Uuid;
+
+#[derive(Debug, Clone)]
+struct ForumEmailRecipient {
+    user_id: Uuid,
+    email: String,
+    full_name: Option<String>,
+}
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+struct OrganizationEmailSettingsRow {
+    service_type: String,
+    smtp_enabled: bool,
+    smtp_host: Option<String>,
+    smtp_port: i32,
+    smtp_from: Option<String>,
+    smtp_username: Option<String>,
+    smtp_password: Option<String>,
+    smtp_starttls: bool,
+}
+
+#[derive(Debug, Clone)]
+struct SmtpConfig {
+    enabled: bool,
+    host: String,
+    from: String,
+    port: u16,
+    starttls: bool,
+    username: Option<String>,
+    password: Option<String>,
+}
+
+fn parse_bool(value: &str) -> bool {
+    let normalized = value.trim().to_lowercase();
+    normalized == "1" || normalized == "true" || normalized == "yes"
+}
+
+fn load_env_smtp_config() -> Result<SmtpConfig, String> {
+    let enabled = env::var("SMTP_ENABLED").map(|v| parse_bool(&v)).unwrap_or(false);
+    let host = env::var("SMTP_HOST").map_err(|_| "SMTP_HOST no está configurado".to_string())?;
+    let from = env::var("SMTP_FROM")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .unwrap_or_else(|| "OpenCCB <no-reply@openccb.local>".to_string());
+    let port = env::var("SMTP_PORT")
+        .ok()
+        .and_then(|v| v.parse::<u16>().ok())
+        .unwrap_or(587);
+    let starttls = env::var("SMTP_STARTTLS")
+        .map(|v| {
+            let normalized = v.trim().to_lowercase();
+            normalized == "1" || normalized == "true" || normalized == "yes"
+        })
+        .unwrap_or(false);
+    let username = env::var("SMTP_USERNAME").ok().filter(|v| !v.trim().is_empty());
+    let password = env::var("SMTP_PASSWORD").ok().filter(|v| !v.trim().is_empty());
+
+    Ok(SmtpConfig {
+        enabled,
+        host,
+        from,
+        port,
+        starttls,
+        username,
+        password,
+    })
+}
+
+async fn load_org_smtp_config(pool: &PgPool, organization_id: Uuid) -> Option<SmtpConfig> {
+    let row = sqlx::query_as::<_, OrganizationEmailSettingsRow>(
+        r#"
+        SELECT
+            service_type,
+            smtp_enabled,
+            smtp_host,
+            smtp_port,
+            smtp_from,
+            smtp_username,
+            smtp_password,
+            smtp_starttls
+        FROM organization_email_services
+        WHERE organization_id = $1
+        ORDER BY is_default DESC, created_at ASC
+        LIMIT 1
+        "#,
+    )
+    .bind(organization_id)
+    .fetch_optional(pool)
+    .await;
+
+    let row = match row {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::warn!(
+                "No se pudo cargar configuración SMTP por organización (fallback a entorno): {}",
+                e
+            );
+            return None;
+        }
+    }?;
+
+    if row.service_type.trim().to_lowercase() != "smtp" {
+        tracing::warn!(
+            "El servicio de email por defecto no es SMTP ({}), se usa fallback de entorno",
+            row.service_type
+        );
+        return None;
+    }
+
+    let host = row.smtp_host.unwrap_or_default().trim().to_string();
+    if host.is_empty() {
+        return None;
+    }
+
+    let from = row
+        .smtp_from
+        .unwrap_or_else(|| "OpenCCB <no-reply@openccb.local>".to_string())
+        .trim()
+        .to_string();
+
+    let port = u16::try_from(row.smtp_port).ok().filter(|v| *v > 0).unwrap_or(587);
+
+    Some(SmtpConfig {
+        enabled: row.smtp_enabled,
+        host,
+        from,
+        port,
+        starttls: row.smtp_starttls,
+        username: row.smtp_username.filter(|v| !v.trim().is_empty()),
+        password: row.smtp_password.filter(|v| !v.trim().is_empty()),
+    })
+}
+
+fn build_smtp_mailer(config: &SmtpConfig) -> Result<AsyncSmtpTransport<Tokio1Executor>, String> {
+    let mut builder = if config.starttls {
+        AsyncSmtpTransport::<Tokio1Executor>::relay(&config.host)
+            .map_err(|e| format!("Error al crear relay SMTP con STARTTLS: {}", e))?
+            .port(config.port)
+    } else {
+        AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(&config.host).port(config.port)
+    };
+
+    if let (Some(user), Some(pass)) = (&config.username, &config.password) {
+        let user = user.trim().to_string();
+        let pass = pass.trim().to_string();
+        builder = builder.credentials(Credentials::new(user, pass));
+    }
+
+    Ok(builder.build())
+}
+
+async fn send_forum_email_notifications(
+    pool: &PgPool,
+    organization_id: Uuid,
+    recipients: &[ForumEmailRecipient],
+    subject: &str,
+    body: &str,
+) {
+    if recipients.is_empty() {
+        return;
+    }
+
+    let smtp_config = match load_org_smtp_config(pool, organization_id).await {
+        Some(config) => config,
+        None => match load_env_smtp_config() {
+            Ok(config) => config,
+            Err(e) => {
+                tracing::warn!("SMTP deshabilitado para foros: {}", e);
+                return;
+            }
+        },
+    };
+
+    if !smtp_config.enabled {
+        return;
+    }
+
+    let mailer = match build_smtp_mailer(&smtp_config) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::warn!("SMTP deshabilitado para foros: {}", e);
+            return;
+        }
+    };
+
+    let from_mailbox: Mailbox = match smtp_config.from.parse() {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("SMTP_FROM inválido ({}): {}", smtp_config.from, e);
+            return;
+        }
+    };
+
+    for recipient in recipients {
+        let to_mailbox: Mailbox = match recipient.email.parse() {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::warn!(
+                    "Email inválido para notificación de foro ({}): {}",
+                    recipient.email,
+                    e
+                );
+                continue;
+            }
+        };
+
+        let personalized_body = if let Some(name) = &recipient.full_name {
+            format!("Hola {},\n\n{}\n\nOpenCCB", name, body)
+        } else {
+            format!("Hola,\n\n{}\n\nOpenCCB", body)
+        };
+
+        let message = match Message::builder()
+            .from(from_mailbox.clone())
+            .to(to_mailbox)
+            .subject(subject)
+            .body(personalized_body)
+        {
+            Ok(msg) => msg,
+            Err(e) => {
+                tracing::warn!("No se pudo construir correo de foro: {}", e);
+                continue;
+            }
+        };
+
+        if let Err(e) = mailer.send(message).await {
+            tracing::warn!(
+                "Falló envío SMTP de foro para {}: {}",
+                recipient.email,
+                e
+            );
+        }
+    }
+}
 
 // ========== DTOs de Solicitud/Respuesta ==========
 
@@ -126,6 +363,13 @@ pub async fn create_thread(
     State(pool): State<PgPool>,
     Json(payload): Json<CreateThreadPayload>,
 ) -> Result<Json<DiscussionThread>, (StatusCode, String)> {
+    let author_name: Option<String> = sqlx::query_scalar("SELECT full_name FROM users WHERE id = $1")
+        .bind(claims.sub)
+        .fetch_optional(&pool)
+        .await
+        .ok()
+        .flatten();
+
     let thread = sqlx::query_as::<_, DiscussionThread>(
         "INSERT INTO discussion_threads (organization_id, course_id, lesson_id, author_id, title, content)
          VALUES ($1, $2, $3, $4, $5, $6)
@@ -135,8 +379,8 @@ pub async fn create_thread(
     .bind(course_id)
     .bind(payload.lesson_id)
     .bind(claims.sub)
-    .bind(payload.title)
-    .bind(payload.content)
+    .bind(&payload.title)
+    .bind(&payload.content)
     .fetch_one(&pool)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -152,6 +396,61 @@ pub async fn create_thread(
     .bind(claims.sub)
     .execute(&pool)
     .await;
+
+    // Notificar a instructores/administradores del curso (excepto autor)
+    let instructor_recipients = sqlx::query_as::<_, (Uuid, String, Option<String>)>(
+        "SELECT DISTINCT u.id, u.email, u.full_name
+         FROM course_instructors ci
+         JOIN users u ON u.id = ci.user_id
+         WHERE ci.course_id = $1
+           AND ci.organization_id = $2
+           AND u.id != $3
+           AND u.email IS NOT NULL
+           AND trim(u.email) != ''",
+    )
+    .bind(course_id)
+    .bind(org_ctx.id)
+    .bind(claims.sub)
+    .fetch_all(&pool)
+    .await
+    .unwrap_or_default()
+    .into_iter()
+    .map(|(user_id, email, full_name)| ForumEmailRecipient {
+        user_id,
+        email,
+        full_name,
+    })
+    .collect::<Vec<_>>();
+
+    for recipient in &instructor_recipients {
+        let _ = sqlx::query(
+            "INSERT INTO notifications (organization_id, user_id, title, message, notification_type, link_url)
+             VALUES ($1, $2, $3, $4, $5, $6)",
+        )
+        .bind(org_ctx.id)
+        .bind(recipient.user_id)
+        .bind(format!("Nuevo hilo en foro: {}", thread.title))
+        .bind(if thread.content.len() > 140 {
+            format!("{}...", &thread.content[..140])
+        } else {
+            thread.content.clone()
+        })
+        .bind("forum_thread")
+        .bind(format!("/courses/{}#discussions", course_id))
+        .execute(&pool)
+        .await;
+    }
+
+    let author_display = author_name.unwrap_or_else(|| "Un estudiante".to_string());
+    let subject = format!("[OpenCCB] Nuevo hilo: {}", thread.title);
+    let body = format!(
+        "{} creó un nuevo hilo en el curso.\n\nTítulo: {}\n\n{}\n\nIr al curso: /courses/{}#discussions",
+        author_display,
+        thread.title,
+        thread.content,
+        course_id
+    );
+    send_forum_email_notifications(&pool, org_ctx.id, &instructor_recipients, &subject, &body).await;
 
     Ok(Json(thread))
 }
@@ -325,8 +624,11 @@ pub async fn create_post(
 ) -> Result<Json<DiscussionPost>, (StatusCode, String)> {
     // Verificar si el hilo está bloqueado
     let thread =
-        sqlx::query_as::<_, (bool,)>("SELECT is_locked FROM discussion_threads WHERE id = $1")
+        sqlx::query_as::<_, (bool, String, Uuid, Uuid)>(
+            "SELECT is_locked, title, course_id, author_id FROM discussion_threads WHERE id = $1 AND organization_id = $2",
+        )
             .bind(thread_id)
+            .bind(org_ctx.id)
             .fetch_one(&pool)
             .await
             .map_err(|_| (StatusCode::NOT_FOUND, "Hilo no encontrado".to_string()))?;
@@ -334,6 +636,13 @@ pub async fn create_post(
     if thread.0 {
         return Err((StatusCode::FORBIDDEN, "El hilo está bloqueado".to_string()));
     }
+
+    let author_name: Option<String> = sqlx::query_scalar("SELECT full_name FROM users WHERE id = $1")
+        .bind(claims.sub)
+        .fetch_optional(&pool)
+        .await
+        .ok()
+        .flatten();
 
     let post = sqlx::query_as::<_, DiscussionPost>(
         "INSERT INTO discussion_posts (organization_id, thread_id, parent_post_id, author_id, content)
@@ -349,7 +658,80 @@ pub async fn create_post(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // TODO: Enviar notificaciones a los usuarios suscritos
+    // Notificar a los suscritos al hilo (excepto autor de la respuesta)
+    let mut recipients = sqlx::query_as::<_, (Uuid, String, Option<String>)>(
+        "SELECT DISTINCT u.id, u.email, u.full_name
+         FROM discussion_subscriptions ds
+         JOIN users u ON u.id = ds.user_id
+         WHERE ds.thread_id = $1
+           AND ds.organization_id = $2
+           AND ds.user_id != $3
+           AND u.email IS NOT NULL
+           AND trim(u.email) != ''",
+    )
+    .bind(thread_id)
+    .bind(org_ctx.id)
+    .bind(claims.sub)
+    .fetch_all(&pool)
+    .await
+    .unwrap_or_default()
+    .into_iter()
+    .map(|(user_id, email, full_name)| ForumEmailRecipient {
+        user_id,
+        email,
+        full_name,
+    })
+    .collect::<Vec<_>>();
+
+    // Si el autor del hilo no está suscrito, añadirlo igualmente (si no es quien respondió)
+    if thread.3 != claims.sub && !recipients.iter().any(|r| r.user_id == thread.3) {
+        if let Ok(Some((email, full_name))) = sqlx::query_as::<_, (String, Option<String>)>(
+            "SELECT email, full_name FROM users WHERE id = $1 AND organization_id = $2",
+        )
+        .bind(thread.3)
+        .bind(org_ctx.id)
+        .fetch_optional(&pool)
+        .await
+        {
+            if !email.trim().is_empty() {
+                recipients.push(ForumEmailRecipient {
+                    user_id: thread.3,
+                    email,
+                    full_name,
+                });
+            }
+        }
+    }
+
+    for recipient in &recipients {
+        let _ = sqlx::query(
+            "INSERT INTO notifications (organization_id, user_id, title, message, notification_type, link_url)
+             VALUES ($1, $2, $3, $4, $5, $6)",
+        )
+        .bind(org_ctx.id)
+        .bind(recipient.user_id)
+        .bind(format!("Nueva respuesta en: {}", thread.1))
+        .bind(if post.content.len() > 140 {
+            format!("{}...", &post.content[..140])
+        } else {
+            post.content.clone()
+        })
+        .bind("forum_reply")
+        .bind(format!("/courses/{}#discussions", thread.2))
+        .execute(&pool)
+        .await;
+    }
+
+    let author_display = author_name.unwrap_or_else(|| "Un usuario".to_string());
+    let subject = format!("[OpenCCB] Nueva respuesta en: {}", thread.1);
+    let body = format!(
+        "{} respondió en un hilo al que estás suscrito.\n\nHilo: {}\n\n{}\n\nIr al curso: /courses/{}#discussions",
+        author_display,
+        thread.1,
+        post.content,
+        thread.2
+    );
+    send_forum_email_notifications(&pool, org_ctx.id, &recipients, &subject, &body).await;
 
     Ok(Json(post))
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import BrandingSettings from "@/components/BrandingSettings";
+import EmailSettings from "@/components/EmailSettings";
 import ExerciseFeatureSettings from "@/components/ExerciseFeatureSettings";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -28,6 +29,7 @@ export default function SettingsPage() {
         >
             <div className="space-y-8">
                 <BrandingSettings />
+                <EmailSettings />
                 <ExerciseFeatureSettings />
             </div>
         </PageLayout>

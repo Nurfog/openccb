@@ -66,6 +66,22 @@ services:
       retries: 5
 
   # ========================================
+  # SMTP Relay Interno (Mailpit)
+  # ========================================
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: openccb-mailpit
+    # SMTP para servicios internos y UI solo accesible por SSH túnel/localhost
+    ports:
+      - "127.0.0.1:8025:8025"
+    environment:
+      - MP_SMTP_BIND_ADDR=0.0.0.0:1025
+      - MP_UI_BIND_ADDR=0.0.0.0:8025
+    networks:
+      - openccb-network
+    restart: always
+
+  # ========================================
   # Studio + CMS (HTTPS)
   # ========================================
   studio:
@@ -126,6 +142,12 @@ services:
       - HOSTNAME=0.0.0.0
       - DATABASE_URL=${LMS_DATABASE_URL}
       - NEXT_PUBLIC_CMS_API_URL=${NEXT_PUBLIC_CMS_API_URL}
+      - SMTP_ENABLED=${SMTP_ENABLED:-false}
+      - SMTP_HOST=${SMTP_HOST:-mailpit}
+      - SMTP_PORT=${SMTP_PORT:-1025}
+      - SMTP_FROM=${SMTP_FROM:-OpenCCB <no-reply@norteamericano.com>}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
     env_file: .env
     extra_hosts:
       - "host.docker.internal:host-gateway"

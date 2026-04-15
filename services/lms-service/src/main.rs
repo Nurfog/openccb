@@ -120,16 +120,16 @@ async fn main() {
         .expose_headers([header::CONTENT_LENGTH, header::CONTENT_TYPE]);
 
     use tower_governor::governor::GovernorConfigBuilder;
+    use tower_governor::key_extractor::SmartIpKeyExtractor;
     use tower_governor::GovernorLayer;
     use std::sync::Arc;
 
-    let governor_conf = Arc::new(
-        GovernorConfigBuilder::default()
-            .per_second(10)
-            .burst_size(50)
-            .finish()
-            .unwrap(),
-    );
+    let mut governor_conf = GovernorConfigBuilder::default()
+        .const_per_second(10)
+        .const_burst_size(50)
+        .key_extractor(SmartIpKeyExtractor);
+
+    let governor_conf = Arc::new(governor_conf.finish().unwrap());
 
     // Rate limiter solo para rutas protegidas (después del middleware de autenticación)
     let protected_routes = Router::new()

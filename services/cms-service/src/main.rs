@@ -3,6 +3,7 @@ pub mod exporter;
 mod external_handlers;
 mod handlers;
 mod handlers_branding;
+mod handlers_email_settings;
 mod handlers_exercise_settings;
 mod handlers_assets;
 mod handlers_dependencies;
@@ -162,16 +163,16 @@ async fn main() {
         .expose_headers([header::CONTENT_LENGTH, header::CONTENT_TYPE, header::CONTENT_RANGE, header::ACCEPT_RANGES]);
 
     use tower_governor::governor::GovernorConfigBuilder;
+    use tower_governor::key_extractor::SmartIpKeyExtractor;
     use tower_governor::GovernorLayer;
     use std::sync::Arc;
 
-    let governor_conf = Arc::new(
-        GovernorConfigBuilder::default()
-            .per_second(5) // CMS usually has more complex operations, slightly lower limit
-            .burst_size(20)
-            .finish()
-            .unwrap(),
-    );
+    let mut governor_conf = GovernorConfigBuilder::default()
+        .const_per_second(5) // CMS usually has more complex operations, slightly lower limit
+        .const_burst_size(20)
+        .key_extractor(SmartIpKeyExtractor);
+
+    let governor_conf = Arc::new(governor_conf.finish().unwrap());
 
     // Rutas protegidas que requieren autenticación y contexto de organización
     let protected_routes = Router::new()
@@ -310,6 +311,25 @@ async fn main() {
             "/organization/exercise-settings",
             get(handlers_exercise_settings::get_organization_exercise_settings)
                 .put(handlers_exercise_settings::update_organization_exercise_settings),
+        )
+        .route(
+            "/organization/email-settings",
+            get(handlers_email_settings::get_organization_email_settings)
+                .put(handlers_email_settings::update_organization_email_settings),
+        )
+        .route(
+            "/organization/email-services",
+            get(handlers_email_settings::list_organization_email_services)
+                .post(handlers_email_settings::create_organization_email_service),
+        )
+        .route(
+            "/organization/email-services/{id}",
+            put(handlers_email_settings::update_organization_email_service)
+                .delete(handlers_email_settings::delete_organization_email_service),
+        )
+        .route(
+            "/organization/email-services/{id}/select",
+            post(handlers_email_settings::select_organization_email_service),
         )
         // Rutas de librerías de contenido
         .route(

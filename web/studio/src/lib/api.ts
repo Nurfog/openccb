@@ -302,6 +302,36 @@ export interface OrganizationSSOConfig {
     updated_at: string;
 }
 
+export interface OrganizationEmailService {
+    id: string;
+    organization_id: string;
+    service_type: string;
+    provider_key: string;
+    display_name: string;
+    smtp_enabled: boolean;
+    is_default: boolean;
+    smtp_host?: string;
+    smtp_port: number;
+    smtp_from?: string;
+    smtp_username?: string;
+    smtp_starttls: boolean;
+    has_password: boolean;
+}
+
+export interface UpsertOrganizationEmailServicePayload {
+    service_type: string;
+    provider_key: string;
+    display_name: string;
+    smtp_enabled: boolean;
+    is_default: boolean;
+    smtp_host?: string;
+    smtp_port: number;
+    smtp_from?: string;
+    smtp_username?: string;
+    smtp_password?: string;
+    smtp_starttls: boolean;
+}
+
 export interface ProvisionPayload {
     org_name: string;
     org_domain?: string;
@@ -881,6 +911,18 @@ export const cmsApi = {
     },
     getSSOConfig: (): Promise<OrganizationSSOConfig> => apiFetch('/organization/sso'),
     updateSSOConfig: (payload: Partial<OrganizationSSOConfig>): Promise<void> => apiFetch('/organization/sso', { method: 'PUT', body: JSON.stringify(payload) }),
+    getOrganizationEmailSettings: (): Promise<OrganizationEmailService> => apiFetch('/organization/email-settings'),
+    updateOrganizationEmailSettings: (payload: UpsertOrganizationEmailServicePayload): Promise<OrganizationEmailService> =>
+        apiFetch('/organization/email-settings', { method: 'PUT', body: JSON.stringify(payload) }),
+    listOrganizationEmailServices: (): Promise<OrganizationEmailService[]> => apiFetch('/organization/email-services'),
+    createOrganizationEmailService: (payload: UpsertOrganizationEmailServicePayload): Promise<OrganizationEmailService> =>
+        apiFetch('/organization/email-services', { method: 'POST', body: JSON.stringify(payload) }),
+    updateOrganizationEmailService: (id: string, payload: UpsertOrganizationEmailServicePayload): Promise<OrganizationEmailService> =>
+        apiFetch(`/organization/email-services/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    deleteOrganizationEmailService: (id: string): Promise<void> =>
+        apiFetch(`/organization/email-services/${id}`, { method: 'DELETE' }),
+    selectOrganizationEmailService: (id: string): Promise<void> =>
+        apiFetch(`/organization/email-services/${id}/select`, { method: 'POST' }),
     getOrganizationExerciseSettings: (): Promise<OrganizationExerciseSettings> => apiFetch('/organization/exercise-settings'),
     updateOrganizationExerciseSettings: (payload: Omit<OrganizationExerciseSettings, 'organization_id'>): Promise<OrganizationExerciseSettings> =>
         apiFetch('/organization/exercise-settings', { method: 'PUT', body: JSON.stringify(payload) }),
