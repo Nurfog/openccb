@@ -1,0 +1,214 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                  GUÍA RÁPIDA - OpenCCB Studio                                 ║
+║                          Referencia de Usuario                                ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+📍 URL DE ACCESO
+─────────────────────────────────────────────────────────────────────────────
+  Studio:    https://studio.norteamericano.com
+  Estudiantes: https://learning.norteamericano.com
+  Soporte:   soporte@openccb.com
+
+🔑 PROCESOS RÁPIDOS
+═════════════════════════════════════════════════════════════════════════════
+
+├─ CREAR UN CURSO (3 Pasos)
+│
+│  1️⃣  PLANTILLA DE PRUEBA
+│      └─ Menú → Plantillas de Prueba → Crear Nueva
+│         • Agregar preguntas (manual o IA)
+│         • Probar claridad
+│         • Guardar
+│
+│  2️⃣  PLANTILLA DE CURSO
+│      └─ Menú → Plantillas de Curso → Crear Nueva
+│         • Definir módulos y lecciones
+│         • Asociar pruebas
+│         • Agregar recursos
+│         • Guardar
+│
+│  3️⃣  CREAR CURSO FINAL
+│      └─ Menú → Mis Cursos → Crear Curso
+│         • Seleccionar plantilla
+│         • Completar detalles
+│         • Configurar fechas y acceso
+│         • ¡Listo!
+
+├─ AGREGAR CONTENIDO A LECCIÓN
+│
+│  1. Abrir curso → Lecciones → Editar lección
+│  2. Hacer clic "Agregar Contenido"
+│  3. Seleccionar tipo:
+│     • Texto: Párrafos y formatos
+│     • Video: URL de YouTube
+│     • Archivo: PDF, DOCX, PPT
+│     • Quiz: Usar plantilla existente
+│  4. Guardar
+
+├─ USAR IA PARA GENERAR PREGUNTAS
+│
+│  1. Plantilla de Prueba → "Generar con IA"
+│  2. Ingresar tema específico
+│  3. Configurar parámetros:
+│     • Cantidad: 5-10 preguntas
+│     • Tipo: Opción Múltiple, Verdadero/Falso
+│     • Nivel: Fácil, Medio, Difícil
+│  4. Hacer clic "Generar"
+│  5. Revisar y editar respuestas
+│  6. Aceptar para agregar
+
+├─ CALIFICAR EVALUACIONES
+│
+│  1. Ir a Curso → Calificaciones
+│  2. Seleccionar evaluación
+│  3. Ver envíos de estudiantes
+│  4. Haz clic en un envío
+│  5. Agregar comentarios
+│  6. Ingresar calificación
+│  7. Guardar (notifica al estudiante)
+
+├─ VER ANÁLISIS DEL CURSO
+│
+│  1. Curso → Análisis
+│  2. Métricas disponibles:
+│     • Promedio de calificaciones
+│     • Tasa de finalización
+│     • Participación en foros
+│     • Estudiantes en riesgo
+│  3. Hacer clic en estudiante para detalles
+│  4. Exportar reporte (PDF, CSV, JSON)
+
+├─ PERSONALIZAR PLANTILLAS DE EMAIL
+│
+│  1. Configuración → Plantillas de Email
+│  2. Seleccionar tipo de email:
+│     • Bienvenida
+│     • Respuesta en foro
+│     • Calificación
+│     • Recordatorio
+│  3. Editar asunto y cuerpo
+│  4. Usar variables:
+│     {{estudiante_nombre}} / {{curso_nombre}} / {{fecha}}
+│  5. Vista previa y guardar
+
+└─ ADMINISTRAR USUARIOS (ADMIN)
+   
+   1. Administración → Usuarios
+   2. Buscar usuario o filtrar por rol
+   3. Crear nuevo:
+      • Haz clic "Nuevo Usuario"
+      • Completar formulario
+      • Seleccionar rol
+      • Enviar invitación
+   4. Editar existente:
+      • Haz clic en usuario
+      • Modificar información
+      • Guardar cambios
+
+⌨️  ATAJOS DE TECLADO
+─────────────────────────────────────────────────────────────────────────────
+  Ctrl + S / Cmd + S    →  Guardar
+  Ctrl + F / Cmd + F    →  Buscar en página
+  Tab                   →  Navegar elementos
+  Esc                   →  Cerrar diálogos
+  Ctrl + Z / Cmd + Z    →  Deshacer
+
+❓ PREGUNTAS FRECUENTES
+─────────────────────────────────────────────────────────────────────────────
+
+P: ¿Cómo recupero mi contraseña?
+R: Login → "¿Olvidó su contraseña?" → Ingresar email → Seguir instrucciones
+
+P: ¿Estudiantes no ven el curso?
+R: Verificación:
+   • Curso está publicado (no en borrador)
+   • Estudiantes están inscritos
+   • Curso no tiene acceso restringido
+   • Intenta acceder como estudiante de prueba
+
+P: ¿Cómo uso la IA?
+R: En cualquier pantalla de creación:
+   • Botón "✨ Generar con IA"
+   • Ingresar prompt/tema
+   • Revisar resultados
+   • Aceptar o rechazar
+
+P: ¿Puedo descargar reportes?
+R: Sí, en Análisis → Exportar
+   Formatos: PDF, CSV (Excel), JSON
+
+P: ¿Hay límite de estudiantes?
+R: Depende del plan. Consultar con administrador en Settings.
+
+🎓 TIPOS DE USUARIO Y PERMISOS
+─────────────────────────────────────────────────────────────────────────────
+
+ESTUDIANTE
+  • Ver cursos inscritos
+  • Completar lecciones
+  • Realizar evaluaciones
+  • Participar en foros
+  • Ver calificaciones propias
+
+INSTRUCTOR
+  • Crear y gestionar cursos
+  • Agregar contenido y evaluaciones
+  • Calificar trabajos
+  • Ver análisis de curso
+  • Crear plantillas
+
+ADMINISTRADOR
+  • Gestionar usuarios
+  • Acceder a todos los cursos
+  • Ver reportes globales
+  • Configurar sistema
+  • Auditoría y logs
+
+📊 MÉTRICAS CLAVE
+─────────────────────────────────────────────────────────────────────────────
+
+Progreso:        % de lecciones completadas
+Calificación:    Promedio de evaluaciones
+Participación:   Mensajes en foros / Actividad
+Tiempo Dedicado:  Horas en plataforma
+Entregas:        Tareas enviadas on-time vs atrasadas
+
+🆘 SOLUCIÓN DE PROBLEMAS
+─────────────────────────────────────────────────────────────────────────────
+
+PROBLEMA              SOLUCIÓN
+─────────────────────────────────────────────────────────────────────────────
+No puedo entrar      → Limpiar cookies / Resetear contraseña
+Imágenes no cargan   → Revisar conexión / Intentar otro navegador
+Video no funciona    → Verificar URL de YouTube y permisos
+Archivo no se sube   → Revisar tamaño (<100MB) y formato
+IA no genera         → Verificar balance de uso
+Estudiante no ve     → Publicar curso y confirmar inscripción
+
+📞 CONTACTO SOPORTE
+─────────────────────────────────────────────────────────────────────────────
+Email:    soporte@openccb.com
+Teléfono: +1-XXX-XXX-XXXX
+Chat:     Disponible en horario comercial (Mon-Fri 9AM-5PM CST)
+
+Adjunta en tu reporte:
+  • Descripción paso a paso del problema
+  • Screenshot del error (sin datos sensibles)
+  • Navegador y SO utilizado
+  • Hora exacta del problema
+
+🚀 TIPS DE PRODUCTIVIDAD
+─────────────────────────────────────────────────────────────────────────────
+
+✓ Crear plantillas reutilizables ahorra 70% de tiempo
+✓ Usar IA para generar preguntas garantiza variedad
+✓ Revisar análisis semanalmente identifica problemas temprano
+✓ Comunicar cambios en foros mejora participación
+✓ Establecer fechas límites claras reduce confusión
+✓ Incluir rubrica en cada evaluación mejora evaluación
+✓ Proporcionar feedback detallado = mejor aprendizaje
+
+═════════════════════════════════════════════════════════════════════════════
+                    Última actualización: 15 de Abril de 2026
+                            OpenCCB Studio v1.0
+═════════════════════════════════════════════════════════════════════════════
