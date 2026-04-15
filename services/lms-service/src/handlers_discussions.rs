@@ -12,6 +12,7 @@ use common::models::{DiscussionPost, DiscussionThread, PostWithAuthor, ThreadWit
 use serde::Deserialize;
 use sqlx::PgPool;
 use std::env;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
@@ -19,6 +20,14 @@ struct ForumEmailRecipient {
     user_id: Uuid,
     email: String,
     full_name: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct EmailTemplate {
+    subject_template: String,
+    body_template: String,
+    is_html: bool,
+    is_enabled: bool,
 }
 
 #[derive(Debug, Clone, sqlx::FromRow)]
@@ -145,6 +154,61 @@ async fn load_org_smtp_config(pool: &PgPool, organization_id: Uuid) -> Option<Sm
     })
 }
 
+async fn load_email_template(
+    organization_id: Uuid,
+    template_key: &str,
+) -> Option<EmailTemplate> {
+    let cms_api_url = env::var("CMS_API_URL").unwrap_or_else(|_| "http://localhost:3001".to_string());
+    let url = format!("{}/organization/email-templates", cms_api_url);
+
+    // Para simplificar, por ahora devolvemos plantillas hardcoded
+    // En producción, haríamos la llamada HTTP con autenticación
+    match template_key {
+        "forum_reply" => Some(EmailTemplate {
+            subject_template: "Nueva respuesta en {{thread_title}}".to_string(),
+            body_template: "Hola {{recipient_name}},
+
+Ha recibido una nueva respuesta en el hilo \"{{thread_title}}\" por {{author_name}}.
+
+Mensaje:
+{{message_content}}
+
+Ver hilo completo: {{thread_url}}
+
+Saludos,
+El equipo de {{organization_name}}".to_string(),
+            is_html: false,
+            is_enabled: true,
+        }),
+        "forum_thread" => Some(EmailTemplate {
+            subject_template: "Nuevo hilo en foro: {{thread_title}}".to_string(),
+            body_template: "Hola {{recipient_name}},
+
+Se ha creado un nuevo hilo en el foro: \"{{thread_title}}\" por {{author_name}}.
+
+Mensaje inicial:
+{{message_content}}
+
+Ver hilo: {{thread_url}}
+
+Saludos,
+El equipo de {{organization_name}}".to_string(),
+            is_html: false,
+            is_enabled: true,
+        }),
+        _ => None,
+    }
+}
+
+fn render_template(template: &str, variables: &HashMap<&str, String>) -> String {
+    let mut result = template.to_string();
+    for (key, value) in variables {
+        let placeholder = format!("{{{{{}}}}}", key);
+        result = result.replace(&placeholder, value);
+    }
+    result
+}
+
 fn build_smtp_mailer(config: &SmtpConfig) -> Result<AsyncSmtpTransport<Tokio1Executor>, String> {
     let mut builder = if config.starttls {
         AsyncSmtpTransport::<Tokio1Executor>::relay(&config.host)
@@ -167,12 +231,20 @@ async fn send_forum_email_notifications(
     pool: &PgPool,
     organization_id: Uuid,
     recipients: &[ForumEmailRecipient],
-    subject: &str,
-    body: &str,
+    template_key: &str,
+    variables: &HashMap<&str, String>,
 ) {
     if recipients.is_empty() {
         return;
     }
+
+    let template = match load_email_template(organization_id, template_key).await {
+        Some(t) if t.is_enabled => t,
+        _ => {
+            tracing::warn!("Plantilla de email '{}' no encontrada o deshabilitada", template_key);
+            return;
+        }
+    };
 
     let smtp_config = match load_org_smtp_config(pool, organization_id).await {
         Some(config) => config,
@@ -206,6 +278,12 @@ async fn send_forum_email_notifications(
     };
 
     for recipient in recipients {
+        let mut recipient_variables = variables.clone();
+        recipient_variables.insert("recipient_name", recipient.full_name.clone().unwrap_or_else(|| "Usuario".to_string()));
+
+        let subject = render_template(&template.subject_template, &recipient_variables);
+        let body = render_template(&template.body_template, &recipient_variables);
+
         let to_mailbox: Mailbox = match recipient.email.parse() {
             Ok(v) => v,
             Err(e) => {
@@ -218,17 +296,11 @@ async fn send_forum_email_notifications(
             }
         };
 
-        let personalized_body = if let Some(name) = &recipient.full_name {
-            format!("Hola {},\n\n{}\n\nOpenCCB", name, body)
-        } else {
-            format!("Hola,\n\n{}\n\nOpenCCB", body)
-        };
-
         let message = match Message::builder()
             .from(from_mailbox.clone())
             .to(to_mailbox)
             .subject(subject)
-            .body(personalized_body)
+            .body(body)
         {
             Ok(msg) => msg,
             Err(e) => {
@@ -442,15 +514,14 @@ pub async fn create_thread(
     }
 
     let author_display = author_name.unwrap_or_else(|| "Un estudiante".to_string());
-    let subject = format!("[OpenCCB] Nuevo hilo: {}", thread.title);
-    let body = format!(
-        "{} creó un nuevo hilo en el curso.\n\nTítulo: {}\n\n{}\n\nIr al curso: /courses/{}#discussions",
-        author_display,
-        thread.title,
-        thread.content,
-        course_id
-    );
-    send_forum_email_notifications(&pool, org_ctx.id, &instructor_recipients, &subject, &body).await;
+    let mut variables = HashMap::new();
+    variables.insert("thread_title", thread.title.clone());
+    variables.insert("author_name", author_display.clone());
+    variables.insert("message_content", thread.content.clone());
+    variables.insert("thread_url", format!("/courses/{}#discussions", course_id));
+    variables.insert("organization_name", "OpenCCB".to_string()); // TODO: obtener de org
+
+    send_forum_email_notifications(&pool, org_ctx.id, &instructor_recipients, "forum_thread", &variables).await;
 
     Ok(Json(thread))
 }
@@ -723,15 +794,14 @@ pub async fn create_post(
     }
 
     let author_display = author_name.unwrap_or_else(|| "Un usuario".to_string());
-    let subject = format!("[OpenCCB] Nueva respuesta en: {}", thread.1);
-    let body = format!(
-        "{} respondió en un hilo al que estás suscrito.\n\nHilo: {}\n\n{}\n\nIr al curso: /courses/{}#discussions",
-        author_display,
-        thread.1,
-        post.content,
-        thread.2
-    );
-    send_forum_email_notifications(&pool, org_ctx.id, &recipients, &subject, &body).await;
+    let mut variables = HashMap::new();
+    variables.insert("thread_title", thread.1.clone());
+    variables.insert("author_name", author_display.clone());
+    variables.insert("message_content", post.content.clone());
+    variables.insert("thread_url", format!("/courses/{}#discussions", thread.2));
+    variables.insert("organization_name", "OpenCCB".to_string()); // TODO: obtener de org
+
+    send_forum_email_notifications(&pool, org_ctx.id, &recipients, "forum_reply", &variables).await;
 
     Ok(Json(post))
 }

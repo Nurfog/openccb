@@ -11,7 +11,7 @@ type EditableService = {
     id?: string;
     display_name: string;
     provider_key: string;
-    smtp_enabled: boolean;
+    is_enabled: boolean;
     is_default: boolean;
     smtp_host: string;
     smtp_port: number;
@@ -26,7 +26,7 @@ function toEditable(service: OrganizationEmailService): EditableService {
         id: service.id,
         display_name: service.display_name,
         provider_key: service.provider_key,
-        smtp_enabled: service.smtp_enabled,
+        is_enabled: service.is_enabled,
         is_default: service.is_default,
         smtp_host: service.smtp_host || "",
         smtp_port: service.smtp_port || 587,
@@ -41,7 +41,7 @@ function newServiceTemplate(): EditableService {
     return {
         display_name: "Nuevo servicio SMTP",
         provider_key: "custom",
-        smtp_enabled: true,
+        is_enabled: true,
         is_default: false,
         smtp_host: "",
         smtp_port: 587,
@@ -131,7 +131,7 @@ export default function EmailSettings() {
         service_type: "smtp",
         provider_key: (form.provider_key || "custom").trim().toLowerCase(),
         display_name: form.display_name.trim() || "Servicio SMTP",
-        smtp_enabled: form.smtp_enabled,
+        is_enabled: form.is_enabled,
         is_default: form.is_default,
         smtp_host: form.smtp_host.trim() || undefined,
         smtp_port: Number(form.smtp_port) || 587,
@@ -186,7 +186,7 @@ export default function EmailSettings() {
                             <div>
                                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">{svc.display_name}</h3>
                                 <p className="text-xs text-slate-500 dark:text-gray-400 mt-1">
-                                    provider: {svc.provider_key} · {svc.smtp_enabled ? "Activo" : "Inactivo"}
+                                    provider: {svc.provider_key} · {svc.is_enabled ? "Activo" : "Inactivo"}
                                 </p>
                             </div>
                             {svc.is_default && (
@@ -271,8 +271,8 @@ export default function EmailSettings() {
                     <label className="flex items-center gap-3 mt-6">
                         <input
                             type="checkbox"
-                            checked={form.smtp_enabled}
-                            onChange={(e) => setField("smtp_enabled", e.target.checked)}
+                            checked={form.is_enabled}
+                            onChange={(e) => setField("is_enabled", e.target.checked)}
                         />
                         <span className="text-sm text-slate-800 dark:text-gray-200">Habilitado</span>
                     </label>

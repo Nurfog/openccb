@@ -81,6 +81,8 @@ if [ "$FAST_MODE" == "false" ]; then
             install_pkg "jq"
             install_pkg "build-essential"
             install_pkg "docker.io"
+            install_pkg "pandoc"
+            install_pkg "texlive-xetex"
             if ! docker compose version &> /dev/null; then
                 install_pkg "docker-compose-v2"
             fi

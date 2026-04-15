@@ -4,6 +4,7 @@ mod external_handlers;
 mod handlers;
 mod handlers_branding;
 mod handlers_email_settings;
+mod handlers_email_templates;
 mod handlers_exercise_settings;
 mod handlers_assets;
 mod handlers_dependencies;
@@ -330,6 +331,16 @@ async fn main() {
         .route(
             "/organization/email-services/{id}/select",
             post(handlers_email_settings::select_organization_email_service),
+        )
+        .route(
+            "/organization/email-templates",
+            get(handlers_email_templates::list_organization_email_templates)
+                .post(handlers_email_templates::create_organization_email_template),
+        )
+        .route(
+            "/organization/email-templates/{id}",
+            put(handlers_email_templates::update_organization_email_template)
+                .delete(handlers_email_templates::delete_organization_email_template),
         )
         // Rutas de librerías de contenido
         .route(

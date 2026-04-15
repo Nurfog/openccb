@@ -308,7 +308,7 @@ export interface OrganizationEmailService {
     service_type: string;
     provider_key: string;
     display_name: string;
-    smtp_enabled: boolean;
+    is_enabled: boolean;
     is_default: boolean;
     smtp_host?: string;
     smtp_port: number;
@@ -322,7 +322,7 @@ export interface UpsertOrganizationEmailServicePayload {
     service_type: string;
     provider_key: string;
     display_name: string;
-    smtp_enabled: boolean;
+    is_enabled: boolean;
     is_default: boolean;
     smtp_host?: string;
     smtp_port: number;
@@ -330,6 +330,28 @@ export interface UpsertOrganizationEmailServicePayload {
     smtp_username?: string;
     smtp_password?: string;
     smtp_starttls: boolean;
+}
+
+export interface OrganizationEmailTemplate {
+    id: string;
+    organization_id: string;
+    template_key: string;
+    display_name: string;
+    subject_template: string;
+    body_template: string;
+    is_html: bool;
+    is_enabled: bool;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface UpsertOrganizationEmailTemplatePayload {
+    template_key: string;
+    display_name: string;
+    subject_template: string;
+    body_template: string;
+    is_html: bool;
+    is_enabled: bool;
 }
 
 export interface ProvisionPayload {
@@ -923,6 +945,13 @@ export const cmsApi = {
         apiFetch(`/organization/email-services/${id}`, { method: 'DELETE' }),
     selectOrganizationEmailService: (id: string): Promise<void> =>
         apiFetch(`/organization/email-services/${id}/select`, { method: 'POST' }),
+    listOrganizationEmailTemplates: (): Promise<OrganizationEmailTemplate[]> => apiFetch('/organization/email-templates'),
+    createOrganizationEmailTemplate: (payload: UpsertOrganizationEmailTemplatePayload): Promise<OrganizationEmailTemplate> =>
+        apiFetch('/organization/email-templates', { method: 'POST', body: JSON.stringify(payload) }),
+    updateOrganizationEmailTemplate: (id: string, payload: UpsertOrganizationEmailTemplatePayload): Promise<OrganizationEmailTemplate> =>
+        apiFetch(`/organization/email-templates/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    deleteOrganizationEmailTemplate: (id: string): Promise<void> =>
+        apiFetch(`/organization/email-templates/${id}`, { method: 'DELETE' }),
     getOrganizationExerciseSettings: (): Promise<OrganizationExerciseSettings> => apiFetch('/organization/exercise-settings'),
     updateOrganizationExerciseSettings: (payload: Omit<OrganizationExerciseSettings, 'organization_id'>): Promise<OrganizationExerciseSettings> =>
         apiFetch('/organization/exercise-settings', { method: 'PUT', body: JSON.stringify(payload) }),

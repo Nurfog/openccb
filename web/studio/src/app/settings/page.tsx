@@ -2,6 +2,7 @@
 
 import BrandingSettings from "@/components/BrandingSettings";
 import EmailSettings from "@/components/EmailSettings";
+import EmailTemplates from "@/components/EmailTemplates";
 import ExerciseFeatureSettings from "@/components/ExerciseFeatureSettings";
 import PageLayout from "@/components/PageLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -30,6 +31,7 @@ export default function SettingsPage() {
             <div className="space-y-8">
                 <BrandingSettings />
                 <EmailSettings />
+                <EmailTemplates />
                 <ExerciseFeatureSettings />
             </div>
         </PageLayout>
