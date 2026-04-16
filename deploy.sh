@@ -526,6 +526,10 @@ sed -i "/^NEXT_PUBLIC_LMS_API_URL=/d" .env 2>/dev/null || true
 echo "NEXT_PUBLIC_CMS_API_URL=\$CMS_URL" >> .env
 echo "NEXT_PUBLIC_LMS_API_URL=\$LMS_URL" >> .env
 
+# URL interna de CMS para comunicación backend-to-backend (LMS -> CMS)
+sed -i "/^CMS_API_URL=/d" .env 2>/dev/null || true
+echo "CMS_API_URL=http://studio:3001" >> .env
+
 # Configurar S3 para almacenamiento de audio
 if ! grep -q "^ASSETS_STORAGE=" .env || grep -q "^ASSETS_STORAGE=$" .env; then
     sed -i "/^ASSETS_STORAGE=/d" .env 2>/dev/null || true

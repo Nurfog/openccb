@@ -287,6 +287,9 @@ EMBEDDING_MODEL=nomic-embed-text
 # Frontend URLs
 NEXT_PUBLIC_CMS_API_URL=http://localhost:3001
 NEXT_PUBLIC_LMS_API_URL=http://localhost:3002
+
+# Backend-to-backend (LMS -> CMS)
+CMS_API_URL=http://studio:3001
 ```
 
 ### Default Credentials

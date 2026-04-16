@@ -161,12 +161,31 @@ Valores esperados en Docker:
 ```bash
 DATABASE_URL=postgresql://user:<password>@db:5432/openccb_lms
 LMS_DATABASE_URL=postgresql://user:<password>@db:5432/openccb_lms
+CMS_API_URL=http://studio:3001
 ```
 
 Si aparece `localhost:5433` en el contenedor `openccb-experience`, recrea el servicio con la variable correcta:
 
 ```bash
 LMS_DATABASE_URL='postgresql://user:password@db:5432/openccb_lms' docker compose up -d --force-recreate experience
+```
+
+### LMS `/auth/me` devuelve `502 Bad Gateway`
+
+**Síntoma común:** login correcto en CMS, pero `GET /auth/me` desde LMS falla con `No se pudo sincronizar el perfil de usuario desde CMS`.
+
+**Causa común:** `CMS_API_URL` faltante o incorrecta dentro del contenedor `experience`.
+
+**Solución:**
+
+```bash
+docker exec openccb-experience sh -lc 'echo CMS_API_URL=$CMS_API_URL'
+
+# Valor recomendado en Docker Compose
+CMS_API_URL=http://studio:3001
+
+# Recrear el servicio con la variable corregida
+CMS_API_URL='http://studio:3001' docker compose up -d --force-recreate experience
 ```
 
 ### Reiniciar servicios

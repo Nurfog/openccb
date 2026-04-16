@@ -1,6 +1,7 @@
 use axum::{
     Json,
     extract::{Multipart, Path, Query, State},
+    http::{HeaderMap, header::AUTHORIZATION},
     http::StatusCode,
     response::IntoResponse,
     Extension,
@@ -37,25 +38,104 @@ fn count_tokens(text: &str) -> i32 {
 pub async fn get_me(
     claims: common::auth::Claims,
     State(pool): State<PgPool>,
+    headers: HeaderMap,
 ) -> Result<Json<UserResponse>, (StatusCode, String)> {
     let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE id = $1")
         .bind(claims.sub)
-        .fetch_one(&pool)
+        .fetch_optional(&pool)
         .await
         .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    Ok(Json(UserResponse {
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        role: user.role,
-        organization_id: user.organization_id,
-        xp: user.xp,
-        level: user.level,
-        avatar_url: user.avatar_url,
-        bio: user.bio,
-        language: user.language,
-    }))
+    if let Some(user) = user {
+        return Ok(Json(UserResponse {
+            id: user.id,
+            email: user.email,
+            full_name: user.full_name,
+            role: user.role,
+            organization_id: user.organization_id,
+            xp: user.xp,
+            level: user.level,
+            avatar_url: user.avatar_url,
+            bio: user.bio,
+            language: user.language,
+        }));
+    }
+
+    if let Some(auth_header) = headers
+        .get(AUTHORIZATION)
+        .and_then(|h| h.to_str().ok())
+        .filter(|v| !v.trim().is_empty())
+    {
+        let mut cms_api_candidates: Vec<String> = Vec::new();
+        if let Ok(url) = env::var("CMS_API_URL") {
+            if !url.trim().is_empty() {
+                cms_api_candidates.push(url);
+            }
+        }
+        cms_api_candidates.push("http://studio:3001".to_string());
+        cms_api_candidates.push("http://localhost:3001".to_string());
+
+        for cms_api_url in cms_api_candidates {
+            let me_url = format!("{}/auth/me", cms_api_url.trim_end_matches('/'));
+
+            if let Ok(response) = reqwest::Client::new()
+                .get(&me_url)
+                .header("Authorization", auth_header)
+                .send()
+                .await
+            {
+                if response.status().is_success() {
+                    if let Ok(cms_user) = response.json::<UserResponse>().await {
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO users (
+                                id, organization_id, email, password_hash, full_name, role, xp, level, avatar_url, bio, language, updated_at
+                            )
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+                            ON CONFLICT (id)
+                            DO UPDATE SET
+                                organization_id = EXCLUDED.organization_id,
+                                email = EXCLUDED.email,
+                                full_name = EXCLUDED.full_name,
+                                role = EXCLUDED.role,
+                                xp = EXCLUDED.xp,
+                                level = EXCLUDED.level,
+                                avatar_url = EXCLUDED.avatar_url,
+                                bio = EXCLUDED.bio,
+                                language = EXCLUDED.language,
+                                updated_at = NOW()
+                            "#,
+                        )
+                        .bind(cms_user.id)
+                        .bind(cms_user.organization_id)
+                        .bind(&cms_user.email)
+                        .bind("synced-from-cms")
+                        .bind(&cms_user.full_name)
+                        .bind(&cms_user.role)
+                        .bind(cms_user.xp)
+                        .bind(cms_user.level)
+                        .bind(&cms_user.avatar_url)
+                        .bind(&cms_user.bio)
+                        .bind(&cms_user.language)
+                        .execute(&pool)
+                        .await;
+
+                        return Ok(Json(cms_user));
+                    }
+                }
+            }
+        }
+    }
+
+    tracing::warn!(
+        "Usuario {} no existe en LMS y no se pudo sincronizar desde CMS",
+        claims.sub
+    );
+
+    Err((
+        StatusCode::BAD_GATEWAY,
+        "No se pudo sincronizar el perfil de usuario desde CMS".to_string(),
+    ))
 }
 
 /// Obtener configuración de idioma del curso

@@ -95,6 +95,12 @@ docker-compose up --build
 # Instalación y configuración automática
 ./install.sh
 
+# Instalación local usando IA en red LAN (ejemplo)
+LOCAL_OLLAMA_URL=http://192.168.0.5:11434 LOCAL_WHISPER_URL=http://192.168.0.5:9000 ./install.sh
+
+# Instalación local con URLs SAM compartidas explícitas
+SAM_SHARED_URL=mysql://user:pass@host:3306/sige_sam_v3 SAM_DIAG_SHARED_URL=mysql://user:pass@host:3306/SAM_diagnostico ./install.sh
+
 # Resetear base de datos de desarrollo
 ./scripts/reset_db.sh
 ```

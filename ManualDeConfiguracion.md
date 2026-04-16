@@ -48,13 +48,32 @@ El script `install.sh` automatiza todo el proceso:
 
 ### Pasos del Script
 
-1. **Detección de entorno**: Dev o Prod
+1. **Entorno local forzado**: `ENVIRONMENT=dev`
 2. **Instalación de dependencias**: Rust, Node.js, Docker, sqlx-cli
 3. **Configuración de .env**: Variables automáticas según entorno
 4. **Inicialización de DB**: Crea bases de datos y ejecuta migraciones
 5. **Configuración de IA**: URLs de Ollama y Whisper
 6. **Creación de admin**: Usuario administrador inicial
 7. **Inicio de servicios**: Docker Compose
+
+### Overrides útiles para `install.sh`
+
+`install.sh` permite sobreescribir variables sin editar el script:
+
+```bash
+# IA local por IP/host de red
+LOCAL_OLLAMA_URL=http://192.168.0.5:11434 \
+LOCAL_WHISPER_URL=http://192.168.0.5:9000 \
+./install.sh
+
+# Forzar URL interna de CMS para comunicación LMS -> CMS
+CMS_API_URL=http://studio:3001 ./install.sh
+
+# Reutilizar SAM remoto compartido
+SAM_SHARED_URL=mysql://user:pass@host:3306/sige_sam_v3 \
+SAM_DIAG_SHARED_URL=mysql://user:pass@host:3306/SAM_diagnostico \
+./install.sh
+```
 
 ### Instalación Manual
 
@@ -122,8 +141,12 @@ DEFAULT_PLATFORM_NAME=OpenCCB Learning
 DEFAULT_PRIMARY_COLOR=#3B82F6
 DEFAULT_SECONDARY_COLOR=#8B5CF6
 
-# SAM Integration (Opcional - para gestión académica)
-SAM_DATABASE_URL=postgresql://user:password@sige_sam_v3_host:5432/sige_sam_v3
+# SAM Integration (MySQL compartido)
+MYSQL_DATABASE_URL=mysql://user:password@host:3306/sige_sam_v3
+SAM_DATABASE_URL=mysql://user:password@host:3306/sige_sam_v3
+SAM_DIAGNOSTICO_DATABASE_URL=mysql://user:password@host:3306/SAM_diagnostico
+# URL interna para sincronización de perfil LMS -> CMS
+CMS_API_URL=http://studio:3001
 ```
 
 ### Configuración por Entorno
@@ -131,8 +154,11 @@ SAM_DATABASE_URL=postgresql://user:password@sige_sam_v3_host:5432/sige_sam_v3
 **Desarrollo:**
 ```bash
 ENVIRONMENT=dev
-LOCAL_OLLAMA_URL=http://t-800:11434
-LOCAL_WHISPER_URL=http://t-800:9000
+LOCAL_OLLAMA_URL=http://localhost:11434
+LOCAL_WHISPER_URL=http://localhost:9000
+# Alternativa LAN:
+# LOCAL_OLLAMA_URL=http://192.168.0.5:11434
+# LOCAL_WHISPER_URL=http://192.168.0.5:9000
 ```
 
 **Producción:**
@@ -159,9 +185,11 @@ OpenCCB se sincroniza con SAM para:
 
 ### Configuración
 
-1. **Agregar variable de entorno** en `.env`:
+1. **Agregar variables de entorno** en `.env`:
    ```bash
-   SAM_DATABASE_URL=postgresql://user:password@host:5432/sige_sam_v3
+  MYSQL_DATABASE_URL=mysql://user:password@host:3306/sige_sam_v3
+  SAM_DATABASE_URL=mysql://user:password@host:3306/sige_sam_v3
+  SAM_DIAGNOSTICO_DATABASE_URL=mysql://user:password@host:3306/SAM_diagnostico
    ```
 
 2. **Ejecutar migración**:
@@ -223,10 +251,19 @@ OpenCCB se sincroniza con SAM para:
 **Error: "SAM_DATABASE_URL not configured"**
 ```bash
 # Agregar en .env
-SAM_DATABASE_URL=postgresql://user:pass@host:5432/sige_sam_v3
+SAM_DATABASE_URL=mysql://user:pass@host:3306/sige_sam_v3
 
 # Reiniciar servicio
 docker-compose restart cms
+```
+
+**Error: `/auth/me` responde 502 en LMS**
+```bash
+# Validar URL interna de CMS usada por LMS
+grep '^CMS_API_URL=' .env.dev .env 2>/dev/null
+
+# Valor recomendado en Docker
+CMS_API_URL=http://studio:3001
 ```
 
 **Error: "Failed to fetch SAM students"**

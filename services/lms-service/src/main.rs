@@ -422,5 +422,10 @@ async fn main() {
     let addr = SocketAddr::from(([0, 0, 0, 0], 3002));
     tracing::info!("LMS Service escuchando en {} con limitación de tasa y encabezados de seguridad", addr);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, public_routes).await.unwrap();
+    axum::serve(
+        listener,
+        public_routes.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .unwrap();
 }

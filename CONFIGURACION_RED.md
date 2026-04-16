@@ -225,6 +225,9 @@ WHISPER_MODEL=whisper-large-v3
 # Frontend URLs
 NEXT_PUBLIC_CMS_API_URL=https://studio.norteamericano.com
 NEXT_PUBLIC_LMS_API_URL=https://learning.norteamericano.com
+
+# Backend-to-backend (LMS -> CMS)
+CMS_API_URL=http://studio:3001
 ```
 
 ---
