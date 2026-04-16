@@ -1210,6 +1210,87 @@ pub async fn get_mysql_courses_by_plan(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener los cursos: {}", e)))?;
 
+    // Intentar refrescar desde MySQL (fuente SAM) para evitar listas incompletas por espejo desactualizado.
+    if let Ok(mysql_pool) = connect_mysql_pool("MYSQL_DATABASE_URL").await {
+        let live_courses: Result<Vec<MySqlCourseInfo>, sqlx::Error> = sqlx::query_as(
+            r#"
+            SELECT DISTINCT
+                c.idCursos AS id_cursos,
+                c.NombreCurso AS nombre_curso,
+                c.NivelCurso AS nivel_curso,
+                pe.idPlanDeEstudios AS id_plan_de_estudios,
+                pe.Nombre AS nombre_plan,
+                c.Duracion AS duracion
+            FROM curso c
+            JOIN plandeestudios pe ON c.idPlanDeEstudios = pe.idPlanDeEstudios
+            WHERE c.Activo = 1
+              AND pe.Activo = 1
+              AND pe.idPlanDeEstudios = ?
+            ORDER BY c.NivelCurso, c.NombreCurso
+            "#,
+        )
+        .bind(filters.plan_id)
+        .fetch_all(&mysql_pool)
+        .await;
+
+        match live_courses {
+            Ok(live) if !live.is_empty() => {
+                if live.len() != courses.len() {
+                    tracing::info!(
+                        "Refrescando cursos SAM desde MySQL para plan {}: espejo={} mysql={}",
+                        filters.plan_id,
+                        courses.len(),
+                        live.len()
+                    );
+                }
+
+                // Best effort: sincronizar también el plan consultado al espejo PostgreSQL.
+                let live_plans: Result<Vec<MySqlPlanInfo>, sqlx::Error> = sqlx::query_as(
+                    r#"
+                    SELECT DISTINCT
+                        pe.idPlanDeEstudios AS id_plan_de_estudios,
+                        pe.Nombre AS nombre_plan
+                    FROM plandeestudios pe
+                    WHERE pe.Activo = 1
+                      AND pe.idPlanDeEstudios = ?
+                    "#,
+                )
+                .bind(filters.plan_id)
+                .fetch_all(&mysql_pool)
+                .await;
+
+                if let Ok(plan_rows) = live_plans {
+                    if !plan_rows.is_empty() {
+                        if let Err(err) = save_mysql_courses_and_plans(&pool, org_ctx.id, plan_rows, live.clone()).await {
+                            tracing::warn!(
+                                "No se pudo actualizar espejo SAM para plan {}: {}",
+                                filters.plan_id,
+                                err
+                            );
+                        }
+                    }
+                }
+
+                courses = live;
+            }
+            Ok(_) => {
+                tracing::debug!(
+                    "MySQL devolvio 0 cursos activos para plan {}; se mantiene espejo local",
+                    filters.plan_id
+                );
+            }
+            Err(err) => {
+                tracing::warn!(
+                    "No se pudo refrescar cursos SAM desde MySQL para plan {}: {}",
+                    filters.plan_id,
+                    err
+                );
+            }
+        }
+
+        mysql_pool.close().await;
+    }
+
     // Respaldo compatible con versiones anteriores: si el reflejo SAM está vacío, usar el reflejo de metadatos heredado.
     if courses.is_empty() {
         courses = sqlx::query_as(
