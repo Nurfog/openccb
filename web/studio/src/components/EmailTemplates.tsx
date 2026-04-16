@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     cmsApi,
     OrganizationEmailTemplate,
@@ -47,19 +47,14 @@ export default function EmailTemplates() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    const selectedTemplate = useMemo(
-        () => templates.find((t) => t.id === selectedId),
-        [templates, selectedId],
-    );
-
-    const loadTemplates = async () => {
+    const loadTemplates = useCallback(async () => {
         const data = await cmsApi.listOrganizationEmailTemplates();
         setTemplates(data);
         if (data.length > 0 && !selectedId) {
             setSelectedId(data[0].id);
             setForm(toEditable(data[0]));
         }
-    };
+    }, [selectedId]);
 
     useEffect(() => {
         const run = async () => {
@@ -73,7 +68,7 @@ export default function EmailTemplates() {
         };
 
         run();
-    }, []);
+    }, [loadTemplates]);
 
     const setField = <K extends keyof EditableTemplate>(key: K, value: EditableTemplate[K]) => {
         setForm((prev) => ({ ...prev, [key]: value }));

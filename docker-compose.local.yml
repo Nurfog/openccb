@@ -16,26 +16,34 @@ services:
       - production
 
   db:
+    container_name: openccb-local-db
     ports:
       - "5432:5432"
 
+  mailpit:
+    container_name: openccb-local-mailpit
+
   studio:
+    container_name: openccb-local-studio
     ports:
       - "3000:3000"
       - "3001:3001"
     env_file: .env.dev
     environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/openccb_cms
       - NEXT_PUBLIC_CMS_API_URL=http://localhost:3001
       - NEXT_PUBLIC_LMS_API_URL=http://localhost:3002/lms-api
       - NEXT_PUBLIC_STUDIO_DOMAIN=localhost
       - NEXT_PUBLIC_LEARNING_DOMAIN=localhost
 
   experience:
+    container_name: openccb-local-experience
     ports:
       - "3003:3003"
       - "3002:3002"
     env_file: .env.dev
     environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/openccb_lms
       - NEXT_PUBLIC_CMS_API_URL=http://localhost:3001
       - NEXT_PUBLIC_LMS_API_URL=http://localhost:3002/lms-api
       - NEXT_PUBLIC_STUDIO_DOMAIN=localhost

@@ -2,7 +2,7 @@
 
 # OpenCCB Local Development Setup
 # Levanta el stack completo en local usando Docker:
-#   - PostgreSQL en localhost:5433
+#   - PostgreSQL en localhost:5432
 #   - CMS API en localhost:3001
 #   - Studio (Next.js) en localhost:3000
 #   - LMS API en localhost:3002
@@ -26,8 +26,13 @@ LOCAL_CMS_URL="http://localhost:3001"
 LOCAL_LMS_URL="http://localhost:3002/lms-api"
 LOCAL_STUDIO_DOMAIN="localhost"
 LOCAL_LEARNING_DOMAIN="localhost"
-DB_CONTAINER="openccb-db"
-COMPOSE_LOCAL="docker compose -f docker-compose.yml -f docker-compose.local.yml"
+LOCAL_PROJECT="openccb-local"
+ENV_FILE=".env.dev"
+DB_CONTAINER="openccb-local-db"
+
+compose_local() {
+    docker compose --env-file "$ENV_FILE" -p "$LOCAL_PROJECT" -f docker-compose.yml -f docker-compose.local.yml "$@"
+}
 # ============================================================================
 
 echo "===================================================="
@@ -109,98 +114,77 @@ if [ "$FAST_MODE" == "false" ]; then
     fi
 fi
 
-# 4. Environment Configuration
+# 4. Environment Configuration (LOCAL ONLY)
 echo ""
-if [ ! -f ".env" ]; then
+if [ ! -f "$ENV_FILE" ]; then
     if [ -f ".env.example" ]; then
-        cp .env.example .env
+        cp .env.example "$ENV_FILE"
     else
-        touch .env
+        touch "$ENV_FILE"
     fi
 fi
 
 update_env() {
     local key=$1
     local val=$2
-    if grep -q "^${key}=" .env; then
-        sed -i "s|^${key}=.*|${key}=${val}|" .env
+    if grep -q "^${key}=" "$ENV_FILE"; then
+        sed -i "s|^${key}=.*|${key}=${val}|" "$ENV_FILE"
     else
-        echo "${key}=${val}" >> .env
+        echo "${key}=${val}" >> "$ENV_FILE"
     fi
 }
 
-# 5. Configuración de Entorno (Dev/Prod)
+# 5. Configuración de Entorno (SIEMPRE DEV EN INSTALL)
 echo ""
-echo "🌍 Selección de Entorno"
-read -p "¿Es un entorno de DESARROLLO o PRODUCCIÓN? [dev/prod]: " ENV_CHOICE
-ENV_CHOICE=$(echo "$ENV_CHOICE" | tr '[:upper:]' '[:lower:]')
-ENV_CHOICE=${ENV_CHOICE:-prod}
-update_env "ENVIRONMENT" "$ENV_CHOICE"
+echo "🌍 Entorno local forzado: dev"
+update_env "ENVIRONMENT" "dev"
 
-# 6. Configuración de IA Remota (Automática según entorno)
+# 6. Configuración de IA Local (Automática)
 echo ""
-echo "🔍 Configurando Servicios de IA Remota ($ENV_CHOICE)..."
+echo "🔍 Configurando Servicios de IA Local..."
 
-# Configuración automática según entorno
-if [ "$ENV_CHOICE" == "dev" ]; then
-    DEFAULT_OLLAMA="http://t-800:11434"
-    DEFAULT_WHISPER="http://t-800:9000"
-    DEFAULT_IMAGE="http://t-800:8080"
-    echo "   ✅ Entorno de DESARROLLO detectado"
-else
-    DEFAULT_OLLAMA="http://t-800.norteamericano.cl:11434"
-    DEFAULT_WHISPER="http://t-800.norteamericano.cl:9000"
-    DEFAULT_IMAGE="http://t-800.norteamericano.cl:8080"
-    echo "   ✅ Entorno de PRODUCCIÓN detectado"
-fi
-
-# Configurar con valores por defecto (sin preguntar)
-REMOTE_OLLAMA_URL="$DEFAULT_OLLAMA"
-REMOTE_WHISPER_URL="$DEFAULT_WHISPER"
-REMOTE_IMAGE_URL="$DEFAULT_IMAGE"
+LOCAL_OLLAMA_URL="http://localhost:11434"
+LOCAL_WHISPER_URL="http://localhost:9000"
+LOCAL_IMAGE_URL="http://localhost:8000"
 LLM_MODEL="llama3.2:3b"
 EMBEDDING_MODEL="nomic-embed-text"
 
-echo "   🤖 Ollama: $REMOTE_OLLAMA_URL"
-echo "   🎤 Whisper: $REMOTE_WHISPER_URL"
-echo "   🖼️  Image Bridge: $REMOTE_IMAGE_URL"
+echo "   🤖 Ollama: $LOCAL_OLLAMA_URL"
+echo "   🎤 Whisper: $LOCAL_WHISPER_URL"
+echo "   🖼️  Image Bridge: $LOCAL_IMAGE_URL"
 echo "   🧠 Modelo LLM: $LLM_MODEL"
 echo "   📊 Embeddings: $EMBEDDING_MODEL"
 
 update_env "AI_PROVIDER" "local"
 update_env "LOCAL_LLM_MODEL" "$LLM_MODEL"
-update_env "LOCAL_VIDEO_BRIDGE_URL" "$REMOTE_IMAGE_URL"
+update_env "LOCAL_VIDEO_BRIDGE_URL" "$LOCAL_IMAGE_URL"
 update_env "EMBEDDING_MODEL" "$EMBEDDING_MODEL"
-update_env "DEV_OLLAMA_URL" "$REMOTE_OLLAMA_URL"
-update_env "DEV_WHISPER_URL" "$REMOTE_WHISPER_URL"
-update_env "PROD_OLLAMA_URL" "$REMOTE_OLLAMA_URL"
-update_env "PROD_WHISPER_URL" "$REMOTE_WHISPER_URL"
-update_env "LOCAL_OLLAMA_URL" "$REMOTE_OLLAMA_URL"
-update_env "LOCAL_WHISPER_URL" "$REMOTE_WHISPER_URL"
+update_env "DEV_OLLAMA_URL" "$LOCAL_OLLAMA_URL"
+update_env "DEV_WHISPER_URL" "$LOCAL_WHISPER_URL"
+update_env "LOCAL_OLLAMA_URL" "$LOCAL_OLLAMA_URL"
+update_env "LOCAL_WHISPER_URL" "$LOCAL_WHISPER_URL"
 
-# Configuración SAM (opcional)
+# Configuración SAM (automática para entorno local)
 echo ""
-echo "🔌 Configuración de Integración SAM"
-read -p "¿Desea configurar la conexión a la base de datos SAM? [y/N]: " CONFIGURE_SAM
-if [[ "$CONFIGURE_SAM" =~ ^[Yy]$ ]]; then
-    read -p "Ingrese SAM_DATABASE_URL []: " SAM_DB_URL
-    SAM_DB_URL=${SAM_DB_URL:-""}
-    if [ -n "$SAM_DB_URL" ]; then
-        update_env "SAM_DATABASE_URL" "$SAM_DB_URL"
-        echo "   ✅ SAM_DATABASE_URL configurada"
-    fi
-else
-    echo "   ℹ️  SAM no configurado. Puede configurarlo luego en .env"
-fi
+echo "🔌 Configuración de Integración SAM (automática)"
+SAM_SHARED_URL="${SAM_SHARED_URL:-mysql://root:Smith3976!@ec2-18-222-25-254.us-east-2.compute.amazonaws.com:3306/sige_sam_v3}"
+SAM_DIAG_SHARED_URL="${SAM_DIAG_SHARED_URL:-mysql://root:Smith3976!@ec2-18-222-25-254.us-east-2.compute.amazonaws.com:3306/SAM_diagnostico}"
+
+update_env "MYSQL_DATABASE_URL" "$SAM_SHARED_URL"
+update_env "SAM_DATABASE_URL" "$SAM_SHARED_URL"
+update_env "SAM_DIAGNOSTICO_DATABASE_URL" "$SAM_DIAG_SHARED_URL"
+
+echo "   ✅ MYSQL_DATABASE_URL configurada a copia SAM compartida"
+echo "   ✅ SAM_DATABASE_URL configurada a copia SAM compartida"
+echo "   ✅ SAM_DIAGNOSTICO_DATABASE_URL configurada a copia SAM diagnóstica"
 
 # Solicitar credenciales de DB si no están configuradas
-if ! grep -q "DATABASE_URL=" .env || [[ $(grep "DATABASE_URL=" .env | cut -d'=' -f2) == "" ]]; then
+if ! grep -q "DATABASE_URL=" "$ENV_FILE" || [[ $(grep "DATABASE_URL=" "$ENV_FILE" | cut -d'=' -f2) == "" ]]; then
     read -p "Ingrese la Contraseña de la Base de Datos [password]: " DB_PASS
     DB_PASS=${DB_PASS:-password}
-    # Usar puerto 5434 (5432 y 5433 ya están en uso)
-    update_env "DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5434/openccb?sslmode=disable"
-    update_env "CMS_DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5434/openccb_cms?sslmode=disable"
-    update_env "LMS_DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5434/openccb_lms?sslmode=disable"
+    update_env "DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5432/openccb?sslmode=disable"
+    update_env "CMS_DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5432/openccb_cms?sslmode=disable"
+    update_env "LMS_DATABASE_URL" "postgresql://user:${DB_PASS}@localhost:5432/openccb_lms?sslmode=disable"
     update_env "JWT_SECRET" "supersecretsecret"
     update_env "NEXT_PUBLIC_CMS_API_URL" "http://localhost:3001"
     update_env "NEXT_PUBLIC_LMS_API_URL" "http://localhost:3003"
@@ -212,65 +196,42 @@ if ! grep -q "DATABASE_URL=" .env || [[ $(grep "DATABASE_URL=" .env | cut -d'=' 
     update_env "DEFAULT_SECONDARY_COLOR" "#8B5CF6"
 fi
 
-# 5. Configuración de Pila de IA (Omitido - usando remoto)
-echo "🌐 Usando servicios de IA remotos en $REMOTE_OLLAMA_URL y $REMOTE_WHISPER_URL"
+# 5. Configuración de Pila de IA (LOCAL)
+echo "🌐 Usando servicios de IA locales en $LOCAL_OLLAMA_URL y $LOCAL_WHISPER_URL"
 
 # 6. Inicialización de la Base de Datos
 echo ""
 echo "🔌 Configuración de Base de Datos"
-echo "   Puerto: 5433 (PostgreSQL existente)"
+echo "   Puerto: 5432 (PostgreSQL local docker-compose.local.yml)"
 echo ""
 
-# Preguntar si PostgreSQL ya está corriendo (producción)
-read -p "¿PostgreSQL ya está corriendo en un contenedor? [y/N]: " DB_EXISTS
-DB_EXISTS=${DB_EXISTS:-N}
-
-if [[ ! "$DB_EXISTS" =~ ^[Yy]$ ]]; then
-    read -p "¿Desea una instalación LIMPIA? (Esto ELIMINARÁ todos los datos existentes) [y/N]: " CLEAN_INSTALL
-    if [[ "$CLEAN_INSTALL" =~ ^[Yy]$ ]]; then
-        echo "🐘 Reseteando la base de datos para una instalación limpia..."
-        docker compose down -v || true
-    fi
-
-    echo "🐘 Iniciando base de datos con Docker..."
-    docker compose up -d db
-
-    echo "⏳ Esperando a que la base de datos esté lista (contenedor)..."
-    RETRIES=30
-    until docker exec openccb-db-1 pg_isready -U user &> /dev/null || [ $RETRIES -eq 0 ]; do
-      echo -n "."
-      sleep 1
-      RETRIES=$((RETRIES-1))
-    done
-    echo ""
-
-    echo "⏳ Esperando al puerto de la base de datos (host)..."
-    RETRIES=10
-    until curl -s localhost:5433 &> /dev/null || [ $RETRIES -eq 0 ]; do
-      echo -n "+"
-      sleep 1
-      RETRIES=$((RETRIES-1))
-    done
-    echo ""
-
-    if [ $RETRIES -eq 0 ]; then
-        echo "⚠️  Tiempo de espera agotado para el puerto del host, pero continuando..."
-    fi
-
-    # Extra buffer for PostgreSQL initialization
-    sleep 2
-
-    echo "🏗️  Creando bases de datos CMS y LMS..."
-    docker exec openccb-db-1 psql -U user -d postgres -c "CREATE DATABASE openccb_cms;" || true
-    docker exec openccb-db-1 psql -U user -d postgres -c "CREATE DATABASE openccb_lms;" || true
-else
-    echo "✅ PostgreSQL ya está corriendo. Saltando inicio del contenedor."
-    echo "   Verificando conexión al puerto 5433..."
-    sleep 2
+read -p "¿Desea una instalación LIMPIA local? (Esto ELIMINARÁ datos locales) [y/N]: " CLEAN_INSTALL
+if [[ "$CLEAN_INSTALL" =~ ^[Yy]$ ]]; then
+        echo "🐘 Reseteando stack local para instalación limpia..."
+        compose_local down -v || true
 fi
 
-CMS_URL=$(grep "CMS_DATABASE_URL=" .env | cut -d'=' -f2-)
-LMS_URL=$(grep "LMS_DATABASE_URL=" .env | cut -d'=' -f2-)
+echo "🐘 Iniciando base de datos local con Docker..."
+compose_local up -d db
+
+echo "⏳ Esperando a que la base de datos esté lista..."
+RETRIES=30
+until compose_local exec -T db pg_isready -U user &> /dev/null || [ $RETRIES -eq 0 ]; do
+    echo -n "."
+    sleep 1
+    RETRIES=$((RETRIES-1))
+done
+echo ""
+
+# Extra buffer for PostgreSQL initialization
+sleep 2
+
+echo "🏗️  Creando bases de datos CMS y LMS..."
+compose_local exec -T db psql -U user -d postgres -c "CREATE DATABASE openccb_cms;" || true
+compose_local exec -T db psql -U user -d postgres -c "CREATE DATABASE openccb_lms;" || true
+
+CMS_URL=$(grep "CMS_DATABASE_URL=" "$ENV_FILE" | cut -d'=' -f2-)
+LMS_URL=$(grep "LMS_DATABASE_URL=" "$ENV_FILE" | cut -d'=' -f2-)
 
 echo "🏗️  Ejecutando migraciones..."
 DATABASE_URL=$CMS_URL sqlx migrate run --source services/cms-service/migrations
@@ -299,13 +260,13 @@ if curl -s http://localhost:11434/api/tags &> /dev/null; then
         echo "✅ Modelo de embeddings ya disponible"
     fi
 else
-    echo "ℹ️  Ollama local no detectado. Se usará el servidor remoto: $REMOTE_OLLAMA_URL"
+    echo "ℹ️  Ollama local no detectado. Se mantendrá la configuración local de $ENV_FILE"
 fi
 
 # 7. System Initialization (Integrated init-system.sh)
 echo ""
 echo "🔍 Buscando administrador existente..."
-ADMIN_EXISTS=$(docker exec openccb-db-1 psql -U user -d openccb_cms -t -c "SELECT EXISTS (SELECT 1 FROM users WHERE role = 'admin');" | xargs 2>/dev/null || echo "f")
+ADMIN_EXISTS=$(compose_local exec -T db psql -U user -d openccb_cms -t -c "SELECT EXISTS (SELECT 1 FROM users WHERE role = 'admin');" | xargs 2>/dev/null || echo "f")
 
 if [ "$ADMIN_EXISTS" != "t" ]; then
     echo "👤 Configurar Administrador Inicial"
@@ -323,16 +284,16 @@ fi
 # Selective Build/Rebuild
 if [ "$FAST_MODE" == "true" ]; then
     echo "⚡ Modo FAST activado. Saltando comprobaciones y reconstrucción de imágenes."
-    docker compose up -d
+    compose_local up -d
 else
     echo ""
     read -p "¿Desea RECONSTRUIR las imágenes de Docker? (Recomendado si hay cambios de código) [y/N]: " REBUILD_CHOICE
     if [[ "$REBUILD_CHOICE" =~ ^[Yy]$ ]]; then
         echo "🚀 Reconstruyendo e iniciando servicios..."
-        docker compose up -d --build
+        compose_local up -d --build
     else
         echo "🚀 Iniciando servicios (sin reconstruir)..."
-        docker compose up -d
+        compose_local up -d
     fi
 fi
 
@@ -358,7 +319,7 @@ if [ "$ADMIN_EXISTS" != "t" ]; then
 
     # Create admin user directly in database using pgcrypto
     echo "🔐 Creando administrador en la base de datos..."
-    docker exec openccb-db-1 psql -U user -d openccb_cms -c "
+    compose_local exec -T db psql -U user -d openccb_cms -c "
         CREATE EXTENSION IF NOT EXISTS pgcrypto;
         SELECT * FROM fn_register_user(
             '$ADMIN_EMAIL',
@@ -371,7 +332,7 @@ if [ "$ADMIN_EXISTS" != "t" ]; then
 
     if [ $? -eq 0 ]; then
         echo "✅ ¡Éxito! Administrador creado."
-        API_KEY=$(docker exec openccb-db-1 psql -U user -d openccb_cms -t -c "SELECT api_key FROM organizations LIMIT 1;" | xargs 2>/dev/null)
+        API_KEY=$(compose_local exec -T db psql -U user -d openccb_cms -t -c "SELECT api_key FROM organizations LIMIT 1;" | xargs 2>/dev/null)
         echo "🔑 API Key Inicial: $API_KEY"
         echo ""
         echo "📋 Credenciales de acceso:"
@@ -395,7 +356,7 @@ EOF
 
         if echo "$RESPONSE" | grep -q "token"; then
             echo "✅ ¡Éxito! Administrador creado vía API."
-            API_KEY=$(docker exec openccb-db-1 psql -U user -d openccb_cms -t -c "SELECT api_key FROM organizations LIMIT 1;" | xargs 2>/dev/null)
+            API_KEY=$(compose_local exec -T db psql -U user -d openccb_cms -t -c "SELECT api_key FROM organizations LIMIT 1;" | xargs 2>/dev/null)
             echo "🔑 API Key Inicial: $API_KEY"
         else
             echo "⚠️  Fallo al crear el administrador. Respuesta: $RESPONSE"

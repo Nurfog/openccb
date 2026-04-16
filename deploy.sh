@@ -12,6 +12,17 @@ echo "        🚀 OpenCCB Deployment Tool"
 echo "===================================================="
 echo ""
 
+# Guardrail: deploy.sh es SOLO para producción
+if [ -f ".env" ]; then
+    CURRENT_ENV=$(grep '^ENVIRONMENT=' .env | cut -d'=' -f2- | tr '[:upper:]' '[:lower:]' | xargs)
+    if [ "$CURRENT_ENV" = "dev" ]; then
+        echo "❌ ERROR: deploy.sh está configurado para PRODUCCIÓN y detectó ENVIRONMENT=dev en .env"
+        echo "   - Usa ./install.sh para entorno local"
+        echo "   - Ajusta .env a ENVIRONMENT=prod antes de desplegar"
+        exit 1
+    fi
+fi
+
 # ============================================================================
 # CONFIGURACIÓN
 # ============================================================================

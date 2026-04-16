@@ -55,10 +55,10 @@ pub async fn list_organization_email_templates(
 ) -> Result<Json<Vec<OrganizationEmailTemplateResponse>>, (StatusCode, String)> {
     let org_id = claims.org;
 
-    let rows: Vec<OrganizationEmailTemplateRow> = sqlx::query!(
+    let rows: Vec<OrganizationEmailTemplateRow> = sqlx::query_as::<_, OrganizationEmailTemplateRow>(
         "SELECT id, organization_id, template_key, display_name, subject_template, body_template, is_html, is_enabled, created_at, updated_at FROM organization_email_templates WHERE organization_id = $1 ORDER BY template_key",
-        org_id
     )
+    .bind(org_id)
     .fetch_all(&pool)
     .await
     .map_err(|e: sqlx::Error| {
@@ -67,21 +67,7 @@ pub async fn list_organization_email_templates(
             StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to fetch email templates".to_string(),
         )
-    })?
-    .into_iter()
-    .map(|row| OrganizationEmailTemplateRow {
-        id: row.id,
-        organization_id: row.organization_id,
-        template_key: row.template_key,
-        display_name: row.display_name,
-        subject_template: row.subject_template,
-        body_template: row.body_template,
-        is_html: row.is_html,
-        is_enabled: row.is_enabled,
-        created_at: row.created_at.expect("created_at should not be null"),
-        updated_at: row.updated_at.expect("updated_at should not be null"),
-    })
-    .collect();
+    })?;
 
     let responses = rows
         .into_iter()
@@ -111,18 +97,18 @@ pub async fn create_organization_email_template(
 
     validate_template_payload(&payload)?;
 
-    let row = sqlx::query!(
+    let row = sqlx::query_as::<_, OrganizationEmailTemplateRow>(
         "INSERT INTO organization_email_templates (organization_id, template_key, display_name, subject_template, body_template, is_html, is_enabled)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING id, organization_id, template_key, display_name, subject_template, body_template, is_html, is_enabled, created_at, updated_at",
-        org_id,
-        payload.template_key,
-        payload.display_name,
-        payload.subject_template,
-        payload.body_template,
-        payload.is_html,
-        payload.is_enabled
     )
+    .bind(org_id)
+    .bind(&payload.template_key)
+    .bind(&payload.display_name)
+    .bind(&payload.subject_template)
+    .bind(&payload.body_template)
+    .bind(payload.is_html)
+    .bind(payload.is_enabled)
     .fetch_one(&pool)
     .await
     .map_err(|e: sqlx::Error| {
@@ -139,19 +125,6 @@ pub async fn create_organization_email_template(
             )
         }
     })?;
-
-    let row = OrganizationEmailTemplateRow {
-        id: row.id,
-        organization_id: row.organization_id,
-        template_key: row.template_key,
-        display_name: row.display_name,
-        subject_template: row.subject_template,
-        body_template: row.body_template,
-        is_html: row.is_html,
-        is_enabled: row.is_enabled,
-        created_at: row.created_at.expect("created_at should not be null"),
-        updated_at: row.updated_at.expect("updated_at should not be null"),
-    };
 
     log_action(
         &pool,
@@ -193,19 +166,19 @@ pub async fn update_organization_email_template(
 
     validate_template_payload(&payload)?;
 
-    let row = sqlx::query!(
+    let row = sqlx::query_as::<_, OrganizationEmailTemplateRow>(
         "UPDATE organization_email_templates
          SET display_name = $3, subject_template = $4, body_template = $5, is_html = $6, is_enabled = $7, updated_at = NOW()
          WHERE id = $1 AND organization_id = $2
          RETURNING id, organization_id, template_key, display_name, subject_template, body_template, is_html, is_enabled, created_at, updated_at",
-        template_id,
-        org_id,
-        payload.display_name,
-        payload.subject_template,
-        payload.body_template,
-        payload.is_html,
-        payload.is_enabled
     )
+    .bind(template_id)
+    .bind(org_id)
+    .bind(&payload.display_name)
+    .bind(&payload.subject_template)
+    .bind(&payload.body_template)
+    .bind(payload.is_html)
+    .bind(payload.is_enabled)
     .fetch_optional(&pool)
     .await
     .map_err(|e: sqlx::Error| {
@@ -215,18 +188,6 @@ pub async fn update_organization_email_template(
             "Failed to update email template".to_string(),
         )
     })?
-    .map(|row| OrganizationEmailTemplateRow {
-        id: row.id,
-        organization_id: row.organization_id,
-        template_key: row.template_key,
-        display_name: row.display_name,
-        subject_template: row.subject_template,
-        body_template: row.body_template,
-        is_html: row.is_html,
-        is_enabled: row.is_enabled,
-        created_at: row.created_at.expect("created_at should not be null"),
-        updated_at: row.updated_at.expect("updated_at should not be null"),
-    })
     .ok_or((
         StatusCode::NOT_FOUND,
         "Email template not found".to_string(),
@@ -270,11 +231,11 @@ pub async fn delete_organization_email_template(
 ) -> Result<StatusCode, (StatusCode, String)> {
     let org_id = claims.org;
 
-    let result = sqlx::query!(
+    let result = sqlx::query(
         "DELETE FROM organization_email_templates WHERE id = $1 AND organization_id = $2",
-        template_id,
-        org_id
     )
+    .bind(template_id)
+    .bind(org_id)
     .execute(&pool)
     .await
     .map_err(|e: sqlx::Error| {

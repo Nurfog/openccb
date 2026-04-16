@@ -48,6 +48,12 @@
         "webhooks": "Webhooks",
         "globalControl": "Control Global"
     },
+    "dashboard": {
+        "title": "Panel del Studio",
+        "newCourse": "Nuevo Curso",
+        "aiBuilder": "Constructor IA",
+        "noCourses": "No hay cursos disponibles."
+    },
     "course": {
         "createCourse": "Crear Curso",
         "editCourse": "Editar Curso",

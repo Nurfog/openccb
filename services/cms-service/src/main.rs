@@ -36,7 +36,16 @@ use tower_http::trace::TraceLayer;
 
 #[tokio::main]
 async fn main() {
-    dotenvy::from_filename(".env.dev").or_else(|_| dotenv()).ok();
+    let env_mode = std::env::var("ENVIRONMENT")
+        .unwrap_or_else(|_| "prod".to_string())
+        .to_lowercase();
+
+    if env_mode == "dev" {
+        dotenvy::from_filename(".env.dev").or_else(|_| dotenv()).ok();
+    } else {
+        dotenv().ok();
+    }
+
     tracing_subscriber::fmt::init();
 
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL debe estar configurada");
@@ -611,7 +620,13 @@ async fn main() {
     let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
     tracing::info!("Servicio CMS escuchando en {} con limitación de tasa y cabeceras de seguridad", addr);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, public_routes).await.unwrap();
+    // Provide peer connection info so governor key extractors can resolve client IPs.
+    axum::serve(
+        listener,
+        public_routes.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .unwrap();
 }
 
 async fn sync_default_organization(pool: &sqlx::PgPool) {

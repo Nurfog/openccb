@@ -35,7 +35,16 @@ use utoipa::OpenApi;
 
 #[tokio::main]
 async fn main() {
-    dotenvy::from_filename(".env.dev").or_else(|_| dotenv()).ok();
+    let env_mode = std::env::var("ENVIRONMENT")
+        .unwrap_or_else(|_| "prod".to_string())
+        .to_lowercase();
+
+    if env_mode == "dev" {
+        dotenvy::from_filename(".env.dev").or_else(|_| dotenv()).ok();
+    } else {
+        dotenv().ok();
+    }
+
     tracing_subscriber::fmt::init();
 
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL debe estar configurada");
