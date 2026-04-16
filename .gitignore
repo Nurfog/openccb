@@ -17,6 +17,7 @@ build/
 # --- Variables de Entorno (SEGURIDAD) ---
 # Nunca subas tus llaves secretas o credenciales
 .env
+.env.dev
 .env*.local
 .env.production
 
@@ -39,7 +40,7 @@ services/lms-service/dev_keys/
 *.pem
 ubuntu.pem
 
-# --- TLS/ACME secrets (never commit) ---
+# --- TLS/ACME secrets (never cApoca225!ommit) ---
 nginx/certs-data/**
 *.key
 *.csr
