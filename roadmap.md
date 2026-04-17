@@ -122,6 +122,3 @@
 2. Despliegue de **Infraestructura SMTP** para comunicación global.
 3. Auditoría de **Accesibilidad Universal (WCAG)**.
 4. Implementación de **IA de Moderación (Seguridad)**.
-
-
-asdf

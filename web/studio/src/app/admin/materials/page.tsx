@@ -6,13 +6,14 @@ import { Upload, Database, FileArchive, CheckCircle2, AlertTriangle, Scissors } 
 
 export default function AdminSharedMaterialsPage() {
     const [zipFile, setZipFile] = useState<File | null>(null);
-    const [ingestRag, setIngestRag] = useState(true);
+    const [ingestRag, setIngestRag] = useState(false);
     const [englishLevel, setEnglishLevel] = useState('');
     const [plans, setPlans] = useState<MySqlPlan[]>([]);
     const [courses, setCourses] = useState<MySqlCourse[]>([]);
     const [selectedPlanId, setSelectedPlanId] = useState<number | ''>('');
     const [selectedCourseId, setSelectedCourseId] = useState<number | ''>('');
     const [splitToRegular, setSplitToRegular] = useState(false);
+    const [useDevProcessing, setUseDevProcessing] = useState(false);
     const [regularPlanId, setRegularPlanId] = useState<number | ''>('');
     const [regularCourses, setRegularCourses] = useState<MySqlCourse[]>([]);
     const [selectedCourseIdR1, setSelectedCourseIdR1] = useState<number | ''>('');
@@ -27,6 +28,8 @@ export default function AdminSharedMaterialsPage() {
         rag_ingested_assets: number;
         rag_chunks_ingested: number;
         failed_entries: string[];
+        rag_background_started?: boolean;
+        rag_background_items?: number;
     } | null>(null);
 
     const canUpload = useMemo(() => Boolean(zipFile) && !loading, [zipFile, loading]);
@@ -159,6 +162,7 @@ export default function AdminSharedMaterialsPage() {
                 splitToRegular,
                 selectedCourseIdR1 || undefined,
                 selectedCourseIdR2 || undefined,
+                useDevProcessing,
             );
             setResult(response);
             setPhase('done');
@@ -218,7 +222,16 @@ export default function AdminSharedMaterialsPage() {
                         checked={ingestRag}
                         onChange={(e) => setIngestRag(e.target.checked)}
                     />
-                    <span className="font-medium">Ingerir automaticamente en RAG al importar</span>
+                    <span className="font-medium">Ingerir automaticamente en RAG al importar (recomendado activar solo para ZIPs pequeños)</span>
+                </label>
+
+                <label className="flex items-center gap-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+                    <input
+                        type="checkbox"
+                        checked={useDevProcessing}
+                        onChange={(e) => setUseDevProcessing(e.target.checked)}
+                    />
+                    <span className="font-medium">Procesar este ZIP con infraestructura DEV (más potente) para transcripción/IA</span>
                 </label>
 
                 <div className="space-y-2">
@@ -396,7 +409,7 @@ export default function AdminSharedMaterialsPage() {
 
                         <p className="text-sm text-slate-700">{statusText}</p>
                         <p className="text-xs text-slate-500">
-                            Nota: esta importacion ZIP corre en la misma solicitud (no crea fila en Tasks), por eso aqui ves el estado en vivo.
+                            Nota: la subida e importación base terminan en esta solicitud. Si activas RAG, su procesamiento puede continuar en segundo plano.
                         </p>
                     </div>
                 )}
@@ -405,6 +418,12 @@ export default function AdminSharedMaterialsPage() {
             {result && (
                 <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.02] p-6 space-y-4">
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">Resultado de la Importacion</h3>
+                    {result.rag_background_started && (
+                        <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-800">
+                            <span className="h-2 w-2 animate-pulse rounded-full bg-indigo-500" />
+                            RAG en segundo plano: {result.rag_background_items ?? 0} archivos en procesamiento
+                        </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="rounded-lg border border-slate-200 dark:border-white/10 p-4">
                             <div className="flex items-center gap-2 text-slate-700 dark:text-gray-300">

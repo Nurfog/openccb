@@ -23,20 +23,37 @@ pub async fn get_background_tasks(
     State(pool): State<PgPool>,
 ) -> Result<Json<Vec<BackgroundTask>>, (StatusCode, String)> {
     let query = r#"
-        SELECT 
-            l.id, 
-            l.title, 
-            c.title as course_title,
-            'lesson_transcription' as task_type,
-            l.transcription_status as status,
-            0 as progress,
-            l.updated_at
-        FROM lessons l
-        JOIN modules m ON l.module_id = m.id
-        JOIN courses c ON m.course_id = c.id
-        WHERE l.transcription_status IN ('queued', 'processing', 'failed')
-        
+        SELECT id, title, course_title, task_type, status, progress, updated_at
+        FROM (
+            SELECT
+                l.id,
+                l.title,
+                c.title as course_title,
+                'lesson_transcription' as task_type,
+                l.transcription_status as status,
+                0 as progress,
+                l.updated_at
+            FROM lessons l
+            JOIN modules m ON l.module_id = m.id
+            JOIN courses c ON m.course_id = c.id
+            WHERE l.transcription_status IN ('queued', 'processing', 'failed')
+
+            UNION ALL
+
+            SELECT
+                t.id,
+                t.title,
+                t.course_title,
+                t.task_type,
+                t.status,
+                t.progress,
+                t.updated_at
+            FROM background_tasks t
+            WHERE t.task_type = 'zip_rag_import'
+              AND t.status IN ('queued', 'processing', 'failed', 'completed')
+        ) merged
         ORDER BY updated_at DESC
+        LIMIT 200
     "#;
 
     let tasks = sqlx::query_as::<_, BackgroundTask>(query)

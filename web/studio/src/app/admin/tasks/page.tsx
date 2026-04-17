@@ -98,6 +98,10 @@ export default function BackgroundTasksPage() {
                 label = 'Transcription';
                 color = 'bg-purple-100 text-purple-800';
                 break;
+            case 'zip_rag_import':
+                label = 'ZIP RAG';
+                color = 'bg-indigo-100 text-indigo-800';
+                break;
             case 'lesson_image':
                 label = 'Lesson Image';
                 color = 'bg-blue-100 text-blue-800';
@@ -165,7 +169,7 @@ export default function BackgroundTasksPage() {
                                             <div className="text-xs text-gray-400">({format(new Date(task.updated_at), 'yyyy')})</div>
                                         </td>
                                         <td className="px-6 py-4 text-right space-x-2">
-                                            {task.status === 'failed' && (
+                                            {task.task_type === 'lesson_transcription' && task.status === 'failed' && (
                                                 <button
                                                     onClick={() => handleRetry(task.id)}
                                                     disabled={actionLoading === task.id}
@@ -175,14 +179,16 @@ export default function BackgroundTasksPage() {
                                                     Retry
                                                 </button>
                                             )}
-                                            <button
-                                                onClick={() => handleCancel(task.id)}
-                                                disabled={actionLoading === task.id}
-                                                className="inline-flex items-center px-3 py-1.5 border border-red-200 text-xs font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 disabled:opacity-50"
-                                            >
-                                                {actionLoading === task.id ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <XCircle className="w-3 h-3 mr-1" />}
-                                                Cancel
-                                            </button>
+                                            {task.task_type === 'lesson_transcription' && (
+                                                <button
+                                                    onClick={() => handleCancel(task.id)}
+                                                    disabled={actionLoading === task.id}
+                                                    className="inline-flex items-center px-3 py-1.5 border border-red-200 text-xs font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 disabled:opacity-50"
+                                                >
+                                                    {actionLoading === task.id ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <XCircle className="w-3 h-3 mr-1" />}
+                                                    Cancel
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

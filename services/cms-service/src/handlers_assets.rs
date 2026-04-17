@@ -20,6 +20,7 @@ use uuid::Uuid;
 use std::collections::HashMap;
 use std::env;
 use std::path::Path as StdPath;
+use std::sync::Arc;
 use tokio::process::Command;
 use tokio::io::AsyncWriteExt;
 use tokio::task::JoinSet;
@@ -47,6 +48,8 @@ pub struct AssetZipImportResponse {
     pub rag_ingested_assets: usize,
     pub rag_chunks_ingested: usize,
     pub failed_entries: Vec<String>,
+    pub rag_background_started: bool,
+    pub rag_background_items: usize,
 }
 
 #[derive(Debug, Deserialize)]
@@ -130,6 +133,18 @@ fn build_s3_object_key(org_id: Uuid, course_id: Option<Uuid>, storage_filename: 
     match course_id {
         Some(cid) => format!("org/{}/course/{}/assets/{}", org_id, cid, storage_filename),
         None => format!("org/{}/shared/assets/{}", org_id, storage_filename),
+    }
+}
+
+fn build_ready_for_rag_path(org_id: Uuid, asset_id: Uuid, filename: &str) -> String {
+    let ext = StdPath::new(filename)
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("");
+    if ext.is_empty() {
+        format!("uploads/ready-for-rag/{}/{}", org_id, asset_id)
+    } else {
+        format!("uploads/ready-for-rag/{}/{}.{}", org_id, asset_id, ext)
     }
 }
 
@@ -700,6 +715,109 @@ struct ZipEntryData {
     is_flv: bool,
 }
 
+struct PendingZipRagItem {
+    entry_name: String,
+    asset: Asset,
+    is_audio_video: bool,
+    unit_number: Option<i32>,
+}
+
+async fn create_zip_rag_background_task(
+    pool: &PgPool,
+    org_id: Uuid,
+    user_id: Uuid,
+    course_id: Option<Uuid>,
+    total_items: usize,
+) -> Result<Uuid, sqlx::Error> {
+    let task_id = Uuid::new_v4();
+    let course_title = if let Some(cid) = course_id {
+        sqlx::query_scalar::<_, String>("SELECT title FROM courses WHERE id = $1")
+            .bind(cid)
+            .fetch_optional(pool)
+            .await?
+    } else {
+        None
+    };
+
+    sqlx::query(
+        r#"
+        INSERT INTO background_tasks (
+            id,
+            organization_id,
+            created_by,
+            title,
+            course_title,
+            task_type,
+            status,
+            progress,
+            total_items,
+            processed_items,
+            failed_items,
+            metadata,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            $1, $2, $3,
+            'ZIP import RAG processing',
+            $4,
+            'zip_rag_import',
+            'queued',
+            0,
+            $5,
+            0,
+            0,
+            '{}'::jsonb,
+            NOW(),
+            NOW()
+        )
+        "#,
+    )
+    .bind(task_id)
+    .bind(org_id)
+    .bind(user_id)
+    .bind(course_title)
+    .bind(total_items as i32)
+    .execute(pool)
+    .await?;
+
+    Ok(task_id)
+}
+
+async fn set_zip_rag_task_status(
+    pool: &PgPool,
+    task_id: Uuid,
+    status: &str,
+    progress: i32,
+    processed_items: usize,
+    failed_items: usize,
+    error_message: Option<&str>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+        UPDATE background_tasks
+        SET status = $2,
+            progress = $3,
+            processed_items = $4,
+            failed_items = $5,
+            error_message = $6,
+            updated_at = NOW()
+        WHERE id = $1
+          AND task_type = 'zip_rag_import'
+        "#,
+    )
+    .bind(task_id)
+    .bind(status)
+    .bind(progress)
+    .bind(processed_items as i32)
+    .bind(failed_items as i32)
+    .bind(error_message)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
 async fn process_zip_entry_without_rag(
     entry: ZipEntryData,
     org_id: Uuid,
@@ -714,6 +832,8 @@ async fn process_zip_entry_without_rag(
     sam_course_id_r2: Option<i32>,
     s3_settings: Option<S3Settings>,
     s3_client: Option<S3Client>,
+    use_dev_processing: bool,
+    ingest_rag: bool,
 ) -> Result<(), String> {
     let ZipEntryData {
         entry_name,
@@ -735,39 +855,76 @@ async fn process_zip_entry_without_rag(
     let asset_id = Uuid::new_v4();
 
     let (storage_path, stored_filename, mimetype) = if is_flv {
-        let temp_storage_filename = format!("{}.flv", asset_id);
-        let temp_storage_path = format!("uploads/{}", temp_storage_filename);
-        tokio::fs::write(&temp_storage_path, &content)
-            .await
-            .map_err(|e| format!("{}: Error en la escritura local ({})", entry_name, e))?;
-
-        let final_storage_filename = format!("{}.mp4", asset_id);
-        let final_storage_path = format!("uploads/{}", final_storage_filename);
-        if let Err((_, msg)) = transcode_flv_to_mp4(&temp_storage_path, &final_storage_path).await {
-            let _ = tokio::fs::remove_file(&temp_storage_path).await;
-            return Err(format!("{}: la transcodificación de flv falló ({})", entry_name, msg));
-        }
-        let _ = tokio::fs::remove_file(&temp_storage_path).await;
-
-        (
-            final_storage_path,
-            replace_extension(&safe_filename, "mp4"),
-            "video/mp4".to_string(),
-        )
-    } else {
-        let extension = StdPath::new(&safe_filename)
-            .extension()
-            .and_then(|s| s.to_str())
-            .unwrap_or("");
-
-        let storage_filename = if extension.is_empty() {
-            asset_id.to_string()
+        if use_dev_processing && ingest_rag {
+            let storage_path = build_ready_for_rag_path(org_id, asset_id, &format!("{}.flv", asset_id));
+            tokio::fs::create_dir_all(StdPath::new(&storage_path).parent().unwrap_or(StdPath::new(".")))
+                .await
+                .map_err(|e| format!("{}: Error creating ready-for-rag dir ({})", entry_name, e))?;
+            tokio::fs::write(&storage_path, &content)
+                .await
+                .map_err(|e| format!("{}: Error en la escritura local ({})", entry_name, e))?;
+            (
+                storage_path,
+                safe_filename.clone(),
+                if guessed_mimetype.is_empty() { "video/x-flv".to_string() } else { guessed_mimetype.clone() },
+            )
+        } else if use_dev_processing {
+            let storage_filename = format!("{}.flv", asset_id);
+            let storage_path = format!("uploads/{}", storage_filename);
+            tokio::fs::write(&storage_path, &content)
+                .await
+                .map_err(|e| format!("{}: Error en la escritura local ({})", entry_name, e))?;
+            (
+                storage_path,
+                safe_filename.clone(),
+                if guessed_mimetype.is_empty() { "video/x-flv".to_string() } else { guessed_mimetype.clone() },
+            )
         } else {
-            format!("{}.{}", asset_id, extension)
-        };
-        let storage_path = format!("uploads/{}", storage_filename);
+            let temp_storage_filename = format!("{}.flv", asset_id);
+            let temp_storage_path = format!("uploads/{}", temp_storage_filename);
+            tokio::fs::write(&temp_storage_path, &content)
+                .await
+                .map_err(|e| format!("{}: Error en la escritura local ({})", entry_name, e))?;
 
-        (storage_path, safe_filename.clone(), guessed_mimetype)
+            let final_storage_filename = format!("{}.mp4", asset_id);
+            let final_storage_path = format!("uploads/{}", final_storage_filename);
+            if let Err((_, msg)) = transcode_flv_to_mp4(&temp_storage_path, &final_storage_path).await {
+                let _ = tokio::fs::remove_file(&temp_storage_path).await;
+                return Err(format!("{}: la transcodificación de flv falló ({})", entry_name, msg));
+            }
+            let _ = tokio::fs::remove_file(&temp_storage_path).await;
+
+            (
+                final_storage_path,
+                replace_extension(&safe_filename, "mp4"),
+                "video/mp4".to_string(),
+            )
+        }
+    } else {
+        if use_dev_processing && ingest_rag {
+            let storage_path = build_ready_for_rag_path(org_id, asset_id, &safe_filename);
+            tokio::fs::create_dir_all(StdPath::new(&storage_path).parent().unwrap_or(StdPath::new(".")))
+                .await
+                .map_err(|e| format!("{}: Error creating ready-for-rag dir ({})", entry_name, e))?;
+            tokio::fs::write(&storage_path, &content)
+                .await
+                .map_err(|e| format!("{}: Error en la escritura local ({})", entry_name, e))?;
+            (storage_path, safe_filename.clone(), guessed_mimetype)
+        } else {
+            let extension = StdPath::new(&safe_filename)
+                .extension()
+                .and_then(|s| s.to_str())
+                .unwrap_or("");
+
+            let storage_filename = if extension.is_empty() {
+                asset_id.to_string()
+            } else {
+                format!("{}.{}", asset_id, extension)
+            };
+            let storage_path = format!("uploads/{}", storage_filename);
+
+            (storage_path, safe_filename.clone(), guessed_mimetype)
+        }
     };
 
     let storage_filename_for_s3 = StdPath::new(&storage_path)
@@ -858,6 +1015,7 @@ pub async fn import_assets_zip(
     let mut split_to_regular = false;
     let mut sam_course_id_r1: Option<i32> = None;
     let mut sam_course_id_r2: Option<i32> = None;
+    let mut use_dev_processing = false;
 
     while let Some(mut field) = multipart
         .next_field()
@@ -939,6 +1097,11 @@ pub async fn import_assets_zip(
                 if let Ok(id) = txt.trim().parse::<i32>() {
                     sam_course_id_r2 = Some(id);
                 }
+            }
+        } else if name == "use_dev_processing" {
+            if let Ok(txt) = field.text().await {
+                let v = txt.trim().to_lowercase();
+                use_dev_processing = v == "1" || v == "true" || v == "yes";
             }
         }
     }
@@ -1046,22 +1209,28 @@ pub async fn import_assets_zip(
     let mut rag_ingested_assets = 0usize;
     let mut rag_chunks_ingested = 0usize;
     let mut failed_entries: Vec<String> = Vec::new();
+    let mut pending_rag_items: Vec<PendingZipRagItem> = Vec::new();
 
     // unit_number → (asset_id, public_url): populated from audio/video assets
     let mut unit_audio_map: HashMap<i32, (Uuid, String)> = HashMap::new();
 
-    let rag_client = if ingest_rag {
-        Some(
-            reqwest::Client::builder()
-                .danger_accept_invalid_certs(true)
-                .danger_accept_invalid_hostnames(true)
-                .build()
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("HTTP client error: {}", e)))?,
-        )
+    let ollama_url = if use_dev_processing {
+        std::env::var("ZIP_DEV_OLLAMA_URL")
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+            .or_else(|| std::env::var("DEV_OLLAMA_URL").ok().filter(|v| !v.trim().is_empty()))
+            .unwrap_or_else(ai::get_ollama_url)
+    } else {
+        ai::get_ollama_url()
+    };
+    let whisper_url_override = if use_dev_processing {
+        std::env::var("ZIP_DEV_WHISPER_URL")
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+            .or_else(|| std::env::var("DEV_WHISPER_URL").ok().filter(|v| !v.trim().is_empty()))
     } else {
         None
     };
-    let ollama_url = ai::get_ollama_url();
     let model = ai::get_embedding_model();
 
     if !ingest_rag {
@@ -1105,6 +1274,8 @@ pub async fn import_assets_zip(
                     sam_course_id_r2,
                     s3_settings_cl,
                     s3_client_cl,
+                    use_dev_processing,
+                    false,
                 )
                 .await
             });
@@ -1125,6 +1296,8 @@ pub async fn import_assets_zip(
             rag_ingested_assets: 0,
             rag_chunks_ingested: 0,
             failed_entries,
+            rag_background_started: false,
+            rag_background_items: 0,
         }));
     }
 
@@ -1150,36 +1323,64 @@ pub async fn import_assets_zip(
         let asset_id = Uuid::new_v4();
 
         let (storage_path, stored_filename, mimetype) = if is_flv {
-            let temp_storage_filename = format!("{}.flv", asset_id);
-            let temp_storage_path = format!("uploads/{}", temp_storage_filename);
-            tokio::fs::write(&temp_storage_path, &content)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-            let final_storage_filename = format!("{}.mp4", asset_id);
-            let final_storage_path = format!("uploads/{}", final_storage_filename);
-            if let Err((_, msg)) = transcode_flv_to_mp4(&temp_storage_path, &final_storage_path).await {
-                let _ = tokio::fs::remove_file(&temp_storage_path).await;
-                failed_entries.push(format!("{}: flv transcode failed ({})", entry_name, msg));
-                continue;
-            }
-            let _ = tokio::fs::remove_file(&temp_storage_path).await;
-
-            (final_storage_path, replace_extension(&safe_filename, "mp4"), "video/mp4".to_string())
-        } else {
-            let extension = StdPath::new(&safe_filename)
-                .extension()
-                .and_then(|s| s.to_str())
-                .unwrap_or("");
-
-            let storage_filename = if extension.is_empty() {
-                asset_id.to_string()
+            if use_dev_processing {
+                let storage_path = build_ready_for_rag_path(org_ctx.id, asset_id, &format!("{}.flv", asset_id));
+                tokio::fs::create_dir_all(StdPath::new(&storage_path).parent().unwrap_or(StdPath::new(".")))
+                    .await
+                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error creating ready-for-rag dir: {}", e)))?;
+                if let Err(e) = tokio::fs::write(&storage_path, &content).await {
+                    failed_entries.push(format!("{}: local write failed ({})", entry_name, e));
+                    continue;
+                }
+                (
+                    storage_path,
+                    safe_filename.clone(),
+                    if guessed_mimetype.is_empty() { "video/x-flv".to_string() } else { guessed_mimetype.clone() },
+                )
             } else {
-                format!("{}.{}", asset_id, extension)
-            };
-            let storage_path = format!("uploads/{}", storage_filename);
+                let temp_storage_filename = format!("{}.flv", asset_id);
+                let temp_storage_path = format!("uploads/{}", temp_storage_filename);
+                tokio::fs::write(&temp_storage_path, &content)
+                    .await
+                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            (storage_path, safe_filename.clone(), guessed_mimetype)
+                let final_storage_filename = format!("{}.mp4", asset_id);
+                let final_storage_path = format!("uploads/{}", final_storage_filename);
+                if let Err((_, msg)) = transcode_flv_to_mp4(&temp_storage_path, &final_storage_path).await {
+                    let _ = tokio::fs::remove_file(&temp_storage_path).await;
+                    failed_entries.push(format!("{}: flv transcode failed ({})", entry_name, msg));
+                    continue;
+                }
+                let _ = tokio::fs::remove_file(&temp_storage_path).await;
+
+                (final_storage_path, replace_extension(&safe_filename, "mp4"), "video/mp4".to_string())
+            }
+        } else {
+            if use_dev_processing {
+                let storage_path = build_ready_for_rag_path(org_ctx.id, asset_id, &safe_filename);
+                tokio::fs::create_dir_all(StdPath::new(&storage_path).parent().unwrap_or(StdPath::new(".")))
+                    .await
+                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error creating ready-for-rag dir: {}", e)))?;
+                if let Err(e) = tokio::fs::write(&storage_path, &content).await {
+                    failed_entries.push(format!("{}: local write failed ({})", entry_name, e));
+                    continue;
+                }
+                (storage_path, safe_filename.clone(), guessed_mimetype)
+            } else {
+                let extension = StdPath::new(&safe_filename)
+                    .extension()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("");
+
+                let storage_filename = if extension.is_empty() {
+                    asset_id.to_string()
+                } else {
+                    format!("{}.{}", asset_id, extension)
+                };
+                let storage_path = format!("uploads/{}", storage_filename);
+
+                (storage_path, safe_filename.clone(), guessed_mimetype)
+            }
         };
 
         let storage_filename_for_s3 = StdPath::new(&storage_path)
@@ -1297,77 +1498,319 @@ pub async fn import_assets_zip(
                 created_at: chrono::Utc::now(),
             };
 
-            // For text/PDF entries, look up the audio asset from the same unit
-            let (linked_audio_id, linked_audio_url) = if !is_audio_video {
-                match unit_number.and_then(|u| unit_audio_map.get(&u)) {
-                    Some((aid, aurl)) => (Some(*aid), Some(aurl.clone())),
-                    None => (None, None),
+            pending_rag_items.push(PendingZipRagItem {
+                entry_name,
+                asset,
+                is_audio_video,
+                unit_number,
+            });
+        }
+    }
+
+    let mut rag_background_started = false;
+    let mut rag_background_items = 0usize;
+
+    if ingest_rag && !pending_rag_items.is_empty() {
+        let pool_bg = pool.clone();
+        let org_id_bg = org_ctx.id;
+        let user_id_bg = claims.sub;
+        let ollama_url_bg = ollama_url.clone();
+        let whisper_url_bg = whisper_url_override.clone();
+        let model_bg = model.clone();
+        let unit_audio_map_bg = unit_audio_map.clone();
+        let queued_count = pending_rag_items.len();
+        let task_id = match create_zip_rag_background_task(
+            &pool,
+            org_ctx.id,
+            claims.sub,
+            course_id,
+            queued_count,
+        )
+        .await
+        {
+            Ok(id) => Some(id),
+            Err(e) => {
+                tracing::warn!("ZIP async RAG: no se pudo crear background task ({})", e);
+                None
+            }
+        };
+        let rag_concurrency = env::var("ZIP_RAG_CONCURRENCY")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .map(|v| v.clamp(1, 12))
+            .unwrap_or(5);
+        rag_background_started = true;
+        rag_background_items = queued_count;
+
+        tokio::spawn(async move {
+            if let Some(tid) = task_id {
+                let _ = set_zip_rag_task_status(&pool_bg, tid, "processing", 0, 0, 0, None).await;
+            }
+
+            let client = match reqwest::Client::builder()
+                .danger_accept_invalid_certs(true)
+                .danger_accept_invalid_hostnames(true)
+                .build()
+            {
+                Ok(c) => c,
+                Err(e) => {
+                    tracing::error!("ZIP async RAG: no se pudo crear cliente HTTP: {}", e);
+                    return;
                 }
-            } else {
-                (None, None)
             };
 
-            match extract_asset_text(&asset).await {
-                Ok(extracted) => {
-                    let trimmed = extracted.trim();
-                    if trimmed.len() < 80 {
-                        failed_entries.push(format!("{}: contenido insuficiente para RAG", entry_name));
-                        continue;
-                    }
+            let mut ingested_assets = 0usize;
+            let mut ingested_chunks = 0usize;
+            let mut processed_items = 0usize;
+            let mut failed_items = 0usize;
 
-                    let chunks = chunk_text(trimmed, 900);
-                    if chunks.is_empty() {
-                        failed_entries.push(format!("{}: no se pudieron generar chunks", entry_name));
-                        continue;
-                    }
+            let mut pending_rag_items = pending_rag_items;
+            let mut unit_audio_map_bg = unit_audio_map_bg;
 
-                    let source_kind = if is_audio_video {
+            for item in pending_rag_items.iter_mut() {
+                if !is_flv_media(&item.asset.filename, &item.asset.mimetype) {
+                    continue;
+                }
+
+                match normalize_flv_asset_for_rag(&pool_bg, &mut item.asset).await {
+                    Ok(()) => {
+                        if item.is_audio_video {
+                            if let Some(u) = item.unit_number {
+                                unit_audio_map_bg.insert(
+                                    u,
+                                    (item.asset.id, build_public_url_from_storage_path(&item.asset.storage_path)),
+                                );
+                            }
+                        }
+                    }
+                    Err((_, msg)) => {
+                        tracing::warn!(
+                            "ZIP async RAG: no se pudo normalizar FLV {} ({})",
+                            item.entry_name,
+                            msg
+                        );
+                    }
+                }
+            }
+
+            let unit_audio_map_bg = Arc::new(unit_audio_map_bg);
+
+            let mut join_set: JoinSet<(usize, usize, bool)> = JoinSet::new();
+
+            for item in pending_rag_items {
+                while join_set.len() >= rag_concurrency {
+                    match join_set.join_next().await {
+                        Some(Ok((assets_ok, chunks_ok, failed))) => {
+                            ingested_assets += assets_ok;
+                            ingested_chunks += chunks_ok;
+                            processed_items += 1;
+                            if failed {
+                                failed_items += 1;
+                            }
+                            if let Some(tid) = task_id {
+                                let progress = ((processed_items * 100) / queued_count.max(1)) as i32;
+                                let _ = set_zip_rag_task_status(
+                                    &pool_bg,
+                                    tid,
+                                    "processing",
+                                    progress,
+                                    processed_items,
+                                    failed_items,
+                                    None,
+                                )
+                                .await;
+                            }
+                        }
+                        Some(Err(e)) => {
+                            processed_items += 1;
+                            failed_items += 1;
+                            tracing::warn!("ZIP async RAG: worker fallo ({})", e);
+                            if let Some(tid) = task_id {
+                                let progress = ((processed_items * 100) / queued_count.max(1)) as i32;
+                                let _ = set_zip_rag_task_status(
+                                    &pool_bg,
+                                    tid,
+                                    "processing",
+                                    progress,
+                                    processed_items,
+                                    failed_items,
+                                    None,
+                                )
+                                .await;
+                            }
+                        }
+                        None => break,
+                    }
+                }
+
+                let pool_w = pool_bg.clone();
+                let client_w = client.clone();
+                let ollama_url_w = ollama_url_bg.clone();
+                let whisper_url_w = whisper_url_bg.clone();
+                let model_w = model_bg.clone();
+                let audio_map_w = unit_audio_map_bg.clone();
+
+                join_set.spawn(async move {
+                    let source_kind = if item.is_audio_video {
                         "audio-transcription"
-                    } else if mimetype.contains("pdf") {
+                    } else if item.asset.mimetype.contains("pdf") {
                         "pdf"
                     } else {
                         "text"
                     };
 
-                    let skill = if is_audio_video {
+                    let skill = if item.is_audio_video {
                         Some("listening")
                     } else {
                         Some("reading")
                     };
 
-                    if let Some(client) = &rag_client {
-                        match ingest_chunks_to_question_bank(
-                            &pool,
-                            org_ctx.id,
-                            claims.sub,
-                            &asset,
-                            source_kind,
-                            skill,
-                            &chunks,
-                            client,
-                            &ollama_url,
-                            &model,
-                            linked_audio_id,
-                            linked_audio_url,
-                            unit_number,
-                        )
-                        .await
-                        {
-                            Ok(()) => {
-                                rag_ingested_assets += 1;
-                                rag_chunks_ingested += chunks.len();
+                    let (linked_audio_id, linked_audio_url) = if !item.is_audio_video {
+                        match item.unit_number.and_then(|u| audio_map_w.get(&u)) {
+                            Some((aid, aurl)) => (Some(*aid), Some(aurl.clone())),
+                            None => (None, None),
+                        }
+                    } else {
+                        (None, None)
+                    };
+
+                    match extract_asset_text_with_endpoints(&item.asset, whisper_url_w.as_deref()).await {
+                        Ok(extracted) => {
+                            let trimmed = extracted.trim();
+                            if trimmed.len() < 80 {
+                                tracing::warn!(
+                                    "ZIP async RAG: {} contenido insuficiente para RAG",
+                                    item.entry_name
+                                );
+                                return (0, 0, true);
                             }
-                            Err((_, msg)) => {
-                                failed_entries.push(format!("{}: rag ingest failed ({})", entry_name, msg));
+
+                            let chunks = chunk_text(trimmed, 900);
+                            if chunks.is_empty() {
+                                tracing::warn!(
+                                    "ZIP async RAG: {} no genero chunks",
+                                    item.entry_name
+                                );
+                                return (0, 0, true);
                             }
+
+                            match ingest_chunks_to_question_bank(
+                                &pool_w,
+                                org_id_bg,
+                                user_id_bg,
+                                &item.asset,
+                                source_kind,
+                                skill,
+                                &chunks,
+                                &client_w,
+                                &ollama_url_w,
+                                &model_w,
+                                linked_audio_id,
+                                linked_audio_url,
+                                item.unit_number,
+                            )
+                            .await
+                            {
+                                Ok(()) => (1, chunks.len(), false),
+                                Err((_, msg)) => {
+                                    tracing::warn!(
+                                        "ZIP async RAG: {} ingest fallo ({})",
+                                        item.entry_name,
+                                        msg
+                                    );
+                                    (0, 0, true)
+                                }
+                            }
+                        }
+                        Err((_, msg)) => {
+                            tracing::warn!(
+                                "ZIP async RAG: {} extract fallo ({})",
+                                item.entry_name,
+                                msg
+                            );
+                            (0, 0, true)
+                        }
+                    }
+                });
+            }
+
+            while let Some(result) = join_set.join_next().await {
+                match result {
+                    Ok((assets_ok, chunks_ok, failed)) => {
+                        ingested_assets += assets_ok;
+                        ingested_chunks += chunks_ok;
+                        processed_items += 1;
+                        if failed {
+                            failed_items += 1;
+                        }
+                        if let Some(tid) = task_id {
+                            let progress = ((processed_items * 100) / queued_count.max(1)) as i32;
+                            let _ = set_zip_rag_task_status(
+                                &pool_bg,
+                                tid,
+                                "processing",
+                                progress,
+                                processed_items,
+                                failed_items,
+                                None,
+                            )
+                            .await;
+                        }
+                    }
+                    Err(e) => {
+                        processed_items += 1;
+                        failed_items += 1;
+                        tracing::warn!("ZIP async RAG: worker fallo ({})", e);
+                        if let Some(tid) = task_id {
+                            let progress = ((processed_items * 100) / queued_count.max(1)) as i32;
+                            let _ = set_zip_rag_task_status(
+                                &pool_bg,
+                                tid,
+                                "processing",
+                                progress,
+                                processed_items,
+                                failed_items,
+                                None,
+                            )
+                            .await;
                         }
                     }
                 }
-                Err((_, msg)) => {
-                    failed_entries.push(format!("{}: extract failed ({})", entry_name, msg));
-                }
             }
-        }
+
+            if let Some(tid) = task_id {
+                let final_status = if failed_items > 0 { "failed" } else { "completed" };
+                let final_message = if failed_items > 0 {
+                    Some("Uno o más archivos fallaron durante la extracción o la ingesta RAG")
+                } else {
+                    None
+                };
+                let _ = set_zip_rag_task_status(
+                    &pool_bg,
+                    tid,
+                    final_status,
+                    100,
+                    queued_count,
+                    failed_items,
+                    final_message,
+                )
+                .await;
+            }
+
+            tracing::info!(
+                "ZIP async RAG finalizado: {} assets, {} chunks (concurrency={})",
+                ingested_assets,
+                ingested_chunks,
+                rag_concurrency
+            );
+        });
+
+        failed_entries.push(format!(
+            "Ingestion RAG iniciada en segundo plano para {} archivos. Puedes continuar usando el sistema mientras finaliza.",
+            queued_count
+        ));
+        rag_ingested_assets = 0;
+        rag_chunks_ingested = 0;
     }
 
     let _ = tokio::fs::remove_file(&zip_path).await;
@@ -1377,6 +1820,8 @@ pub async fn import_assets_zip(
         rag_ingested_assets,
         rag_chunks_ingested,
         failed_entries,
+        rag_background_started,
+        rag_background_items,
     }))
 }
 
@@ -1395,6 +1840,123 @@ fn replace_extension(filename: &str, new_ext: &str) -> String {
         .and_then(|s| s.to_str())
         .unwrap_or("file");
     format!("{}.{}", base, new_ext)
+}
+
+fn replace_last_path_extension(path: &str, new_ext: &str) -> String {
+    if let Some((prefix, last)) = path.rsplit_once('/') {
+        return format!("{}/{}", prefix, replace_extension(last, new_ext));
+    }
+    replace_extension(path, new_ext)
+}
+
+fn build_public_url_from_storage_path(storage_path: &str) -> String {
+    if let Some((_, key)) = parse_s3_storage_path(storage_path) {
+        if let Some(settings) = get_s3_settings() {
+            return build_s3_public_url(&settings, key);
+        }
+        return storage_path.to_string();
+    }
+
+    let storage_filename = StdPath::new(storage_path)
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("");
+    format!("/assets/{}", storage_filename)
+}
+
+async fn normalize_flv_asset_for_rag(
+    pool: &PgPool,
+    asset: &mut Asset,
+) -> Result<(), (StatusCode, String)> {
+    if !is_flv_media(&asset.filename, &asset.mimetype) {
+        return Ok(());
+    }
+
+    tokio::fs::create_dir_all("uploads/tmp")
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error creating temp dir: {}", e)))?;
+
+    let input_path = format!("uploads/tmp/flv-normalize-in-{}.flv", asset.id);
+    let output_path = format!("uploads/tmp/flv-normalize-out-{}.mp4", asset.id);
+
+    let source_bytes = read_storage_bytes(&asset.storage_path).await?;
+    tokio::fs::write(&input_path, source_bytes)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error writing temp FLV: {}", e)))?;
+
+    if let Err(e) = transcode_flv_to_mp4(&input_path, &output_path).await {
+        let _ = tokio::fs::remove_file(&input_path).await;
+        let _ = tokio::fs::remove_file(&output_path).await;
+        return Err(e);
+    }
+
+    let _ = tokio::fs::remove_file(&input_path).await;
+
+    let output_bytes = tokio::fs::read(&output_path)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error reading temp MP4: {}", e)))?;
+    let _ = tokio::fs::remove_file(&output_path).await;
+
+    let next_storage_path = replace_last_path_extension(&asset.storage_path, "mp4");
+    if let Some((bucket, key)) = parse_s3_storage_path(&next_storage_path) {
+        let settings = get_s3_settings().ok_or((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "S3 path detected but storage is not configured".to_string(),
+        ))?;
+        let client = build_s3_client(&settings).await?;
+        let old_storage_path = asset.storage_path.clone();
+
+        client
+            .put_object()
+            .bucket(bucket)
+            .key(key)
+            .content_type("video/mp4")
+            .body(output_bytes.clone().into())
+            .send()
+            .await
+            .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Error uploading normalized MP4 to S3: {}", e)))?;
+
+        if old_storage_path != next_storage_path {
+            let _ = delete_storage_path(&old_storage_path).await;
+        }
+    } else {
+        tokio::fs::write(&next_storage_path, &output_bytes)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error writing normalized MP4: {}", e)))?;
+
+        if asset.storage_path != next_storage_path {
+            let _ = tokio::fs::remove_file(&asset.storage_path).await;
+        }
+    }
+
+    let next_filename = replace_extension(&asset.filename, "mp4");
+    let next_size = output_bytes.len() as i64;
+
+    sqlx::query(
+        r#"
+        UPDATE assets
+        SET filename = $1,
+            storage_path = $2,
+            mimetype = $3,
+            size_bytes = $4
+        WHERE id = $5
+        "#,
+    )
+    .bind(&next_filename)
+    .bind(&next_storage_path)
+    .bind("video/mp4")
+    .bind(next_size)
+    .bind(asset.id)
+    .execute(pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error updating normalized asset: {}", e)))?;
+
+    asset.filename = next_filename;
+    asset.storage_path = next_storage_path;
+    asset.mimetype = "video/mp4".to_string();
+    asset.size_bytes = next_size;
+
+    Ok(())
 }
 
 async fn transcode_flv_to_mp4(input_path: &str, output_path: &str) -> Result<(), (StatusCode, String)> {
@@ -1514,12 +2076,19 @@ async fn ingest_chunks_to_question_bank(
 }
 
 async fn extract_asset_text(asset: &Asset) -> Result<String, (StatusCode, String)> {
+    extract_asset_text_with_endpoints(asset, None).await
+}
+
+async fn extract_asset_text_with_endpoints(
+    asset: &Asset,
+    whisper_url_override: Option<&str>,
+) -> Result<String, (StatusCode, String)> {
     let lower_name = asset.filename.to_lowercase();
     let mimetype = asset.mimetype.to_lowercase();
 
     if mimetype.starts_with("audio/") || mimetype.starts_with("video/") {
         let bytes = read_storage_bytes(&asset.storage_path).await?;
-        return transcribe_media_bytes(bytes, &asset.filename).await;
+        return transcribe_media_bytes_with_override(bytes, &asset.filename, whisper_url_override).await;
     }
 
     if mimetype.contains("pdf") || lower_name.ends_with(".pdf") {
@@ -1583,8 +2152,18 @@ async fn extract_pdf_text_from_bytes(bytes: Vec<u8>) -> Result<String, (StatusCo
     Ok(text)
 }
 
-async fn transcribe_media_bytes(file_data: Vec<u8>, filename: &str) -> Result<String, (StatusCode, String)> {
+async fn transcribe_media_bytes_with_override(
+    file_data: Vec<u8>,
+    filename: &str,
+    whisper_url_override: Option<&str>,
+) -> Result<String, (StatusCode, String)> {
     let mut whisper_urls: Vec<String> = Vec::new();
+    if let Some(url) = whisper_url_override {
+        let trimmed = url.trim();
+        if !trimmed.is_empty() {
+            whisper_urls.push(trimmed.trim_end_matches('/').to_string());
+        }
+    }
     if let Ok(url) = std::env::var("WHISPER_URL") {
         let trimmed = url.trim();
         if !trimmed.is_empty() {

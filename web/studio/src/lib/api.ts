@@ -755,6 +755,8 @@ export interface AssetZipImportResult {
     rag_ingested_assets: number;
     rag_chunks_ingested: number;
     failed_entries: string[];
+    rag_background_started?: boolean;
+    rag_background_items?: number;
 }
 
 export interface Cohort {
@@ -1130,6 +1132,7 @@ export const cmsApi = {
         splitToRegular = false,
         samCourseIdR1?: number,
         samCourseIdR2?: number,
+        useDevProcessing = false,
     ): Promise<AssetZipImportResult> => {
         return new Promise((resolve, reject) => {
             const maxNetworkRetries = 2;
@@ -1146,6 +1149,9 @@ export const cmsApi = {
                     formData.append('split_to_regular', 'true');
                     if (samCourseIdR1) formData.append('sam_course_id_r1', String(samCourseIdR1));
                     if (samCourseIdR2) formData.append('sam_course_id_r2', String(samCourseIdR2));
+                }
+                if (useDevProcessing) {
+                    formData.append('use_dev_processing', 'true');
                 }
 
                 const xhr = new XMLHttpRequest();
@@ -1819,7 +1825,7 @@ export interface BackgroundTask {
     id: string;
     title: string;
     course_title?: string;
-    task_type: 'lesson_transcription' | 'lesson_image' | 'course_image';
+    task_type: 'lesson_transcription' | 'lesson_image' | 'course_image' | 'zip_rag_import';
     status: 'idle' | 'queued' | 'processing' | 'failed' | 'completed' | 'error';
     progress: number;
     updated_at: string;
