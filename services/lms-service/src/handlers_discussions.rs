@@ -26,7 +26,6 @@ struct ForumEmailRecipient {
 struct EmailTemplate {
     subject_template: String,
     body_template: String,
-    is_html: bool,
     is_enabled: bool,
 }
 
@@ -155,12 +154,9 @@ async fn load_org_smtp_config(pool: &PgPool, organization_id: Uuid) -> Option<Sm
 }
 
 async fn load_email_template(
-    organization_id: Uuid,
+    _organization_id: Uuid,
     template_key: &str,
 ) -> Option<EmailTemplate> {
-    let cms_api_url = env::var("CMS_API_URL").unwrap_or_else(|_| "http://localhost:3001".to_string());
-    let url = format!("{}/organization/email-templates", cms_api_url);
-
     // Para simplificar, por ahora devolvemos plantillas hardcoded
     // En producción, haríamos la llamada HTTP con autenticación
     match template_key {
@@ -177,7 +173,6 @@ Ver hilo completo: {{thread_url}}
 
 Saludos,
 El equipo de {{organization_name}}".to_string(),
-            is_html: false,
             is_enabled: true,
         }),
         "forum_thread" => Some(EmailTemplate {
@@ -193,7 +188,6 @@ Ver hilo: {{thread_url}}
 
 Saludos,
 El equipo de {{organization_name}}".to_string(),
-            is_html: false,
             is_enabled: true,
         }),
         _ => None,
