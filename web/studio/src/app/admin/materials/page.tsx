@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { cmsApi, questionBankApi, MySqlPlan, MySqlCourse } from '@/lib/api';
+import { cmsApi, questionBankApi, MySqlPlan, MySqlCourse, AssetImportHistoryItem } from '@/lib/api';
 import { Upload, Database, FileArchive, CheckCircle2, AlertTriangle, Scissors } from 'lucide-react';
 
 export default function AdminSharedMaterialsPage() {
@@ -31,6 +31,7 @@ export default function AdminSharedMaterialsPage() {
         rag_background_started?: boolean;
         rag_background_items?: number;
     } | null>(null);
+    const [importHistory, setImportHistory] = useState<AssetImportHistoryItem[]>([]);
 
     const canUpload = useMemo(() => Boolean(zipFile) && !loading, [zipFile, loading]);
 
@@ -62,6 +63,7 @@ export default function AdminSharedMaterialsPage() {
 
     React.useEffect(() => {
         questionBankApi.getMySQLPlans().then(setPlans).catch(() => setPlans([]));
+        cmsApi.getAssetImportHistory().then(setImportHistory).catch(() => setImportHistory([]));
     }, []);
 
     React.useEffect(() => {
@@ -165,6 +167,7 @@ export default function AdminSharedMaterialsPage() {
                 useDevProcessing,
             );
             setResult(response);
+            cmsApi.getAssetImportHistory().then(setImportHistory).catch(() => setImportHistory([]));
             setPhase('done');
             alert('Importacion ZIP finalizada.');
         } catch (error) {
@@ -411,6 +414,48 @@ export default function AdminSharedMaterialsPage() {
                         <p className="text-xs text-slate-500">
                             Nota: la subida e importación base terminan en esta solicitud. Si activas RAG, su procesamiento puede continuar en segundo plano.
                         </p>
+                    </div>
+                )}
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.02] p-6 space-y-4">
+                <div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">ZIPs ya importados</h3>
+                    <p className="text-xs text-slate-500 dark:text-gray-400 mt-1">
+                        Revisa nombre del ZIP y nivel antes de repetir una carga.
+                    </p>
+                </div>
+                {importHistory.length === 0 ? (
+                    <p className="text-sm text-slate-500 dark:text-gray-400">Aun no hay importaciones ZIP registradas.</p>
+                ) : (
+                    <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                        {importHistory.map((item) => (
+                            <div key={item.zip_batch_id} className="rounded-xl border border-slate-200 dark:border-white/10 p-4 bg-slate-50/70 dark:bg-white/[0.03]">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p className="text-sm font-semibold text-slate-900 dark:text-white break-all">{item.source_zip_name}</p>
+                                        <p className="text-xs text-slate-500 dark:text-gray-400 mt-1">
+                                            {new Date(item.created_at).toLocaleString()} · {item.asset_count} assets
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 justify-end">
+                                        <span className="rounded-full border border-slate-300 dark:border-white/10 px-3 py-1 text-[11px] font-semibold text-slate-700 dark:text-gray-300">
+                                            Nivel: {item.english_level || 'general'}
+                                        </span>
+                                        {item.sam_plan_id && (
+                                            <span className="rounded-full border border-slate-300 dark:border-white/10 px-3 py-1 text-[11px] font-semibold text-slate-700 dark:text-gray-300">
+                                                Plan SAM: {item.sam_plan_id}
+                                            </span>
+                                        )}
+                                        {item.sam_course_id && (
+                                            <span className="rounded-full border border-slate-300 dark:border-white/10 px-3 py-1 text-[11px] font-semibold text-slate-700 dark:text-gray-300">
+                                                Curso SAM: {item.sam_course_id}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>

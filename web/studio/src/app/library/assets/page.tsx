@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
     Search, Image as ImageIcon, FileText, Film, File as FileIcon,
     Loader2, Upload, Trash2, ExternalLink, Filter, Plus
@@ -11,37 +11,69 @@ import { useTranslation } from "@/context/I18nContext";
 import PageLayout from "@/components/PageLayout";
 
 export default function AssetLibraryPage() {
+    const PAGE_SIZE = 100;
     const { t } = useTranslation();
     const { user } = useAuth();
     const [assets, setAssets] = useState<Asset[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [filterType, setFilterType] = useState<string>("all");
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-    const loadAssets = useCallback(async () => {
-        setIsLoading(true);
+    const loadAssets = useCallback(async (nextPage = 1, append = false) => {
+        if (append) {
+            setIsLoadingMore(true);
+        } else {
+            setIsLoading(true);
+        }
         try {
-            const filters: AssetFilters = {};
+            const filters: AssetFilters = { page: nextPage, limit: PAGE_SIZE };
             if (searchTerm) filters.search = searchTerm;
             if (filterType !== "all") filters.mimetype = filterType;
 
             const data = await cmsApi.getAssets(filters);
-            setAssets(data);
+            setAssets((prev) => append ? [...prev, ...data] : data);
+            setPage(nextPage);
+            setHasMore(data.length === PAGE_SIZE);
         } catch (error) {
             console.error("Failed to load assets:", error);
         } finally {
-            setIsLoading(false);
+            if (append) {
+                setIsLoadingMore(false);
+            } else {
+                setIsLoading(false);
+            }
         }
     }, [searchTerm, filterType]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            loadAssets();
+            setAssets([]);
+            setPage(1);
+            setHasMore(true);
+            loadAssets(1, false);
         }, 300);
         return () => clearTimeout(timer);
     }, [loadAssets]);
+
+    useEffect(() => {
+        if (!sentinelRef.current || !hasMore || isLoading || isLoadingMore) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            const first = entries[0];
+            if (first?.isIntersecting) {
+                loadAssets(page + 1, true);
+            }
+        }, { rootMargin: '300px' });
+
+        observer.observe(sentinelRef.current);
+        return () => observer.disconnect();
+    }, [hasMore, isLoading, isLoadingMore, loadAssets, page]);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
@@ -56,7 +88,7 @@ export default function AssetLibraryPage() {
                     setUploadProgress(pct);
                 });
             }
-            loadAssets();
+            loadAssets(1, false);
         } catch (error) {
             console.error("Upload failed:", error);
             alert("Failed to upload assets.");
@@ -235,6 +267,20 @@ export default function AssetLibraryPage() {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {!isLoading && assets.length > 0 && (
+                    <div ref={sentinelRef} className="flex justify-center py-8">
+                        {isLoadingMore ? (
+                            <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-gray-400">
+                                <Loader2 className="w-4 h-4 animate-spin" /> Cargando mas assets...
+                            </div>
+                        ) : !hasMore ? (
+                            <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500">
+                                Fin de la biblioteca
+                            </div>
+                        ) : null}
                     </div>
                 )}
             </div>

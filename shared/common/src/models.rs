@@ -349,6 +349,8 @@ pub struct Asset {
     pub sam_plan_id: Option<i32>,
     pub sam_course_id: Option<i32>,
     pub unit_number: Option<i32>,
+    pub zip_batch_id: Option<Uuid>,
+    pub source_zip_name: Option<String>,
     pub filename: String,
     pub storage_path: String,
     pub mimetype: String,

@@ -725,10 +725,22 @@ export interface Asset {
     uploaded_by: string | null;
     course_id: string | null;
     english_level?: string | null;
+    zip_batch_id?: string | null;
+    source_zip_name?: string | null;
     filename: string;
     storage_path: string;
     mimetype: string;
     size_bytes: number;
+    created_at: string;
+}
+
+export interface AssetImportHistoryItem {
+    zip_batch_id: string;
+    source_zip_name: string;
+    english_level?: string | null;
+    sam_plan_id?: number | null;
+    sam_course_id?: number | null;
+    asset_count: number;
     created_at: string;
 }
 
@@ -1117,6 +1129,7 @@ export const cmsApi = {
         const query = params.toString();
         return apiFetch(`/api/assets${query ? `?${query}` : ''}`);
     },
+    getAssetImportHistory: (): Promise<AssetImportHistoryItem[]> => apiFetch('/api/assets/import-history'),
     getCourseAssets: (courseId: string): Promise<Asset[]> => apiFetch(`/api/assets?course_id=${courseId}`),
     deleteAsset: (id: string): Promise<void> => apiFetch(`/api/assets/${id}`, { method: 'DELETE' }),
     ingestAssetForRag: (id: string): Promise<AssetRagIngestResult> =>

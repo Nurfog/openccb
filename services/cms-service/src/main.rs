@@ -276,6 +276,7 @@ async fn main() {
         .route("/audit-logs", get(handlers::get_audit_logs))
         .route("/api/ai/review-text", post(handlers::review_text))
         .route("/api/assets", get(handlers_assets::list_assets))
+        .route("/api/assets/import-history", get(handlers_assets::list_asset_import_history))
         .route("/api/assets/upload", post(handlers_assets::upload_asset))
         .route("/api/assets/import-zip", post(handlers_assets::import_assets_zip))
         .route(

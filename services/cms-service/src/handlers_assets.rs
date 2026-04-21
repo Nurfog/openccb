@@ -72,6 +72,17 @@ pub struct AssetZipImportResponse {
     pub rag_background_items: usize,
 }
 
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct AssetImportHistoryItem {
+    pub zip_batch_id: Uuid,
+    pub source_zip_name: String,
+    pub english_level: Option<String>,
+    pub sam_plan_id: Option<i32>,
+    pub sam_course_id: Option<i32>,
+    pub asset_count: i64,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct AssetFilters {
     pub mimetype: Option<String>,
@@ -608,6 +619,37 @@ pub async fn list_assets(
     Ok(Json(assets))
 }
 
+pub async fn list_asset_import_history(
+    Org(org_ctx): Org,
+    State(pool): State<PgPool>,
+) -> Result<Json<Vec<AssetImportHistoryItem>>, (StatusCode, String)> {
+    let items = sqlx::query_as::<_, AssetImportHistoryItem>(
+        r#"
+        SELECT
+            zip_batch_id,
+            source_zip_name,
+            english_level,
+            sam_plan_id,
+            sam_course_id,
+            COUNT(*)::bigint AS asset_count,
+            MAX(created_at) AS created_at
+        FROM assets
+        WHERE organization_id = $1
+          AND zip_batch_id IS NOT NULL
+          AND source_zip_name IS NOT NULL
+        GROUP BY zip_batch_id, source_zip_name, english_level, sam_plan_id, sam_course_id
+        ORDER BY MAX(created_at) DESC
+        LIMIT 100
+        "#,
+    )
+    .bind(org_ctx.id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(items))
+}
+
 /// DELETE /api/assets/:id - Eliminar un activo y su archivo físico
 pub async fn delete_asset(
     Org(org_ctx): Org,
@@ -879,6 +921,8 @@ async fn process_zip_entry_without_rag(
     org_id: Uuid,
     user_id: Uuid,
     pool: PgPool,
+    zip_batch_id: Uuid,
+    source_zip_name: String,
     course_id: Option<Uuid>,
     english_level: Option<String>,
     sam_plan_id: Option<i32>,
@@ -1054,13 +1098,15 @@ async fn process_zip_entry_without_rag(
 
     sqlx::query(
         r#"
-        INSERT INTO assets (id, organization_id, uploaded_by, course_id, english_level, sam_plan_id, sam_course_id, unit_number, filename, storage_path, mimetype, size_bytes)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        INSERT INTO assets (id, organization_id, uploaded_by, zip_batch_id, source_zip_name, course_id, english_level, sam_plan_id, sam_course_id, unit_number, filename, storage_path, mimetype, size_bytes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         "#,
     )
     .bind(asset_id)
     .bind(org_id)
     .bind(user_id)
+    .bind(zip_batch_id)
+    .bind(source_zip_name)
     .bind(course_id)
     .bind(&english_level)
     .bind(sam_plan_id)
@@ -1103,6 +1149,7 @@ pub async fn import_assets_zip(
     );
 
     let mut zip_temp_path: Option<String> = None;
+    let mut zip_original_name: Option<String> = None;
     let mut course_id: Option<Uuid> = None;
     let mut english_level: Option<String> = None;
     let mut sam_plan_id: Option<i32> = None;
@@ -1121,6 +1168,15 @@ pub async fn import_assets_zip(
         let name = field.name().unwrap_or_default().to_string();
 
         if name == "file" {
+            if let Some(file_name) = field.file_name() {
+                zip_original_name = Some(
+                    StdPath::new(file_name)
+                        .file_name()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or(file_name)
+                        .to_string(),
+                );
+            }
             let temp_name = format!("uploads/tmp/import-{}.zip", Uuid::new_v4());
             tokio::fs::create_dir_all("uploads/tmp")
                 .await
@@ -1221,6 +1277,8 @@ pub async fn import_assets_zip(
             return Err((StatusCode::BAD_REQUEST, "No ZIP file uploaded".to_string()));
         }
     };
+    let zip_batch_id = Uuid::new_v4();
+    let source_zip_name = zip_original_name.unwrap_or_else(|| "import.zip".to_string());
 
     let zip_file = std::fs::File::open(&zip_path)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to open temp zip file: {}", e)))?;
@@ -1399,6 +1457,7 @@ pub async fn import_assets_zip(
             let english_level_cl = english_level.clone();
             let s3_settings_cl = s3_settings.clone();
             let s3_client_cl = s3_client.clone();
+            let source_zip_name_cl = source_zip_name.clone();
 
             join_set.spawn(async move {
                 process_zip_entry_without_rag(
@@ -1406,6 +1465,8 @@ pub async fn import_assets_zip(
                     org_id,
                     user_id,
                     pool_cl,
+                    zip_batch_id,
+                    source_zip_name_cl,
                     course_id,
                     english_level_cl,
                     sam_plan_id,
@@ -1598,13 +1659,15 @@ pub async fn import_assets_zip(
 
         let insert_result = sqlx::query(
             r#"
-            INSERT INTO assets (id, organization_id, uploaded_by, course_id, english_level, sam_plan_id, sam_course_id, unit_number, filename, storage_path, mimetype, size_bytes)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            INSERT INTO assets (id, organization_id, uploaded_by, zip_batch_id, source_zip_name, course_id, english_level, sam_plan_id, sam_course_id, unit_number, filename, storage_path, mimetype, size_bytes)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             "#,
         )
         .bind(asset_id)
         .bind(org_ctx.id)
         .bind(claims.sub)
+        .bind(zip_batch_id)
+        .bind(&source_zip_name)
         .bind(course_id)
         .bind(&english_level)
         .bind(sam_plan_id)
@@ -1641,6 +1704,8 @@ pub async fn import_assets_zip(
                 sam_plan_id,
                 sam_course_id: effective_sam_course_id,
                 unit_number,
+                zip_batch_id: Some(zip_batch_id),
+                source_zip_name: Some(source_zip_name.clone()),
                 filename: stored_filename.clone(),
                 storage_path: db_storage_path.clone(),
                 mimetype: mimetype.clone(),
