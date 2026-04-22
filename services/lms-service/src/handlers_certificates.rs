@@ -546,17 +546,38 @@ async fn issue_certificate_internal(
         )
     })?;
 
+    // Enviar email de completitud (fire-and-forget)
+    _send_completion_email_spawn(pool.clone(), organization_id, user_id, user_name.clone(), course_title.clone());
+
     Ok(Json(CertificateResponse {
         id: issued_cert.get("id"),
         user_id,
         course_id,
-        course_title: course_title,
-        student_name: user_name,
+        course_title: course_title.clone(),
+        student_name: user_name.clone(),
         certificate_html,
         issued_at: issued_cert.get::<chrono::DateTime<chrono::Utc>, _>("issued_at").to_string(),
         verification_code,
         metadata,
     }))
+}
+
+// Importación local para email (evitar ciclos de módulos)
+use crate::handlers_email;
+
+fn _send_completion_email_spawn(pool: PgPool, org_id: Uuid, user_id: Uuid, user_name: String, course_title: String) {
+    tokio::spawn(async move {
+        let email_row = sqlx::query_as::<_, (String,)>(
+            "SELECT email FROM users WHERE id = $1",
+        )
+        .bind(user_id)
+        .fetch_optional(&pool)
+        .await;
+
+        if let Ok(Some((email,))) = email_row {
+            handlers_email::send_completion_email(&pool, org_id, &email, &user_name, &course_title).await;
+        }
+    });
 }
 
 /// Template de certificado por defecto

@@ -1,6 +1,9 @@
 mod db_util;
 mod handlers;
 mod handlers_announcements;
+mod handlers_email;
+mod handlers_scorm;
+mod handlers_search;
 mod handlers_cohorts;
 mod handlers_discussions;
 mod handlers_notes;
@@ -386,6 +389,10 @@ async fn main() {
         .route("/ingest", post(handlers::ingest_course))
         .route("/auth/register", post(handlers::register))
         .route("/auth/login", post(handlers::login))
+        .route("/auth/forgot-password", post(handlers_email::forgot_password))
+        .route("/auth/reset-password", post(handlers_email::reset_password))
+        .route("/xapi/statements", post(handlers_scorm::track_xapi_statement))
+        .route("/search", get(handlers_search::global_search))
         .route(
             "/payments/mercadopago/webhook",
             post(handlers_payments::mercadopago_webhook),

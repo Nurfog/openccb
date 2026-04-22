@@ -624,6 +624,37 @@ pub async fn enroll_user(
         )
         .await;
 
+    // Email transaccional de bienvenida (fire-and-forget)
+    {
+        let pool_clone = pool.clone();
+        let org_id = org_ctx.id;
+        tokio::spawn(async move {
+            let user_row = sqlx::query_as::<_, (String, Option<String>)>(
+                "SELECT email, full_name FROM users WHERE id = $1",
+            )
+            .bind(user_id)
+            .fetch_optional(&pool_clone)
+            .await;
+
+            let course_title = sqlx::query_scalar::<_, String>(
+                "SELECT title FROM courses WHERE id = $1",
+            )
+            .bind(course_id)
+            .fetch_optional(&pool_clone)
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| "el curso".to_string());
+
+            if let Ok(Some((email, name))) = user_row {
+                let name = name.unwrap_or_else(|| "Estudiante".to_string());
+                crate::handlers_email::send_enrollment_email(
+                    &pool_clone, org_id, &email, &name, &course_title,
+                ).await;
+            }
+        });
+    }
+
     Ok(Json(enrollment))
 }
 

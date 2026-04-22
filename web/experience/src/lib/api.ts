@@ -224,7 +224,20 @@ export interface Block {
     initial_code?: string;
     solution?: string;
     test_cases?: { description: string; expected: string }[];
+    // SCORM/xAPI fields
+    launch_url?: string;
     metadata?: any;
+}
+
+export interface TrackXapiPayload {
+    course_id: string;
+    lesson_id: string;
+    verb: string;
+    object_id: string;
+    score?: number;
+    progress?: number;
+    completed?: boolean;
+    raw_statement?: unknown;
 }
 
 export interface CourseInstructor {
@@ -602,6 +615,31 @@ export const lmsApi = {
 
     async login(payload: AuthPayload): Promise<AuthResponse> {
         return apiFetch('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+    },
+
+    async forgotPassword(email: string): Promise<{ message: string }> {
+        return apiFetch('/auth/forgot-password', {
+            method: 'POST',
+            body: JSON.stringify({ email })
+        });
+    },
+
+    async resetPassword(token: string, new_password: string): Promise<{ message: string }> {
+        return apiFetch('/auth/reset-password', {
+            method: 'POST',
+            body: JSON.stringify({ token, new_password })
+        });
+    },
+
+    async globalSearch(q: string, limit = 20): Promise<{ query: string; total: number; results: Array<{ id: string; kind: string; title: string; snippet?: string; url: string; course_id?: string; course_title?: string }> }> {
+        return apiFetch(`/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+    },
+
+    async trackXapiStatement(payload: TrackXapiPayload): Promise<{ id: string; message: string }> {
+        return apiFetch('/xapi/statements', {
             method: 'POST',
             body: JSON.stringify(payload)
         });

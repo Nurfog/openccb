@@ -5,19 +5,73 @@ import Image from "next/image";
 import { useBranding } from "@/context/BrandingContext";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/context/I18nContext";
-import { LogOut, Globe, Menu, X, Sun, Moon } from "lucide-react";
+import { LogOut, Globe, Menu, X, Sun, Moon, Search } from "lucide-react";
 import NotificationCenter from "./NotificationCenter";
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useTheme } from "@/context/ThemeContext";
+import { useRouter } from "next/navigation";
 
-import { getImageUrl } from "@/lib/api";
+import { getImageUrl, lmsApi } from "@/lib/api";
 
 export default function AppHeader() {
     const { t, language, setLanguage } = useTranslation();
     const { branding } = useBranding();
     const { user, logout } = useAuth();
     const { theme, toggleTheme } = useTheme();
+    const router = useRouter();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    // ── Búsqueda global ──
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [searchResults, setSearchResults] = useState<Array<{ id: string; kind: string; title: string; snippet?: string; url: string; course_title?: string }>>([]);
+    const [searchLoading, setSearchLoading] = useState(false);
+    const searchRef = useRef<HTMLDivElement>(null);
+    const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const runSearch = useCallback(async (q: string) => {
+        if (!q.trim() || q.length < 2) { setSearchResults([]); return; }
+        setSearchLoading(true);
+        try {
+            const res = await lmsApi.globalSearch(q);
+            setSearchResults(res.results ?? []);
+        } catch {
+            setSearchResults([]);
+        } finally {
+            setSearchLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (searchTimer.current) clearTimeout(searchTimer.current);
+        searchTimer.current = setTimeout(() => runSearch(searchQuery), 350);
+        return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+    }, [searchQuery, runSearch]);
+
+    // Cerrar al hacer click fuera
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+                setSearchOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
+
+    function handleSearchSelect(url: string) {
+        setSearchOpen(false);
+        setSearchQuery("");
+        setSearchResults([]);
+        router.push(url);
+    }
+
+    const kindLabel: Record<string, string> = {
+        course: "Curso",
+        lesson: "Lección",
+        discussion: "Foro",
+        announcement: "Anuncio",
+    };
 
     // Use platform_name if available, otherwise name, otherwise default
     const platformName = branding?.platform_name || branding?.name || 'Academia';
@@ -46,6 +100,56 @@ export default function AppHeader() {
             </Link>
 
             <div className="flex items-center gap-4">
+                {/* Búsqueda global */}
+                {user && (
+                    <div ref={searchRef} className="relative hidden md:block">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={e => { setSearchQuery(e.target.value); setSearchOpen(true); }}
+                                onFocus={() => setSearchOpen(true)}
+                                placeholder="Buscar cursos, lecciones..."
+                                className="w-56 lg:w-72 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 transition-all"
+                            />
+                        </div>
+                        {searchOpen && searchQuery.length >= 2 && (
+                            <div className="absolute top-full mt-2 left-0 w-80 lg:w-96 bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl z-[200] overflow-hidden">
+                                {searchLoading ? (
+                                    <div className="p-4 text-sm text-gray-400 text-center">Buscando...</div>
+                                ) : searchResults.length === 0 ? (
+                                    <div className="p-4 text-sm text-gray-400 text-center">Sin resultados para &quot;{searchQuery}&quot;</div>
+                                ) : (
+                                    <ul className="max-h-80 overflow-y-auto divide-y divide-black/5 dark:divide-white/5">
+                                        {searchResults.map(r => (
+                                            <li key={`${r.kind}-${r.id}`}>
+                                                <button
+                                                    onClick={() => handleSearchSelect(r.url)}
+                                                    className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-white/5 transition-colors flex flex-col gap-0.5"
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 rounded">
+                                                            {kindLabel[r.kind] ?? r.kind}
+                                                        </span>
+                                                        <span className="text-sm font-semibold text-slate-800 dark:text-white truncate">{r.title}</span>
+                                                    </div>
+                                                    {r.snippet && (
+                                                        <p className="text-xs text-gray-400 truncate pl-0.5">{r.snippet}</p>
+                                                    )}
+                                                    {r.course_title && r.kind !== 'course' && (
+                                                        <p className="text-xs text-gray-500 truncate pl-0.5">en {r.course_title}</p>
+                                                    )}
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {user && (
                     <nav className="hidden md:flex items-center gap-8 mr-4" aria-label="Navegación principal">
                         <Link href="/" className="flex items-center gap-2 text-base font-black uppercase tracking-wider transition-colors text-slate-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white">

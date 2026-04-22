@@ -21,6 +21,7 @@ import AudioResponsePlayer from "@/components/blocks/AudioResponsePlayer";
 import RolePlayingPlayer from "@/components/blocks/RolePlayingPlayer";
 import PeerReviewPlayer from "@/components/blocks/PeerReviewPlayer";
 import MermaidViewer from "@/components/blocks/MermaidViewer";
+import ScormPlayer from "@/components/blocks/ScormPlayer";
 import InteractiveTranscript from "@/components/InteractiveTranscript";
 import AITutor from "@/components/AITutor";
 import LessonLockedView from "@/components/LessonLockedView";
@@ -507,6 +508,15 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                                         );
                                                     case 'mermaid':
                                                         return <MermaidViewer block={block} />;
+                                                    case 'scorm':
+                                                        return (
+                                                            <ScormPlayer
+                                                                lessonId={params.lessonId}
+                                                                courseId={params.id}
+                                                                title={block.title || lesson.title}
+                                                                launchUrl={block.launch_url || block.url || lesson.content_url || ""}
+                                                            />
+                                                        );
                                                     default:
                                                         return <div className="p-4 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-500 uppercase tracking-widest">Tipo de Bloque Desconocido: {block.type}</div>;
                                                 }
@@ -521,17 +531,26 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                     </div>
                                 ) : (lesson.content_url) ? (
                                     <div className="animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
-                                        <MediaPlayer
-                                            id="main-media-fallback"
-                                            lessonId={params.lessonId}
-                                            title={lesson.title}
-                                            url={lesson.content_url}
-                                            media_type={(lesson.content_type as any) || 'video'}
-                                            onTimeUpdate={setCurrentTime}
-                                            initialPlayCount={0}
-                                            isGraded={lesson.is_graded}
-                                            hasTranscription={!!lesson.transcription}
-                                        />
+                                        {lesson.content_type === 'scorm' || lesson.content_type === 'xapi' ? (
+                                            <ScormPlayer
+                                                lessonId={params.lessonId}
+                                                courseId={params.id}
+                                                title={lesson.title}
+                                                launchUrl={lesson.content_url}
+                                            />
+                                        ) : (
+                                            <MediaPlayer
+                                                id="main-media-fallback"
+                                                lessonId={params.lessonId}
+                                                title={lesson.title}
+                                                url={lesson.content_url}
+                                                media_type={(lesson.content_type as any) || 'video'}
+                                                onTimeUpdate={setCurrentTime}
+                                                initialPlayCount={0}
+                                                isGraded={lesson.is_graded}
+                                                hasTranscription={!!lesson.transcription}
+                                            />
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="py-20 text-center glass-card border-dashed border-black/10 dark:border-white/10">

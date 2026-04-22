@@ -80,9 +80,9 @@
 - [x] **Importación Masiva (Excel)**: Finalizar soporte para Question Bank.
 
 ## Fase 23 - 27: Infraestructura Crítica 📋 (Planificado)
-- [ ] **Integración SMTP**: Password reset, notificaciones transaccionales y de marketing.
-- [ ] **Búsqueda Global Unificada**: Búsqueda full-text y semántica en toda la plataforma.
-- [ ] **Soporte SCORM/xAPI**: Player nativo para contenidos legados.
+- [x] **Integración SMTP**: Password reset, notificaciones transaccionales (inscripción, completitud) y emails de marketing.
+- [x] **Búsqueda Global Unificada**: Endpoint `/search` en LMS (cursos, lecciones, foros, anuncios) con full-text e índices GIN. Barra de búsqueda en navbar del Experience.
+- [x] **Soporte SCORM/xAPI**: Player nativo (iframe) para lecciones `content_type=scorm|xapi` y bloque `scorm`, con tracking de statements xAPI en LMS.
 - [ ] **Accesibilidad WCAG 2.1**: Auditoría y ajustes de contraste/navegación.
 - [ ] **PWA y Soporte Offline**: Service workers para aprendizaje sin conexión.
 

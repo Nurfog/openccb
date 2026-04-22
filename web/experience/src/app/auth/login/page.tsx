@@ -109,6 +109,13 @@ export default function ExperienceLoginPage() {
                                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-gray-500" />
                                     <input required type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-10 pr-4 text-slate-900 dark:text-white text-sm focus:border-indigo-500 focus:outline-none transition-colors" placeholder="••••••••" />
                                 </div>
+                                {isLogin && (
+                                    <div className="text-right pt-1">
+                                        <a href="/auth/forgot-password" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
+                                            ¿Olvidaste tu contraseña?
+                                        </a>
+                                    </div>
+                                )}
                             </div>
 
                             {error && <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-300 text-xs p-3 rounded-lg font-medium">{error}</div>}
