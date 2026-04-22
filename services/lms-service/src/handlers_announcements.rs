@@ -27,6 +27,55 @@ pub struct UpdateAnnouncementPayload {
     pub is_pinned: Option<bool>,
 }
 
+fn is_instructor_or_admin(role: &str) -> bool {
+    role == "instructor" || role == "admin"
+}
+
+fn normalize_lms_role(role: &str) -> &'static str {
+    match role {
+        "admin" => "admin",
+        "instructor" => "instructor",
+        _ => "student",
+    }
+}
+
+async fn ensure_announcement_author_exists(
+    pool: &PgPool,
+    user_id: Uuid,
+    organization_id: Uuid,
+    role: &str,
+) -> Result<(), (StatusCode, String)> {
+    let exists = sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)")
+        .bind(user_id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if exists {
+        return Ok(());
+    }
+
+    let synthetic_email = format!("user-{}@openccb.local", user_id);
+    let synthetic_name = format!("Usuario {}", &user_id.to_string()[..8]);
+    let normalized_role = normalize_lms_role(role);
+
+    sqlx::query(
+        "INSERT INTO users (id, email, password_hash, full_name, organization_id, role)
+         VALUES ($1, $2, $3, $4, $5, $6)",
+    )
+    .bind(user_id)
+    .bind(&synthetic_email)
+    .bind("external-auth")
+    .bind(&synthetic_name)
+    .bind(organization_id)
+    .bind(normalized_role)
+    .execute(pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("No se pudo provisionar usuario LMS: {}", e)))?;
+
+    Ok(())
+}
+
 // ========== MANEJADORES ==========
 
 pub async fn list_announcements(
@@ -75,19 +124,14 @@ pub async fn create_announcement(
     State(pool): State<PgPool>,
     Json(payload): Json<CreateAnnouncementPayload>,
 ) -> Result<Json<CourseAnnouncement>, (StatusCode, String)> {
-    // Verificar si el usuario es instructor o administrador
-    let user = sqlx::query_as::<_, (String,)>("SELECT role FROM users WHERE id = $1")
-        .bind(claims.sub)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| (StatusCode::UNAUTHORIZED, "Usuario no encontrado".to_string()))?;
-
-    if user.0 != "instructor" && user.0 != "admin" {
+    if !is_instructor_or_admin(&claims.role) {
         return Err((
             StatusCode::FORBIDDEN,
             "Solo los instructores pueden crear anuncios".to_string(),
         ));
     }
+
+    ensure_announcement_author_exists(&pool, claims.sub, org_ctx.id, &claims.role).await?;
 
     let mut tx = pool
         .begin()
@@ -198,14 +242,7 @@ pub async fn update_announcement(
     State(pool): State<PgPool>,
     Json(payload): Json<UpdateAnnouncementPayload>,
 ) -> Result<Json<CourseAnnouncement>, (StatusCode, String)> {
-    // Verificar si el usuario es instructor o administrador
-    let user = sqlx::query_as::<_, (String,)>("SELECT role FROM users WHERE id = $1")
-        .bind(claims.sub)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| (StatusCode::UNAUTHORIZED, "Usuario no encontrado".to_string()))?;
-
-    if user.0 != "instructor" && user.0 != "admin" {
+    if !is_instructor_or_admin(&claims.role) {
         return Err((
             StatusCode::FORBIDDEN,
             "Solo los instructores pueden actualizar anuncios".to_string(),
@@ -250,14 +287,7 @@ pub async fn delete_announcement(
     Path(announcement_id): Path<Uuid>,
     State(pool): State<PgPool>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    // Verificar si el usuario es instructor o administrador
-    let user = sqlx::query_as::<_, (String,)>("SELECT role FROM users WHERE id = $1")
-        .bind(claims.sub)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| (StatusCode::UNAUTHORIZED, "Usuario no encontrado".to_string()))?;
-
-    if user.0 != "instructor" && user.0 != "admin" {
+    if !is_instructor_or_admin(&claims.role) {
         return Err((
             StatusCode::FORBIDDEN,
             "Solo los instructores pueden eliminar anuncios".to_string(),

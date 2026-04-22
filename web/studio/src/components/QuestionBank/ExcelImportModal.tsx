@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { questionBankApi } from '@/lib/api';
+import * as XLSX from 'xlsx';
+import { CreateQuestionBankPayload, QuestionBankType, questionBankApi } from '@/lib/api';
 import { X, Upload, FileSpreadsheet, Check, AlertCircle, Download } from 'lucide-react';
 
 interface ExcelImportModalProps {
@@ -12,8 +13,133 @@ interface ExcelImportModalProps {
 export default function ExcelImportModal({ onSuccess, onCancel }: ExcelImportModalProps) {
     const [excelFile, setExcelFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
-    const [result, setResult] = useState<any>(null);
+    const [result, setResult] = useState<{ imported: number; skipped: number; error?: string } | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    const toQuestionType = (value: string): QuestionBankType | null => {
+        const normalized = value.trim().toLowerCase();
+        const mapping: Record<string, QuestionBankType> = {
+            'multiple-choice': 'multiple-choice',
+            'multiple choice': 'multiple-choice',
+            'mcq': 'multiple-choice',
+            'true-false': 'true-false',
+            'true false': 'true-false',
+            'boolean': 'true-false',
+            'short-answer': 'short-answer',
+            'short answer': 'short-answer',
+            'essay': 'essay',
+            'matching': 'matching',
+            'ordering': 'ordering',
+            'fill-in-the-blanks': 'fill-in-the-blanks',
+            'fill in the blanks': 'fill-in-the-blanks',
+            'audio-response': 'audio-response',
+            'audio response': 'audio-response',
+            'hotspot': 'hotspot',
+            'code-lab': 'code-lab',
+            'code lab': 'code-lab',
+        };
+        return mapping[normalized] || null;
+    };
+
+    const parseUnknownJson = (value: string): unknown => {
+        const trimmed = value.trim();
+        if (!trimmed) return undefined;
+        if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+            try {
+                return JSON.parse(trimmed);
+            } catch {
+                return undefined;
+            }
+        }
+        if (/^-?\d+$/.test(trimmed)) {
+            return Number.parseInt(trimmed, 10);
+        }
+        if (/^-?\d+\.\d+$/.test(trimmed)) {
+            return Number.parseFloat(trimmed);
+        }
+        return trimmed;
+    };
+
+    const parseOptions = (raw: string): unknown => {
+        const parsed = parseUnknownJson(raw);
+        if (Array.isArray(parsed)) return parsed;
+        if (typeof parsed === 'string') {
+            const pieces = parsed
+                .split(',')
+                .map((p) => p.trim())
+                .filter(Boolean);
+            return pieces.length > 0 ? pieces : undefined;
+        }
+        return undefined;
+    };
+
+    const parseExcelRows = async (file: File): Promise<CreateQuestionBankPayload[]> => {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        if (!firstSheet) return [];
+
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, {
+            defval: '',
+            raw: false,
+        });
+
+        return rows
+            .map((row) => {
+                const getField = (name: string): string => {
+                    const direct = row[name];
+                    if (direct !== undefined) return String(direct).trim();
+                    const lowerName = name.toLowerCase();
+                    const foundKey = Object.keys(row).find((k) => k.trim().toLowerCase() === lowerName);
+                    return foundKey ? String(row[foundKey]).trim() : '';
+                };
+
+                const questionText = getField('question_text');
+                const questionTypeRaw = getField('question_type');
+                const questionType = toQuestionType(questionTypeRaw);
+                if (!questionText || !questionType) return null;
+
+                const optionsRaw = getField('options');
+                const correctAnswerRaw = getField('correct_answer');
+                const explanation = getField('explanation') || undefined;
+                const difficultyRaw = getField('difficulty').toLowerCase();
+                const difficulty = ['easy', 'medium', 'hard'].includes(difficultyRaw) ? difficultyRaw : 'medium';
+                const tagsRaw = getField('tags');
+                const pointsRaw = getField('points');
+
+                let options = parseOptions(optionsRaw);
+                let correctAnswer = parseUnknownJson(correctAnswerRaw);
+
+                if (questionType === 'true-false') {
+                    options = ['Verdadero', 'Falso'];
+                    if (typeof correctAnswer === 'string') {
+                        const lower = correctAnswer.toLowerCase();
+                        correctAnswer = lower === 'verdadero' || lower === 'true' ? 0 : 1;
+                    }
+                }
+
+                const tags = tagsRaw
+                    ? tagsRaw
+                        .split(',')
+                        .map((t) => t.trim())
+                        .filter(Boolean)
+                    : undefined;
+
+                const pointsNum = Number.parseInt(pointsRaw, 10);
+
+                return {
+                    question_text: questionText,
+                    question_type: questionType,
+                    options,
+                    correct_answer: correctAnswer,
+                    explanation,
+                    difficulty,
+                    tags,
+                    points: Number.isFinite(pointsNum) && pointsNum > 0 ? pointsNum : 1,
+                } as CreateQuestionBankPayload;
+            })
+            .filter((item): item is CreateQuestionBankPayload => item !== null);
+    };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -37,39 +163,61 @@ export default function ExcelImportModal({ onSuccess, onCancel }: ExcelImportMod
             setUploading(true);
             setError(null);
 
-            const formData = new FormData();
-            formData.append('file', excelFile);
-
-            const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_API_URL || 'http://localhost:3001'}/question-bank/import-excel`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                },
-                body: formData,
-            });
-
-            if (!response.ok) {
-                throw new Error('Error al importar');
+            const payloads = await parseExcelRows(excelFile);
+            if (payloads.length === 0) {
+                throw new Error('No se encontraron filas válidas en el archivo. Verifica columnas y tipos.');
             }
 
-            const data = await response.json();
-            setResult(data);
+            let imported = 0;
+            let skipped = 0;
+            const errors: string[] = [];
+
+            for (const payload of payloads) {
+                try {
+                    await questionBankApi.create(payload);
+                    imported += 1;
+                } catch (e) {
+                    skipped += 1;
+                    if (errors.length < 5) {
+                        errors.push((e as Error).message || 'Error desconocido al crear pregunta');
+                    }
+                }
+            }
+
+            setResult({
+                imported,
+                skipped,
+                error: errors.length > 0 ? errors.join(' | ') : undefined,
+            });
 
             setTimeout(() => {
                 onSuccess?.();
             }, 2000);
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Excel import failed:', err);
-            setError(err.message || 'Error al importar');
+            setError((err as Error)?.message || 'Error al importar');
         } finally {
             setUploading(false);
         }
     };
 
     const downloadTemplate = () => {
-        // Create a simple template explanation
-        alert('Descargando plantilla...\n\nColumnas requeridas:\n1. question_text - Texto de la pregunta\n2. question_type - multiple-choice, true-false, etc.\n3. options - ["A","B","C","D"]\n4. correct_answer - 0, 1, 2, o 3\n5. explanation - Explicación (opcional)\n6. difficulty - easy, medium, hard\n7. tags - tag1,tag2,tag3');
+        const csv = [
+            'question_text,question_type,options,correct_answer,explanation,difficulty,tags,points',
+            'What color is the sky?,multiple-choice,"[""Blue"",""Green"",""Red"",""Yellow""]",0,"The sky appears blue due to Rayleigh scattering",easy,"science,colors",1',
+            'The sun rises in the east.,true-false,"[""Verdadero"",""Falso""]",0,"The sun always rises in the east",easy,"geography",1',
+        ].join('\n');
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'question_bank_template.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
     return (

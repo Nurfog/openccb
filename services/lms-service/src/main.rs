@@ -9,6 +9,7 @@ mod handlers_peer_review;
 mod handlers_embeddings;
 mod handlers_faq;
 mod handlers_certificates;
+mod progress_tracking;
 mod lti;
 mod jwks;
 mod predictive;

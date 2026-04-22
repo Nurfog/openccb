@@ -74,10 +74,10 @@
 ---
 
 ## Fase 22: Estabilidad y Funcionalidades Pendientes 🛠️ (En Ejecución)
-- [ ] **Generación de Certificados Premium**: Mejorar UI de configuración de templates en Studio.
-- [ ] **Tracking de Progreso Atómico**: Reemplazar hardcodes por cálculo real de completitud.
-- [ ] **Notificaciones de Foros**: Implementar despacho de alertas vía SMTP.
-- [ ] **Importación Masiva (Excel)**: Finalizar soporte para Question Bank.
+- [x] **Generación de Certificados Premium**: Mejorar UI de configuración de templates en Studio.
+- [x] **Tracking de Progreso Atómico**: Reemplazar hardcodes por cálculo real de completitud.
+- [x] **Notificaciones de Foros**: Implementar despacho de alertas vía SMTP.
+- [x] **Importación Masiva (Excel)**: Finalizar soporte para Question Bank.
 
 ## Fase 23 - 27: Infraestructura Crítica 📋 (Planificado)
 - [ ] **Integración SMTP**: Password reset, notificaciones transaccionales y de marketing.

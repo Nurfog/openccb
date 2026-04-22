@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { cmsApi, Course } from "@/lib/api";
+import { cmsApi, Course, Organization, getImageUrl } from "@/lib/api";
 import { Save, Settings as SettingsIcon, BookOpen, Calendar, Clock, Download, Upload, Copy, Wand2 } from "lucide-react";
 
 const DEFAULT_CERTIFICATE_TEMPLATE = `
@@ -55,12 +55,54 @@ const MINIMAL_CERTIFICATE_TEMPLATE = `
 </div>
 `;
 
+const BRANDED_CERTIFICATE_TEMPLATE = `
+<div style="width: 900px; height: 620px; padding: 24px; box-sizing: border-box; font-family: 'Inter', 'Segoe UI', sans-serif; background: linear-gradient(145deg, {{primary_color}}, {{secondary_color}}); color: #0f172a;">
+    <div style="height: 100%; border-radius: 28px; background: rgba(255,255,255,0.94); padding: 48px 56px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;">
+            <div>
+                <p style="margin: 0 0 10px 0; font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; color: {{secondary_color}};">{{platform_name}}</p>
+                <h1 style="margin: 0; font-size: 50px; line-height: 1; color: #0f172a;">Premium Certificate</h1>
+                <p style="margin: 12px 0 0 0; color: #475569; font-size: 16px;">Issued by {{organization_name}}</p>
+            </div>
+            <div style="min-width: 96px; min-height: 96px; border-radius: 24px; background: #fff; border: 1px solid rgba(15, 23, 42, 0.08); display: flex; align-items: center; justify-content: center; padding: 12px; box-sizing: border-box;">
+                <img src="{{logo_url}}" alt="{{organization_name}}" style="max-width: 100%; max-height: 72px; object-fit: contain;" />
+            </div>
+        </div>
+        <div>
+            <p style="margin: 0 0 14px 0; text-transform: uppercase; letter-spacing: 0.22em; font-size: 12px; color: #64748b;">Awarded to</p>
+            <p style="margin: 0 0 18px 0; font-size: 42px; font-weight: 800; color: #0f172a;">{{student_name}}</p>
+            <p style="margin: 0 0 10px 0; font-size: 16px; color: #475569;">for successfully completing</p>
+            <p style="margin: 0; font-size: 30px; font-weight: 700; color: {{primary_color}};">{{course_title}}</p>
+        </div>
+        <div style="display: flex; justify-content: space-between; gap: 32px; align-items: flex-end;">
+            <div>
+                <p style="margin: 0 0 8px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.18em; color: #64748b;">Completion</p>
+                <p style="margin: 0; font-size: 18px; font-weight: 700; color: #0f172a;">{{date}}</p>
+            </div>
+            <div>
+                <p style="margin: 0 0 8px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.18em; color: #64748b;">Final Result</p>
+                <p style="margin: 0; font-size: 18px; font-weight: 700; color: #0f172a;">{{score}}</p>
+            </div>
+            <div style="text-align: right;">
+                <p style="margin: 0 0 8px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.18em; color: #64748b;">Verification</p>
+                <p style="margin: 0; font-size: 14px; font-weight: 700; color: #0f172a;">{{verification_code}}</p>
+            </div>
+        </div>
+    </div>
+</div>
+`;
+
 const TEMPLATE_VARIABLES = [
-    "{{student_name}}",
-    "{{course_title}}",
-    "{{date}}",
-    "{{score}}",
-    "{{verification_code}}",
+        { token: "{{student_name}}", label: "Estudiante", description: "Nombre completo del estudiante." },
+        { token: "{{course_title}}", label: "Curso", description: "Título del curso completado." },
+        { token: "{{date}}", label: "Fecha", description: "Fecha de emisión del certificado." },
+        { token: "{{score}}", label: "Resultado", description: "Resultado o puntaje final." },
+        { token: "{{verification_code}}", label: "Verificación", description: "Código público de verificación." },
+        { token: "{{organization_name}}", label: "Organización", description: "Nombre legal de la organización." },
+        { token: "{{platform_name}}", label: "Plataforma", description: "Nombre comercial de la plataforma." },
+        { token: "{{primary_color}}", label: "Color primario", description: "Color primario de branding." },
+        { token: "{{secondary_color}}", label: "Color secundario", description: "Color secundario de branding." },
+        { token: "{{logo_url}}", label: "Logo", description: "URL pública del logo organizacional." },
 ];
 
 import CourseEditorLayout from "@/components/CourseEditorLayout";
@@ -71,6 +113,7 @@ export default function CourseSettingsPage() {
     const { id } = useParams() as { id: string };
     const router = useRouter();
     const [course, setCourse] = useState<Course | null>(null);
+    const [organization, setOrganization] = useState<Organization | null>(null);
     const [passingPercentage, setPassingPercentage] = useState(70);
     const [certificateTemplate, setCertificateTemplate] = useState("");
     const [loading, setLoading] = useState(true);
@@ -83,7 +126,7 @@ export default function CourseSettingsPage() {
     const [price, setPrice] = useState(0);
     const [currency, setCurrency] = useState("USD");
     const [previewStudentName, setPreviewStudentName] = useState("Jane Doe");
-    const [previewScore, setPreviewScore] = useState("95");
+    const [previewScore, setPreviewScore] = useState("95%");
     const [templateWarning, setTemplateWarning] = useState<string | null>(null);
 
     const buildPreviewCertificate = () => {
@@ -91,17 +134,26 @@ export default function CourseSettingsPage() {
             .replace(/{{student_name}}/g, previewStudentName || "Jane Doe")
             .replace(/{{course_title}}/g, course?.title || "Demo Course")
             .replace(/{{date}}/g, new Date().toLocaleDateString())
-            .replace(/{{score}}/g, previewScore || "95")
-            .replace(/{{verification_code}}/g, "OPENCCB-VERIFY-2026");
+            .replace(/{{score}}/g, previewScore || "95%")
+            .replace(/{{verification_code}}/g, "OPENCCB-VERIFY-2026")
+            .replace(/{{organization_name}}/g, organization?.name || "OpenCCB")
+            .replace(/{{platform_name}}/g, organization?.platform_name || organization?.name || "OpenCCB")
+            .replace(/{{primary_color}}/g, organization?.primary_color || "#2563eb")
+            .replace(/{{secondary_color}}/g, organization?.secondary_color || "#7c3aed")
+            .replace(/{{logo_url}}/g, organization?.logo_url ? getImageUrl(organization.logo_url) : "https://placehold.co/240x96?text=Logo");
     };
 
-    const applyTemplatePreset = (preset: "default" | "modern" | "minimal") => {
+    const applyTemplatePreset = (preset: "default" | "modern" | "minimal" | "branded") => {
         if (preset === "modern") {
             setCertificateTemplate(MODERN_CERTIFICATE_TEMPLATE);
             return;
         }
         if (preset === "minimal") {
             setCertificateTemplate(MINIMAL_CERTIFICATE_TEMPLATE);
+            return;
+        }
+        if (preset === "branded") {
+            setCertificateTemplate(BRANDED_CERTIFICATE_TEMPLATE);
             return;
         }
         setCertificateTemplate(DEFAULT_CERTIFICATE_TEMPLATE);
@@ -125,14 +177,22 @@ export default function CourseSettingsPage() {
             setTemplateWarning(`Faltan variables clave: ${missingCore.join(", ")}`);
             return;
         }
+        if (certificateTemplate.includes("{{logo_url}}") && !organization?.logo_url) {
+            setTemplateWarning("La plantilla usa {{logo_url}}, pero la organización no tiene logo configurado.");
+            return;
+        }
         setTemplateWarning(null);
-    }, [certificateTemplate]);
+    }, [certificateTemplate, organization?.logo_url]);
 
     useEffect(() => {
         const fetchCourse = async () => {
             try {
-                const data = await cmsApi.getCourse(id);
+                const [data, orgData] = await Promise.all([
+                    cmsApi.getCourse(id),
+                    cmsApi.getOrganization(),
+                ]);
                 setCourse(data);
+                setOrganization(orgData);
                 setPassingPercentage(data.passing_percentage || 70);
                 setCertificateTemplate(data.certificate_template || DEFAULT_CERTIFICATE_TEMPLATE);
                 setPacingMode(data.pacing_mode || "self_paced");
@@ -451,19 +511,25 @@ export default function CourseSettingsPage() {
                                     >
                                         Minimal
                                     </button>
+                                    <button
+                                        onClick={() => applyTemplatePreset("branded")}
+                                        className="px-3 py-1.5 rounded-lg bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest hover:border-blue-500/40 transition-colors"
+                                    >
+                                        Premium
+                                    </button>
                                 </div>
                             </div>
 
                             <div className="space-y-2">
                                 <label className="block text-xs font-black text-slate-500 dark:text-gray-400 uppercase tracking-[0.2em]">Variables</label>
                                 <div className="flex flex-wrap gap-2">
-                                    {TEMPLATE_VARIABLES.map((token) => (
-                                        <div key={token} className="flex items-center gap-1 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1">
+                                    {TEMPLATE_VARIABLES.map(({ token, label, description }) => (
+                                        <div key={token} className="flex items-center gap-1 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1" title={description}>
                                             <button
                                                 onClick={() => insertVariable(token)}
                                                 className="text-[10px] font-black text-blue-600 dark:text-blue-400 hover:text-blue-700"
                                             >
-                                                {token}
+                                                {label}
                                             </button>
                                             <button
                                                 onClick={() => copyVariable(token)}
@@ -481,6 +547,33 @@ export default function CourseSettingsPage() {
                         {templateWarning && (
                             <div className="rounded-xl border border-amber-300/50 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-xs font-bold text-amber-700 dark:text-amber-300">
                                 {templateWarning}
+                            </div>
+                        )}
+
+                        {organization && (
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-4 shadow-sm">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Organización</p>
+                                    <p className="mt-2 text-sm font-bold text-slate-800 dark:text-white">{organization.name}</p>
+                                </div>
+                                <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-4 shadow-sm">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Plataforma</p>
+                                    <p className="mt-2 text-sm font-bold text-slate-800 dark:text-white">{organization.platform_name || organization.name}</p>
+                                </div>
+                                <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-4 shadow-sm">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Color primario</p>
+                                    <div className="mt-2 flex items-center gap-2">
+                                        <span className="h-4 w-4 rounded-full border border-slate-200" style={{ backgroundColor: organization.primary_color || "#2563eb" }} />
+                                        <p className="text-sm font-bold text-slate-800 dark:text-white">{organization.primary_color || "#2563eb"}</p>
+                                    </div>
+                                </div>
+                                <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-4 shadow-sm">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Color secundario</p>
+                                    <div className="mt-2 flex items-center gap-2">
+                                        <span className="h-4 w-4 rounded-full border border-slate-200" style={{ backgroundColor: organization.secondary_color || "#7c3aed" }} />
+                                        <p className="text-sm font-bold text-slate-800 dark:text-white">{organization.secondary_color || "#7c3aed"}</p>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -517,6 +610,9 @@ export default function CourseSettingsPage() {
                                         placeholder="Score"
                                     />
                                 </div>
+                                <p className="text-[11px] text-slate-500 dark:text-gray-400 font-medium">
+                                    La previsualización usa el branding actual de la organización y resuelve el logo con la misma lógica pública usada por la plataforma.
+                                </p>
                                 <div className="w-full h-[400px] bg-white rounded-xl overflow-hidden relative group border border-slate-200 shadow-sm">
                                     <iframe
                                         srcDoc={buildPreviewCertificate()}

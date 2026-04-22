@@ -6,7 +6,7 @@ import { Upload, Database, FileArchive, CheckCircle2, AlertTriangle, Scissors } 
 
 export default function AdminSharedMaterialsPage() {
     const [zipFile, setZipFile] = useState<File | null>(null);
-    const [ingestRag, setIngestRag] = useState(false);
+    const [ingestRag, setIngestRag] = useState(true);
     const [englishLevel, setEnglishLevel] = useState('');
     const [plans, setPlans] = useState<MySqlPlan[]>([]);
     const [courses, setCourses] = useState<MySqlCourse[]>([]);

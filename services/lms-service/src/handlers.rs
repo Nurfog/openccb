@@ -22,6 +22,7 @@ use common::models::{
     LessonDependency,
 };
 use crate::external_db::MySqlPool;
+use crate::progress_tracking::{CourseCompletionMetrics, calculate_course_completion};
 use serde_json::json;
 use base64::Engine;
 use tokio::time::{Duration, timeout};
@@ -1340,6 +1341,7 @@ pub async fn get_user_enrollments(
             WHERE ug.user_id = e.user_id
               AND ug.course_id = e.course_id
               AND l.is_graded = true
+              AND (ug.score * 100.0) >= COALESCE(l.passing_percentage::double precision, 60.0)
         ) graded ON TRUE
         LEFT JOIN LATERAL (
             SELECT COUNT(DISTINCT li.lesson_id)::int AS ungraded_done
@@ -1530,31 +1532,26 @@ pub async fn submit_lesson_score(
         .await;
 
     // Lógica de detección de finalización de curso
-    let total_lessons: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM lessons WHERE module_id IN (SELECT id FROM modules WHERE course_id = $1)")
-        .bind(payload.course_id)
-        .fetch_one(&pool).await.unwrap_or(0);
-
-    let completed_lessons: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM user_grades WHERE organization_id = $1 AND user_id = $2 AND course_id = $3",
-    )
-    .bind(org_ctx.id)
-    .bind(payload.user_id)
-    .bind(payload.course_id)
-    .fetch_one(&pool)
-    .await
-    .unwrap_or(0);
-
-    if total_lessons > 0 && completed_lessons >= total_lessons {
-        webhook_service
-            .dispatch(
-                org_ctx.id,
-                "course.completed",
-                &serde_json::json!({
-                    "user_id": payload.user_id,
-                    "course_id": payload.course_id
-                }),
-            )
-            .await;
+    if let Ok(course_completion) = calculate_course_completion(&pool, payload.user_id, payload.course_id).await {
+        if course_completion.completed {
+            webhook_service
+                .dispatch(
+                    org_ctx.id,
+                    "course.completed",
+                    &serde_json::json!({
+                        "user_id": payload.user_id,
+                        "course_id": payload.course_id,
+                        "progress_percentage": course_completion.progress_percentage
+                    }),
+                )
+                .await;
+        }
+    } else {
+        tracing::warn!(
+            "No se pudo calcular la completitud real del curso {} para el usuario {}",
+            payload.course_id,
+            payload.user_id
+        );
     }
 
     Ok(Json(grade))
@@ -1799,49 +1796,25 @@ pub async fn get_student_progress_stats(
 ) -> Result<Json<common::models::ProgressStats>, (StatusCode, String)> {
     let user_id = claims.sub;
 
-    // 1. Lecciones totales
-    let total_lessons: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM lessons WHERE organization_id = $1 AND module_id IN (SELECT id FROM modules WHERE course_id = $2)"
-    )
-    .bind(org_ctx.id)
-    .bind(course_id)
-    .fetch_one(&pool)
-    .await
-    .unwrap_or(0);
+    let course_completion = calculate_course_completion(&pool, user_id, course_id)
+        .await
+        .unwrap_or_else(|e| {
+            tracing::warn!(
+                "No se pudo calcular el progreso del curso {} para el usuario {}: {}",
+                course_id,
+                user_id,
+                e
+            );
+            CourseCompletionMetrics {
+                total_lessons: 0,
+                completed_lessons: 0,
+                progress_percentage: 0.0,
+                completed: false,
+            }
+        });
 
-    // 2. Lecciones completadas
-    let completed_lessons: i64 = sqlx::query_scalar(
-        r#"
-        SELECT COUNT(*)
-        FROM lessons l
-        JOIN modules m ON m.id = l.module_id
-        WHERE m.course_id = $2
-          AND l.organization_id = $3
-          AND (
-              (l.is_graded = true AND EXISTS (
-                  SELECT 1
-                  FROM user_grades ug
-                  WHERE ug.user_id = $1
-                    AND ug.course_id = $2
-                    AND ug.lesson_id = l.id
-              ))
-              OR
-              (l.is_graded = false AND EXISTS (
-                  SELECT 1
-                  FROM lesson_interactions li
-                  WHERE li.user_id = $1
-                    AND li.lesson_id = l.id
-                    AND li.event_type = 'complete'
-              ))
-          )
-        "#,
-    )
-    .bind(user_id)
-    .bind(course_id)
-    .bind(org_ctx.id)
-    .fetch_one(&pool)
-    .await
-    .unwrap_or(0);
+    let total_lessons = course_completion.total_lessons;
+    let completed_lessons = course_completion.completed_lessons;
 
     // 3. Progreso diario (Últimos 30 días)
     let daily_completions = sqlx::query_as::<_, common::models::DailyProgress>(
@@ -1888,11 +1861,7 @@ pub async fn get_student_progress_stats(
         None
     };
 
-    let progress_percentage = if total_lessons > 0 {
-        (completed_lessons as f32 / total_lessons as f32) * 100.0
-    } else {
-        0.0
-    };
+    let progress_percentage = course_completion.progress_percentage as f32;
 
     Ok(Json(common::models::ProgressStats {
         total_lessons,

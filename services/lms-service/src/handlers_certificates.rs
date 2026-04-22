@@ -3,10 +3,12 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
+use crate::progress_tracking::{CourseCompletionMetrics, calculate_course_completion};
 use common::auth::Claims;
 use serde::{Deserialize, Serialize};
 use sha2::{Sha256, Digest};
 use sqlx::{PgPool, Row};
+use std::env;
 use uuid::Uuid;
 
 // Macro para usar json!() sin importar serde_json
@@ -48,6 +50,45 @@ struct CertificateRecord {
     issued_at: chrono::DateTime<chrono::Utc>,
     verification_code: String,
     metadata: serde_json::Value,
+}
+
+fn resolve_certificate_asset_url(path: &str) -> String {
+    if path.starts_with("http://") || path.starts_with("https://") {
+        return path.to_string();
+    }
+
+    let cms_base_url = env::var("NEXT_PUBLIC_CMS_API_URL")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| "/cms-api".to_string());
+    let cms_base_url = cms_base_url.trim_end_matches('/');
+
+    if let Some(without_scheme) = path.strip_prefix("s3://") {
+        if let Some((bucket, key)) = without_scheme.split_once('/') {
+            return format!(
+                "{}/api/assets/s3-proxy/{}/{}",
+                cms_base_url,
+                bucket,
+                key
+            );
+        }
+    }
+
+    let normalized = if let Some(stripped) = path.strip_prefix("uploads/") {
+        format!("/assets/{}", stripped)
+    } else if let Some(stripped) = path.strip_prefix("/uploads/") {
+        format!("/assets/{}", stripped)
+    } else if path.starts_with("/assets/") {
+        path.to_string()
+    } else if path.starts_with("assets/") {
+        format!("/{}", path)
+    } else if path.starts_with('/') {
+        path.to_string()
+    } else {
+        format!("/{}", path)
+    };
+
+    format!("{}{}", cms_base_url, normalized)
 }
 
 // ============= Handlers =============
@@ -170,7 +211,7 @@ pub async fn get_certificate(
             StatusCode::FORBIDDEN,
             Json(json!({
                 "error": "No has completado este curso aún",
-                "progress": course_completion.progress,
+                "progress": course_completion.progress_percentage,
                 "required": 100.0
             })),
         ));
@@ -257,7 +298,7 @@ pub async fn issue_certificate(
             StatusCode::FORBIDDEN,
             Json(json!({
                 "error": "No has completado este curso aún",
-                "progress": course_completion.progress,
+                "progress": course_completion.progress_percentage,
                 "required": 100.0
             })),
         ));
@@ -326,98 +367,19 @@ pub async fn verify_certificate(
 
 // ============= Funciones Internas =============
 
-struct CourseCompletion {
-    completed: bool,
-    progress: f64,
-}
-
 async fn check_course_completion(
     user_id: Uuid,
     course_id: Uuid,
     pool: &PgPool,
-) -> Result<CourseCompletion, (StatusCode, Json<serde_json::Value>)> {
-    // Obtener todas las lecciones graduables del curso
-    let gradable_lessons = sqlx::query(
-        r#"
-        SELECT l.id, l.is_graded, l.passing_percentage
-        FROM lessons l
-        JOIN modules m ON m.id = l.module_id
-        WHERE m.course_id = $1 AND l.is_graded = true
-        "#
-    )
-    .bind(course_id)
-    .fetch_all(pool)
+) -> Result<CourseCompletionMetrics, (StatusCode, Json<serde_json::Value>)> {
+    calculate_course_completion(pool, user_id, course_id)
     .await
     .map_err(|e: sqlx::Error| {
-        tracing::error!("Error al obtener lecciones graduables: {}", e);
+        tracing::error!("Error al calcular completitud del curso: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({"error": "Error interno del servidor"})),
         )
-    })?;
-
-    if gradable_lessons.is_empty() {
-        // Si no hay lecciones graduables, considerar completado si está inscrito
-        let enrolled = sqlx::query(
-            "SELECT id FROM enrollments WHERE user_id = $1 AND course_id = $2"
-        )
-        .bind(user_id)
-        .bind(course_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|e: sqlx::Error| {
-            tracing::error!("Error al verificar inscripción: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Error interno del servidor"})),
-            )
-        })?;
-
-        return Ok(CourseCompletion {
-            completed: enrolled.is_some(),
-            progress: if enrolled.is_some() { 100.0 } else { 0.0 },
-        });
-    }
-
-    // Contar lecciones aprobadas
-    let total_lessons = gradable_lessons.len() as f64;
-    let mut passed_lessons = 0.0;
-
-    for lesson in gradable_lessons {
-        let passing_pct = lesson.get::<Option<i32>, _>("passing_percentage").unwrap_or(60) as f64;
-        let lesson_id: Uuid = lesson.get("id");
-
-        let best_score = sqlx::query(
-            r#"
-            SELECT MAX(score_percentage) as max_score
-            FROM grades
-            WHERE user_id = $1 AND lesson_id = $2
-            "#
-        )
-        .bind(user_id)
-        .bind(lesson_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|e: sqlx::Error| {
-            tracing::error!("Error al obtener calificaciones: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Error interno del servidor"})),
-            )
-        })?;
-
-        if let Some(row) = best_score {
-            if row.get::<Option<f64>, _>("max_score").unwrap_or(0.0) >= passing_pct {
-                passed_lessons += 1.0;
-            }
-        }
-    }
-
-    let progress = (passed_lessons / total_lessons) * 100.0;
-
-    Ok(CourseCompletion {
-        completed: progress >= 100.0,
-        progress,
     })
 }
 
@@ -469,7 +431,7 @@ async fn issue_certificate_internal(
     let organization_id: Uuid = course_row.get("organization_id");
     let org_data = sqlx::query(
         r#"
-        SELECT name, certificate_template
+        SELECT name, platform_name, logo_url, primary_color, secondary_color, certificate_template
         FROM organizations
         WHERE id = $1
         "#
@@ -492,7 +454,27 @@ async fn issue_certificate_internal(
         .or_else(|| org_data.as_ref().and_then(|o| o.get::<Option<String>, _>("certificate_template")))
         .unwrap_or_else(|| get_default_certificate_template());
 
-    let _org_name = org_data.as_ref().map(|o| o.get::<String, _>("name")).unwrap_or_else(|| "OpenCCB".to_string());
+    let organization_name = org_data
+        .as_ref()
+        .map(|o| o.get::<String, _>("name"))
+        .unwrap_or_else(|| "OpenCCB".to_string());
+    let platform_name = org_data
+        .as_ref()
+        .and_then(|o| o.get::<Option<String>, _>("platform_name"))
+        .unwrap_or_else(|| organization_name.clone());
+    let logo_url = org_data
+        .as_ref()
+        .and_then(|o| o.get::<Option<String>, _>("logo_url"))
+        .map(|value| resolve_certificate_asset_url(&value))
+        .unwrap_or_default();
+    let primary_color = org_data
+        .as_ref()
+        .and_then(|o| o.get::<Option<String>, _>("primary_color"))
+        .unwrap_or_else(|| "#2563eb".to_string());
+    let secondary_color = org_data
+        .as_ref()
+        .and_then(|o| o.get::<Option<String>, _>("secondary_color"))
+        .unwrap_or_else(|| "#7c3aed".to_string());
 
     // Reemplazar variables en el template
     let now = chrono::Utc::now();
@@ -501,6 +483,11 @@ async fn issue_certificate_internal(
         .replace("{{course_title}}", &course_title)
         .replace("{{date}}", &now.format("%d/%m/%Y").to_string())
         .replace("{{score}}", "Aprobado")
+        .replace("{{organization_name}}", &organization_name)
+        .replace("{{platform_name}}", &platform_name)
+        .replace("{{logo_url}}", &logo_url)
+        .replace("{{primary_color}}", &primary_color)
+        .replace("{{secondary_color}}", &secondary_color)
         .replace("{{verification_code}}", "VER-PLACEHOLDER");
 
     // Generar código de verificación único
@@ -519,16 +506,12 @@ async fn issue_certificate_internal(
     let certificate_hash = format!("{:x}", hasher.finalize());
 
     // Obtener progreso final para metadata
-    let course_completion = check_course_completion(user_id, course_id, pool).await
-        .unwrap_or(CourseCompletion {
-            completed: true,
-            progress: 100.0,
-        });
+    let course_completion = check_course_completion(user_id, course_id, pool).await?;
 
     // Insertar certificado en BD
     let metadata = serde_json::json!({
         "completion_date": now.to_rfc3339(),
-        "final_score": course_completion.progress,
+        "final_score": course_completion.progress_percentage,
         "organization_id": organization_id.to_string(),
     });
 

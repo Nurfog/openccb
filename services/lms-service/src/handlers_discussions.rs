@@ -57,6 +57,42 @@ fn parse_bool(value: &str) -> bool {
     normalized == "1" || normalized == "true" || normalized == "yes"
 }
 
+fn build_learning_base_url() -> String {
+    let domain = env::var("NEXT_PUBLIC_LEARNING_DOMAIN")
+        .or_else(|_| env::var("LEARNING_DOMAIN"))
+        .unwrap_or_else(|_| "localhost:3003".to_string())
+        .trim()
+        .trim_end_matches('/')
+        .to_string();
+
+    if domain.starts_with("http://") || domain.starts_with("https://") {
+        return domain;
+    }
+
+    let scheme = if domain.contains("localhost") || domain.contains("127.0.0.1") {
+        "http"
+    } else {
+        "https"
+    };
+
+    format!("{}://{}", scheme, domain)
+}
+
+fn build_discussion_thread_url(course_id: Uuid) -> String {
+    format!("{}/courses/{}#discussions", build_learning_base_url(), course_id)
+}
+
+async fn load_organization_name(pool: &PgPool, organization_id: Uuid) -> String {
+    sqlx::query_scalar::<_, String>("SELECT name FROM organizations WHERE id = $1")
+        .bind(organization_id)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| "OpenCCB".to_string())
+}
+
 fn load_env_smtp_config() -> Result<SmtpConfig, String> {
     let enabled = env::var("SMTP_ENABLED").map(|v| parse_bool(&v)).unwrap_or(false);
     let host = env::var("SMTP_HOST").map_err(|_| "SMTP_HOST no está configurado".to_string())?;
@@ -429,6 +465,8 @@ pub async fn create_thread(
     State(pool): State<PgPool>,
     Json(payload): Json<CreateThreadPayload>,
 ) -> Result<Json<DiscussionThread>, (StatusCode, String)> {
+    let organization_name = load_organization_name(&pool, org_ctx.id).await;
+    let thread_url = build_discussion_thread_url(course_id);
     let author_name: Option<String> = sqlx::query_scalar("SELECT full_name FROM users WHERE id = $1")
         .bind(claims.sub)
         .fetch_optional(&pool)
@@ -502,7 +540,7 @@ pub async fn create_thread(
             thread.content.clone()
         })
         .bind("forum_thread")
-        .bind(format!("/courses/{}#discussions", course_id))
+        .bind(thread_url.clone())
         .execute(&pool)
         .await;
     }
@@ -512,8 +550,8 @@ pub async fn create_thread(
     variables.insert("thread_title", thread.title.clone());
     variables.insert("author_name", author_display.clone());
     variables.insert("message_content", thread.content.clone());
-    variables.insert("thread_url", format!("/courses/{}#discussions", course_id));
-    variables.insert("organization_name", "OpenCCB".to_string()); // TODO: obtener de org
+    variables.insert("thread_url", thread_url);
+    variables.insert("organization_name", organization_name);
 
     send_forum_email_notifications(&pool, org_ctx.id, &instructor_recipients, "forum_thread", &variables).await;
 
@@ -687,6 +725,7 @@ pub async fn create_post(
     State(pool): State<PgPool>,
     Json(payload): Json<CreatePostPayload>,
 ) -> Result<Json<DiscussionPost>, (StatusCode, String)> {
+    let organization_name = load_organization_name(&pool, org_ctx.id).await;
     // Verificar si el hilo está bloqueado
     let thread =
         sqlx::query_as::<_, (bool, String, Uuid, Uuid)>(
@@ -701,6 +740,8 @@ pub async fn create_post(
     if thread.0 {
         return Err((StatusCode::FORBIDDEN, "El hilo está bloqueado".to_string()));
     }
+
+    let thread_url = build_discussion_thread_url(thread.2);
 
     let author_name: Option<String> = sqlx::query_scalar("SELECT full_name FROM users WHERE id = $1")
         .bind(claims.sub)
@@ -782,7 +823,7 @@ pub async fn create_post(
             post.content.clone()
         })
         .bind("forum_reply")
-        .bind(format!("/courses/{}#discussions", thread.2))
+        .bind(thread_url.clone())
         .execute(&pool)
         .await;
     }
@@ -792,8 +833,8 @@ pub async fn create_post(
     variables.insert("thread_title", thread.1.clone());
     variables.insert("author_name", author_display.clone());
     variables.insert("message_content", post.content.clone());
-    variables.insert("thread_url", format!("/courses/{}#discussions", thread.2));
-    variables.insert("organization_name", "OpenCCB".to_string()); // TODO: obtener de org
+    variables.insert("thread_url", thread_url);
+    variables.insert("organization_name", organization_name);
 
     send_forum_email_notifications(&pool, org_ctx.id, &recipients, "forum_reply", &variables).await;
 
