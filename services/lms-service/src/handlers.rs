@@ -36,6 +36,69 @@ fn count_tokens(text: &str) -> i32 {
     (text.len() / 4) as i32 + 1
 }
 
+fn scope_rejection_message(lesson_title: &str) -> String {
+    format!(
+        "Esa pregunta está fuera del tema de la lección actual \"{}\". Estoy aquí para ayudarte únicamente con esta lección. ¿Qué parte te gustaría repasar?",
+        lesson_title
+    )
+}
+
+fn parse_scope_classification(content: &str) -> Option<bool> {
+    let normalized = content.trim().to_lowercase();
+    let compact = normalized
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect::<String>();
+
+    if compact.contains("\"in_scope\":true") || compact.contains("in_scope:true")
+    {
+        return Some(true);
+    }
+
+    if compact.contains("\"in_scope\":false") || compact.contains("in_scope:false")
+    {
+        return Some(false);
+    }
+
+    if normalized == "true" {
+        return Some(true);
+    }
+    if normalized == "false" {
+        return Some(false);
+    }
+
+    None
+}
+
+fn tokenize_significant_terms(text: &str) -> Vec<String> {
+    const STOPWORDS: [&str; 36] = [
+        "the", "and", "for", "with", "that", "this", "from", "have", "what", "when", "where",
+        "como", "para", "sobre", "esta", "este", "donde", "cuando", "porque", "puedes", "puedo",
+        "quiero", "want", "need", "help", "hola", "hello", "please", "por", "una", "unos", "unas",
+        "del", "con", "los", "las",
+    ];
+
+    text.split(|c: char| !c.is_alphanumeric())
+        .map(|s| s.trim().to_lowercase())
+        .filter(|s| s.len() >= 4 && !STOPWORDS.contains(&s.as_str()))
+        .collect()
+}
+
+fn heuristic_out_of_scope(message: &str, lesson_scope: &str) -> bool {
+    let msg_terms = tokenize_significant_terms(message);
+    if msg_terms.len() < 3 {
+        return false;
+    }
+
+    let scope_lc = lesson_scope.to_lowercase();
+    let overlap = msg_terms
+        .iter()
+        .filter(|term| scope_lc.contains(term.as_str()))
+        .count();
+
+    overlap == 0
+}
+
 pub async fn get_me(
     claims: common::auth::Claims,
     State(pool): State<PgPool>,
@@ -3651,14 +3714,79 @@ pub async fn chat_with_tutor(
         )
     };
 
+    let scope_guard_prompt = format!(
+        "Clasifica si la pregunta del estudiante está estrictamente dentro de la lección ACTUAL. \
+        Responde SOLO JSON válido con esta forma exacta: {{\"in_scope\": true}} o {{\"in_scope\": false}}. \
+        Marca false si pide otro tema distinto, incluso si es educativo.\n\nLECCION_ACTUAL:\n{}",
+        context
+    );
+
+    let scope_guard_response = client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .header("Authorization", auth_header.clone())
+        .json(&serde_json::json!({
+            "model": model,
+            "messages": [
+                { "role": "system", "content": scope_guard_prompt },
+                { "role": "user", "content": payload.message }
+            ],
+            "temperature": 0.0,
+            "max_tokens": 20
+        }))
+        .send()
+        .await;
+
+    let scope_decision = match scope_guard_response {
+        Ok(resp) if resp.status().is_success() => {
+            let parsed_json: serde_json::Value = match resp.json().await {
+                Ok(data) => data,
+                Err(_) => json!({}),
+            };
+
+            let classification_text = parsed_json["choices"][0]["message"]["content"]
+                .as_str()
+                .unwrap_or("");
+            parse_scope_classification(classification_text)
+        }
+        _ => None,
+    };
+
+    let lesson_scope = format!(
+        "{}\n{}\n{}",
+        lesson.title,
+        lesson.summary.as_deref().unwrap_or_default(),
+        block_content
+    );
+
+    let is_out_of_scope = scope_decision == Some(false)
+        || (scope_decision.is_none() && heuristic_out_of_scope(&payload.message, &lesson_scope));
+
+    if is_out_of_scope {
+        let strict_rejection = scope_rejection_message(&lesson.title);
+
+        let _ = sqlx::query("INSERT INTO chat_messages (session_id, role, content) VALUES ($1, $2, $3)")
+            .bind(session_id)
+            .bind("assistant")
+            .bind(&strict_rejection)
+            .execute(&pool)
+            .await;
+
+        return Ok(Json(ChatResponse {
+            response: strict_rejection,
+            session_id,
+        }));
+    }
+
     let system_prompt = format!(
         "Eres un asistente pedagógico de IA experto para la plataforma OpenCCB. \
-        Tu propósito es ayudar al estudiante a comprender el contenido de esta lección y cómo se relaciona con las lecciones anteriores del curso. \
+        Tu propósito es ayudar al estudiante a comprender EXCLUSIVAMENTE el contenido de esta lección actual. \
         \
         REGLAS ESTRICTAS: \
-        1. Solo puedes responder preguntas relacionadas con la lección ACTUAL, las lecciones PASADAS o el CONTEXTO de la BASE DE CONOCIMIENTOS proporcionado. \
+        1. Solo puedes responder preguntas relacionadas con la lección ACTUAL y el CONTEXTO de la BASE DE CONOCIMIENTOS proporcionado para esta misma lección. \
         2. Si el estudiante hace preguntas de cultura general, noticias, entretenimiento, eventos históricos o cualquier tema que NO esté en el contenido del curso, \
-        debes rechazar de forma amable pero firme. Responde algo como: 'Esa pregunta está fuera del contenido de este curso. Estoy aquí para ayudarte con [título de la lección]. ¿Tienes alguna duda sobre el tema?' \
+        debes rechazar de forma amable pero firme usando una frase corta, sin explicar ese tema y sin ofrecer ayuda sobre ese tema más adelante. \
+        Usa este formato: 'Esa pregunta está fuera del tema de la lección actual \"[título]\". Estoy aquí para ayudarte únicamente con esta lección. ¿Qué parte te gustaría repasar?' \
         NUNCA respondas preguntas fuera del contexto del curso, sin importar cuán simples parezcan. \
         3. CRÍTICO: NO proporciones respuestas directas para las actividades, cuestionarios o ejercicios de código de la lección ACTUAL. \
         Incluso si la respuesta está en la memoria o base de conocimientos, solo debes proporcionar pistas o explicar conceptos. \
