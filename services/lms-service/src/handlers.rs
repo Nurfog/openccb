@@ -84,9 +84,42 @@ fn tokenize_significant_terms(text: &str) -> Vec<String> {
         .collect()
 }
 
+fn contains_any_keyword(text: &str, keywords: &[&str]) -> bool {
+    let lc = text.to_lowercase();
+    keywords.iter().any(|k| lc.contains(k))
+}
+
+fn is_programming_related(text: &str) -> bool {
+    const PROGRAMMING_KEYWORDS: [&str; 20] = [
+        "c++", "cpp", "python", "java", "javascript", "typescript", "rust", "golang", "fibonacci",
+        "algoritmo", "algorithm", "recursiv", "funcion", "function", "codigo", "program", "compilar",
+        "compilar", "array", "puntero",
+    ];
+    contains_any_keyword(text, &PROGRAMMING_KEYWORDS)
+}
+
+fn looks_like_off_topic_response(response: &str) -> bool {
+    const OFF_TOPIC_RESPONSE_MARKERS: [&str; 10] = [
+        "si deseas saber",
+        "puedo darte una pista",
+        "fibonacci",
+        "c++",
+        "```",
+        "algoritmo",
+        "recursiv",
+        "int fibonacci",
+        "tiempo de complejidad",
+        "memorizaci",
+    ];
+    contains_any_keyword(response, &OFF_TOPIC_RESPONSE_MARKERS)
+}
+
 fn heuristic_out_of_scope(message: &str, lesson_scope: &str) -> bool {
     let msg_terms = tokenize_significant_terms(message);
     if msg_terms.len() < 3 {
+        if is_programming_related(message) && !is_programming_related(lesson_scope) {
+            return true;
+        }
         return false;
     }
 
@@ -96,7 +129,11 @@ fn heuristic_out_of_scope(message: &str, lesson_scope: &str) -> bool {
         .filter(|term| scope_lc.contains(term.as_str()))
         .count();
 
-    overlap == 0
+    if is_programming_related(message) && !is_programming_related(lesson_scope) {
+        return true;
+    }
+
+    overlap <= 1
 }
 
 pub async fn get_me(
@@ -3834,10 +3871,19 @@ pub async fn chat_with_tutor(
         )
     })?;
 
-    let tutor_response = ai_data["choices"][0]["message"]["content"]
+    let raw_tutor_response = ai_data["choices"][0]["message"]["content"]
         .as_str()
         .unwrap_or("Lo siento, tuve un problema procesando tu pregunta.")
         .to_string();
+
+    let tutor_response = if looks_like_off_topic_response(&raw_tutor_response)
+        && is_programming_related(&payload.message)
+        && !is_programming_related(&lesson_scope)
+    {
+        scope_rejection_message(&lesson.title)
+    } else {
+        raw_tutor_response
+    };
 
     // Calcular y registrar el uso de tokens
     let input_tokens = count_tokens(&system_prompt) + count_tokens(&payload.message);
