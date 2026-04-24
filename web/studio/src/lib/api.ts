@@ -926,7 +926,7 @@ export const apiFetch = (url: string, options: ApiFetchOptions = {}, isLms: bool
             }
         }
         // Handle no-content responses
-        if (res.status === 204) return;
+        if (res.status === 204 || res.status === 202) return;
         return res.json();
     });
 };

@@ -169,7 +169,7 @@ export default function BackgroundTasksPage() {
                                             <div className="text-xs text-gray-400">({format(new Date(task.updated_at), 'yyyy')})</div>
                                         </td>
                                         <td className="px-6 py-4 text-right space-x-2">
-                                            {task.task_type === 'lesson_transcription' && task.status === 'failed' && (
+                                            {(task.task_type === 'lesson_transcription' || task.task_type === 'zip_rag_import') && task.status === 'failed' && (
                                                 <button
                                                     onClick={() => handleRetry(task.id)}
                                                     disabled={actionLoading === task.id}

@@ -680,39 +680,33 @@ pub async fn delete_asset(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// POST /api/assets/:id/ingest-rag - Ingesta un asset (PDF/audio/video/texto) en chunks para RAG
-pub async fn ingest_asset_for_rag(
-    Org(org_ctx): Org,
-    claims: Claims,
-    State(pool): State<PgPool>,
-    Path(id): Path<Uuid>,
-) -> Result<Json<AssetRagIngestResponse>, (StatusCode, String)> {
-    let asset: Asset = sqlx::query_as(
-        "SELECT * FROM assets WHERE id = $1 AND organization_id = $2"
-    )
-    .bind(id)
-    .bind(org_ctx.id)
-    .fetch_optional(&pool)
-    .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-    .ok_or((StatusCode::NOT_FOUND, "Activo no encontrado".to_string()))?;
+/// Lógica interna de ingesta RAG reutilizable (también usada en retry de tareas).
+pub async fn ingest_asset_for_rag_core(
+    pool: &PgPool,
+    org_id: Uuid,
+    user_id: Uuid,
+    asset_id: Uuid,
+) -> Result<(usize, usize), String> {
+    let asset: Asset = sqlx::query_as("SELECT * FROM assets WHERE id = $1 AND organization_id = $2")
+        .bind(asset_id)
+        .bind(org_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Activo no encontrado".to_string())?;
 
-    let extracted = extract_asset_text(&asset).await?;
-    let content = extracted.trim();
+    let extracted = extract_asset_text(&asset)
+        .await
+        .map_err(|(_, msg)| msg)?;
+    let content = extracted.trim().to_string();
 
     if content.len() < 80 {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            "No se encontró suficiente texto utilizable en el archivo".to_string(),
-        ));
+        return Err("No se encontró suficiente texto utilizable en el archivo".to_string());
     }
 
-    let chunks = chunk_text(content, 900);
+    let chunks = chunk_text(&content, 900);
     if chunks.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            "No se pudo generar contenido para RAG".to_string(),
-        ));
+        return Err("No se pudo generar contenido para RAG".to_string());
     }
 
     sqlx::query(
@@ -723,11 +717,11 @@ pub async fn ingest_asset_for_rag(
           AND source_metadata->>'asset_id' = $2
         "#,
     )
-    .bind(org_ctx.id)
+    .bind(org_id)
     .bind(asset.id.to_string())
-    .execute(&pool)
+    .execute(pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Cleanup failed: {}", e)))?;
+    .map_err(|e| format!("Cleanup failed: {}", e))?;
 
     let source_kind = if asset.mimetype.starts_with("audio/") || asset.mimetype.starts_with("video/") {
         "audio-transcription"
@@ -747,16 +741,16 @@ pub async fn ingest_asset_for_rag(
         .danger_accept_invalid_certs(true)
         .danger_accept_invalid_hostnames(true)
         .build()
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("HTTP client error: {}", e)))?;
+        .map_err(|e| format!("HTTP client error: {}", e))?;
     let ollama_url = ai::get_ollama_url();
     let model = ai::get_embedding_model();
 
     ingest_chunks_to_question_bank(
-        &pool,
-        org_ctx.id,
-        claims.sub,
+        pool,
+        org_id,
+        user_id,
         &asset,
-        &source_kind,
+        source_kind,
         skill,
         &chunks,
         &client,
@@ -766,13 +760,51 @@ pub async fn ingest_asset_for_rag(
         None,
         asset.unit_number,
     )
-    .await?;
+    .await
+    .map_err(|(_, msg)| msg)?;
+
+    Ok((chunks.len(), content.len()))
+}
+
+/// POST /api/assets/:id/ingest-rag - Ingesta un asset (PDF/audio/video/texto) en chunks para RAG
+pub async fn ingest_asset_for_rag(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<AssetRagIngestResponse>, (StatusCode, String)> {
+    let (chunks_ingested, chars_ingested) = ingest_asset_for_rag_core(&pool, org_ctx.id, claims.sub, id)
+        .await
+        .map_err(|e| {
+            if e.contains("Activo no encontrado") {
+                (StatusCode::NOT_FOUND, e)
+            } else if e.contains("suficiente texto") || e.contains("generar contenido") {
+                (StatusCode::BAD_REQUEST, e)
+            } else {
+                (StatusCode::INTERNAL_SERVER_ERROR, e)
+            }
+        })?;
+
+    let asset: Asset = sqlx::query_as("SELECT * FROM assets WHERE id = $1 AND organization_id = $2")
+        .bind(id)
+        .bind(org_ctx.id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let source_kind = if asset.mimetype.starts_with("audio/") || asset.mimetype.starts_with("video/") {
+        "audio-transcription"
+    } else if asset.mimetype.contains("pdf") {
+        "pdf"
+    } else {
+        "text"
+    };
 
     Ok(Json(AssetRagIngestResponse {
         asset_id: asset.id,
         source: source_kind.to_string(),
-        chunks_ingested: chunks.len(),
-        chars_ingested: content.len(),
+        chunks_ingested,
+        chars_ingested,
     }))
 }
 
@@ -825,6 +857,7 @@ async fn create_zip_rag_background_task(
     org_id: Uuid,
     user_id: Uuid,
     course_id: Option<Uuid>,
+    zip_batch_id: Uuid,
     total_items: usize,
 ) -> Result<Uuid, sqlx::Error> {
     let task_id = Uuid::new_v4();
@@ -865,7 +898,7 @@ async fn create_zip_rag_background_task(
             $5,
             0,
             0,
-            '{}'::jsonb,
+            jsonb_build_object('zip_batch_id', $6::text),
             NOW(),
             NOW()
         )
@@ -876,13 +909,14 @@ async fn create_zip_rag_background_task(
     .bind(user_id)
     .bind(course_title)
     .bind(total_items as i32)
+    .bind(zip_batch_id.to_string())
     .execute(pool)
     .await?;
 
     Ok(task_id)
 }
 
-async fn set_zip_rag_task_status(
+pub async fn set_zip_rag_task_status(
     pool: &PgPool,
     task_id: Uuid,
     status: &str,
@@ -1739,6 +1773,7 @@ pub async fn import_assets_zip(
             org_ctx.id,
             claims.sub,
             course_id,
+            zip_batch_id,
             queued_count,
         )
         .await
