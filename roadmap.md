@@ -79,21 +79,21 @@
 - [x] **Notificaciones de Foros**: Implementar despacho de alertas vía SMTP.
 - [x] **Importación Masiva (Excel)**: Finalizar soporte para Question Bank.
 
-## Fase 23 - 27: Infraestructura Crítica 📋 (Planificado)
+## Fase 23 - 27: Infraestructura Crítica ✅ (Completado)
 - [x] **Integración SMTP**: Password reset, notificaciones transaccionales (inscripción, completitud) y emails de marketing.
 - [x] **Búsqueda Global Unificada**: Endpoint `/search` en LMS (cursos, lecciones, foros, anuncios) con full-text e índices GIN. Barra de búsqueda en navbar del Experience.
 - [x] **Soporte SCORM/xAPI**: Player nativo (iframe) para lecciones `content_type=scorm|xapi` y bloque `scorm`, con tracking de statements xAPI en LMS.
-- [ ] **Accesibilidad WCAG 2.1**: Auditoría y ajustes de contraste/navegación.
-- [ ] **PWA y Soporte Offline**: Service workers para aprendizaje sin conexión.
+- [x] **Accesibilidad WCAG 2.1**: Auditoría y ajustes de contraste/navegación.
+- [x] **PWA y Soporte Offline**: Service workers para aprendizaje sin conexión. *(MVP base implementado: registro SW, caché estático, navegación network-first con fallback offline y API GET network-first; UX añadida: prompt de instalación PWA y banner online/offline; cola offline para progreso (grades/interactions/xAPI) con flush automático al reconectar; panel visible de sync, deduplicación por huella de mutación y pruebas E2E offline→online para grades/interactions; validado en producción con endpoints `/manifest.webmanifest`, `/sw.js` y `/offline.html` en HTTP 200).* 
 
 ---
 
 ## 🚀 Fases Estratégicas (Nuevas)
 
 ### Fase 32: IA de Moderación y Ética 🛡️
-- [ ] **Auditoría de IA**: Sistema de validación para prevenir "halucinaciones" en el Tutor RAG.
-- [ ] **Moderación Automática**: Detección de lenguaje ofensivo o inapropiado en foros y chats.
-- [ ] **Ética de Datos**: Herramientas para transparencia en el uso de datos por los modelos de IA local.
+- [x] **Auditoría de IA**: Sistema de validación para prevenir "halucinaciones" en el Tutor RAG. *(MVP backend + UI Studio: endpoints protegidos para listar logs de chat con señales de riesgo y marcar revisión humana en `ai_usage_logs.request_metadata`, con panel operativo en Admin.)*
+- [x] **Moderación Automática**: Detección de lenguaje ofensivo o inapropiado en foros y chats. *(MVP backend por diccionario en creación de hilos/respuestas de foro y mensajes de chat tutor/role-play).* 
+- [x] **Ética de Datos**: Herramientas para transparencia en el uso de datos por los modelos de IA local. *(MVP backend + UI Studio: endpoint protegido `/ai/data-ethics/summary` con métricas de uso, eventos recientes y campos almacenados; panel Admin en `/admin/data-ethics`.)*
 
 ### Fase 33: Aprendizaje Colaborativo Síncrono 🤝
 - [ ] **Pizarras Compartidas**: Espacio de dibujo colaborativo integrado en lecciones.
@@ -120,5 +120,5 @@
 **Próximas Prioridades**:
 1. Finalización de **Certificados y Progreso Real**.
 2. Despliegue de **Infraestructura SMTP** para comunicación global.
-3. Auditoría de **Accesibilidad Universal (WCAG)**.
-4. Implementación de **IA de Moderación (Seguridad)**.
+3. Validación en producción de **Ética de Datos** (panel + endpoint).
+4. Endurecimiento de **señales de riesgo IA** (reglas + umbrales + métricas).

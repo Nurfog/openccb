@@ -26,6 +26,7 @@ export default function AppHeader() {
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchResults, setSearchResults] = useState<Array<{ id: string; kind: string; title: string; snippet?: string; url: string; course_title?: string }>>([]);
     const [searchLoading, setSearchLoading] = useState(false);
+    const [searchActiveIndex, setSearchActiveIndex] = useState(-1);
     const searchRef = useRef<HTMLDivElement>(null);
     const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -63,7 +64,43 @@ export default function AppHeader() {
         setSearchOpen(false);
         setSearchQuery("");
         setSearchResults([]);
+        setSearchActiveIndex(-1);
         router.push(url);
+    }
+
+    function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+        if (!searchOpen && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+            setSearchOpen(true);
+            return;
+        }
+
+        if (e.key === 'Escape') {
+            setSearchOpen(false);
+            setSearchActiveIndex(-1);
+            return;
+        }
+
+        if (!searchResults.length) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setSearchActiveIndex((prev) => (prev + 1) % searchResults.length);
+            return;
+        }
+
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setSearchActiveIndex((prev) => (prev <= 0 ? searchResults.length - 1 : prev - 1));
+            return;
+        }
+
+        if (e.key === 'Enter' && searchActiveIndex >= 0) {
+            e.preventDefault();
+            const selected = searchResults[searchActiveIndex];
+            if (selected) {
+                handleSearchSelect(selected.url);
+            }
+        }
     }
 
     const kindLabel: Record<string, string> = {
@@ -106,11 +143,23 @@ export default function AppHeader() {
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                             <input
+                                id="global-search"
                                 type="text"
                                 value={searchQuery}
-                                onChange={e => { setSearchQuery(e.target.value); setSearchOpen(true); }}
+                                onChange={e => {
+                                    setSearchQuery(e.target.value);
+                                    setSearchOpen(true);
+                                    setSearchActiveIndex(-1);
+                                }}
                                 onFocus={() => setSearchOpen(true)}
+                                onKeyDown={handleSearchKeyDown}
                                 placeholder="Buscar cursos, lecciones..."
+                                role="combobox"
+                                aria-expanded={searchOpen}
+                                aria-controls="global-search-results"
+                                aria-autocomplete="list"
+                                aria-activedescendant={searchActiveIndex >= 0 ? `search-option-${searchActiveIndex}` : undefined}
+                                aria-label="Buscar cursos, lecciones, foros y anuncios"
                                 className="w-56 lg:w-72 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 transition-all"
                             />
                         </div>
@@ -121,12 +170,15 @@ export default function AppHeader() {
                                 ) : searchResults.length === 0 ? (
                                     <div className="p-4 text-sm text-gray-400 text-center">Sin resultados para &quot;{searchQuery}&quot;</div>
                                 ) : (
-                                    <ul className="max-h-80 overflow-y-auto divide-y divide-black/5 dark:divide-white/5">
-                                        {searchResults.map(r => (
-                                            <li key={`${r.kind}-${r.id}`}>
+                                    <ul id="global-search-results" role="listbox" className="max-h-80 overflow-y-auto divide-y divide-black/5 dark:divide-white/5">
+                                        {searchResults.map((r, idx) => (
+                                            <li key={`${r.kind}-${r.id}`} role="presentation">
                                                 <button
+                                                    id={`search-option-${idx}`}
+                                                    role="option"
+                                                    aria-selected={searchActiveIndex === idx}
                                                     onClick={() => handleSearchSelect(r.url)}
-                                                    className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-white/5 transition-colors flex flex-col gap-0.5"
+                                                    className={`w-full px-4 py-3 text-left transition-colors flex flex-col gap-0.5 ${searchActiveIndex === idx ? 'bg-blue-50 dark:bg-white/10' : 'hover:bg-blue-50 dark:hover:bg-white/5'}`}
                                                 >
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 rounded">

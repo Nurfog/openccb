@@ -34,9 +34,8 @@ export function useCourseLanguage(courseId: string | null) {
         try {
             // Importar dinámicamente para evitar circular dependencies
             const { lmsApi } = await import('@/lib/api');
-            
-            const response = await lmsApi.get(`/courses/${courseId}/language-config`);
-            const data = response.data;
+
+            const data = await lmsApi.getCourseLanguageConfig(courseId);
             
             setConfig(data);
             

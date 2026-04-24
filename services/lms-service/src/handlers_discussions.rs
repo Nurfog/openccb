@@ -3,6 +3,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
 };
+use crate::moderation::contains_inappropriate_language;
 use lettre::message::Mailbox;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
@@ -465,6 +466,15 @@ pub async fn create_thread(
     State(pool): State<PgPool>,
     Json(payload): Json<CreateThreadPayload>,
 ) -> Result<Json<DiscussionThread>, (StatusCode, String)> {
+    if contains_inappropriate_language(&payload.title)
+        || contains_inappropriate_language(&payload.content)
+    {
+        return Err((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "El contenido contiene lenguaje inapropiado. Por favor edita el texto e inténtalo nuevamente.".to_string(),
+        ));
+    }
+
     let organization_name = load_organization_name(&pool, org_ctx.id).await;
     let thread_url = build_discussion_thread_url(course_id);
     let author_name: Option<String> = sqlx::query_scalar("SELECT full_name FROM users WHERE id = $1")
@@ -725,6 +735,13 @@ pub async fn create_post(
     State(pool): State<PgPool>,
     Json(payload): Json<CreatePostPayload>,
 ) -> Result<Json<DiscussionPost>, (StatusCode, String)> {
+    if contains_inappropriate_language(&payload.content) {
+        return Err((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "El contenido contiene lenguaje inapropiado. Por favor edita el texto e inténtalo nuevamente.".to_string(),
+        ));
+    }
+
     let organization_name = load_organization_name(&pool, org_ctx.id).await;
     // Verificar si el hilo está bloqueado
     let thread =

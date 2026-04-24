@@ -5,6 +5,7 @@ import { lmsApi, Course, Module, Recommendation, UserGrade, Meeting, normalizePr
 import { Sparkles, AlertTriangle, ArrowRight, CheckCircle2, XCircle, Circle, Video, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { BookOpen, ChevronRight, PlayCircle, Calendar, Clock, Info, Lock } from "lucide-react";
+import { Award } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import DiscussionBoard from "@/components/DiscussionBoard";
 import { AnnouncementsList } from "@/components/AnnouncementsList";
@@ -79,7 +80,7 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
 
         // Load organization settings (branding includes the certificates_enabled flag)
         lmsApi.getBranding()
-            .then(res => setOrgSettings(res.organization))
+            .then(res => setOrgSettings(res))
             .catch(console.error);
     }, [params.id, user]);
 

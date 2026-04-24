@@ -339,8 +339,8 @@ export interface OrganizationEmailTemplate {
     display_name: string;
     subject_template: string;
     body_template: string;
-    is_html: bool;
-    is_enabled: bool;
+    is_html: boolean;
+    is_enabled: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -350,8 +350,8 @@ export interface UpsertOrganizationEmailTemplatePayload {
     display_name: string;
     subject_template: string;
     body_template: string;
-    is_html: bool;
-    is_enabled: bool;
+    is_html: boolean;
+    is_enabled: boolean;
 }
 
 export interface ProvisionPayload {
@@ -1739,6 +1739,31 @@ export const lmsApi = {
             method: 'GET',
             query: { search, limit, offset }
         }, true),
+    getAiAuditLogs: (
+        reviewed?: boolean,
+        limit = 50,
+        offset = 0
+    ): Promise<AiAuditListResponse> =>
+        apiFetch('/ai/audit/logs', {
+            method: 'GET',
+            query: { reviewed, limit, offset }
+        }, true),
+    reviewAiAuditLog: (
+        logId: string,
+        payload: { reviewed: boolean; reviewer_note?: string }
+    ): Promise<{ id: string; reviewed: boolean }> =>
+        apiFetch(`/ai/audit/logs/${logId}/review`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }, true),
+    getAiDataEthicsSummary: (
+        days = 30,
+        limit = 40
+    ): Promise<AiDataEthicsSummaryResponse> =>
+        apiFetch('/ai/data-ethics/summary', {
+            method: 'GET',
+            query: { days, limit }
+        }, true),
 };
 
 export interface Meeting {
@@ -1813,6 +1838,60 @@ export interface FaqEntry {
     is_published: boolean;
     created_at: string;
     updated_at: string;
+}
+
+export interface AiAuditItem {
+    id: string;
+    user_id: string;
+    student_name?: string;
+    endpoint: string;
+    model: string;
+    output_tokens: number;
+    has_rag_context: boolean;
+    risk_score: number;
+    risk_signals: string[];
+    response_excerpt: string;
+    reviewed: boolean;
+    reviewed_by?: string;
+    reviewed_by_name?: string;
+    reviewer_note?: string;
+    created_at: string;
+}
+
+export interface AiAuditListResponse {
+    items: AiAuditItem[];
+    limit: number;
+    offset: number;
+}
+
+export interface AiDataEthicsEventItem {
+    id: string;
+    endpoint: string;
+    model: string;
+    request_type: string;
+    tokens_used: number;
+    input_tokens: number;
+    output_tokens: number;
+    has_rag_context: boolean;
+    created_at: string;
+}
+
+export interface AiDataEthicsSummary {
+    days_window: number;
+    total_requests: number;
+    total_tokens: number;
+    total_input_tokens: number;
+    total_output_tokens: number;
+    average_tokens_per_request: number;
+    model_count: number;
+    request_type_count: number;
+    retention_days: number;
+    stored_fields: string[];
+}
+
+export interface AiDataEthicsSummaryResponse {
+    summary: AiDataEthicsSummary;
+    events: AiDataEthicsEventItem[];
 }
 
 export interface LtiDeepLinkingContentItem {

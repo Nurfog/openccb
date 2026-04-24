@@ -184,7 +184,7 @@ export interface QuizQuestion {
 
 export interface Block {
     id: string;
-    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'code' | 'hotspot' | 'memory-match' | 'document' | 'audio-response' | 'video_marker' | 'peer-review' | 'role-playing' | 'mermaid' | 'code-lab';
+    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'code' | 'hotspot' | 'memory-match' | 'document' | 'audio-response' | 'video_marker' | 'peer-review' | 'role-playing' | 'mermaid' | 'code-lab' | 'scorm';
     title: string;
     content?: string;
     url?: string;
@@ -192,6 +192,7 @@ export interface Block {
     config?: Record<string, unknown>;
     quiz_data?: {
         questions: QuizQuestion[];
+        test_type?: string;
     };
     pairs?: { left: string; right: string }[];
     items?: string[];
@@ -563,15 +564,242 @@ const getToken = () => {
     return sessionStorage.getItem('preview_token') || localStorage.getItem('experience_token');
 };
 
-const apiFetch = async (url: string, options: RequestInit = {}, isCMS: boolean = false) => {
+const OFFLINE_QUEUE_KEY = 'experience_offline_mutation_queue_v1';
+const OFFLINE_SYNC_META_KEY = 'experience_offline_sync_meta_v1';
+
+type OfflineMutationKind = 'grade' | 'interaction' | 'xapi';
+
+type OfflineMutationItem = {
+    id: string;
+    dedupeKey: string;
+    kind: OfflineMutationKind;
+    url: string;
+    method: 'POST' | 'PUT' | 'DELETE';
+    isCMS: boolean;
+    body: string;
+    createdAt: string;
+};
+
+export type OfflineSyncStatus = {
+    pending: number;
+    isFlushing: boolean;
+    lastSyncAt: string | null;
+    lastFlushedCount: number;
+    lastError: string | null;
+};
+
+const offlineSyncListeners = new Set<(status: OfflineSyncStatus) => void>();
+let offlineFlushPromise: Promise<{ flushed: number; pending: number }> | null = null;
+let inMemoryOfflineStatus: OfflineSyncStatus = {
+    pending: 0,
+    isFlushing: false,
+    lastSyncAt: null,
+    lastFlushedCount: 0,
+    lastError: null,
+};
+
+const loadOfflineQueue = (): OfflineMutationItem[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+        const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return (parsed as OfflineMutationItem[]).map((item) => ({
+            ...item,
+            dedupeKey: item.dedupeKey || `${item.method}:${item.url}:${item.body}`,
+        }));
+    } catch {
+        return [];
+    }
+};
+
+const loadOfflineSyncMeta = (): Partial<OfflineSyncStatus> => {
+    if (typeof window === 'undefined') return {};
+    try {
+        const raw = localStorage.getItem(OFFLINE_SYNC_META_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return {};
+        return parsed as Partial<OfflineSyncStatus>;
+    } catch {
+        return {};
+    }
+};
+
+const saveOfflineSyncMeta = (status: OfflineSyncStatus) => {
+    if (typeof window === 'undefined') return;
+    const persistable = {
+        lastSyncAt: status.lastSyncAt,
+        lastFlushedCount: status.lastFlushedCount,
+        lastError: status.lastError,
+    };
+    localStorage.setItem(OFFLINE_SYNC_META_KEY, JSON.stringify(persistable));
+};
+
+const emitOfflineSyncStatus = (partial: Partial<OfflineSyncStatus>) => {
+    const queue = loadOfflineQueue();
+    inMemoryOfflineStatus = {
+        ...inMemoryOfflineStatus,
+        ...partial,
+        pending: queue.length,
+    };
+    saveOfflineSyncMeta(inMemoryOfflineStatus);
+    offlineSyncListeners.forEach((listener) => listener(inMemoryOfflineStatus));
+};
+
+const hydrateOfflineSyncStatus = () => {
+    const meta = loadOfflineSyncMeta();
+    const queue = loadOfflineQueue();
+    inMemoryOfflineStatus = {
+        pending: queue.length,
+        isFlushing: false,
+        lastSyncAt: typeof meta.lastSyncAt === 'string' ? meta.lastSyncAt : null,
+        lastFlushedCount: typeof meta.lastFlushedCount === 'number' ? meta.lastFlushedCount : 0,
+        lastError: typeof meta.lastError === 'string' ? meta.lastError : null,
+    };
+};
+
+hydrateOfflineSyncStatus();
+
+const saveOfflineQueue = (queue: OfflineMutationItem[]) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+    emitOfflineSyncStatus({ pending: queue.length });
+};
+
+const enqueueOfflineMutation = (item: OfflineMutationItem) => {
+    const queue = loadOfflineQueue();
+    const duplicate = queue.some((queued) => queued.dedupeKey === item.dedupeKey);
+    if (duplicate) return;
+    queue.push(item);
+    saveOfflineQueue(queue);
+};
+
+const getOfflineSyncStatusSnapshot = (): OfflineSyncStatus => {
+    const queue = loadOfflineQueue();
+    return {
+        ...inMemoryOfflineStatus,
+        pending: queue.length,
+    };
+};
+
+const subscribeOfflineSync = (listener: (status: OfflineSyncStatus) => void) => {
+    offlineSyncListeners.add(listener);
+    listener(getOfflineSyncStatusSnapshot());
+    return () => {
+        offlineSyncListeners.delete(listener);
+    };
+};
+
+const buildApiHeaders = (options: RequestInit = {}) => {
     const token = getToken();
-    const baseUrl = isCMS ? getCmsApiUrl() : getLmsApiUrl();
     const isFormData = options.body instanceof FormData;
-    const headers: Record<string, string> = {
+    return {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...Object.fromEntries(Object.entries(options.headers || {}).map(([k, v]) => [k, String(v)])),
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    } as Record<string, string>;
+};
+
+const flushOfflineQueueInternal = async () => {
+    if (offlineFlushPromise) {
+        return offlineFlushPromise;
+    }
+
+    const run = async () => {
+    if (typeof window === 'undefined') return { flushed: 0, pending: 0 };
+    emitOfflineSyncStatus({ isFlushing: true, lastError: null });
+
+    if (!navigator.onLine) {
+        const pending = loadOfflineQueue().length;
+        emitOfflineSyncStatus({ isFlushing: false, pending, lastError: 'offline' });
+        return { flushed: 0, pending };
+    }
+
+    const queue = loadOfflineQueue();
+    if (!queue.length) {
+        emitOfflineSyncStatus({
+            isFlushing: false,
+            pending: 0,
+            lastSyncAt: new Date().toISOString(),
+            lastFlushedCount: 0,
+            lastError: null,
+        });
+        return { flushed: 0, pending: 0 };
+    }
+
+    const stillPending: OfflineMutationItem[] = [];
+    let flushed = 0;
+
+    for (const item of queue) {
+        try {
+            const baseUrl = item.isCMS ? getCmsApiUrl() : getLmsApiUrl();
+            const response = await fetch(`${baseUrl}${item.url}`, {
+                method: item.method,
+                body: item.body,
+                headers: buildApiHeaders({ body: item.body })
+            });
+
+            if (!response.ok) {
+                // 4xx validation/auth errors should not block the queue forever.
+                if (response.status >= 500) {
+                    stillPending.push(item);
+                }
+                continue;
+            }
+
+            flushed += 1;
+        } catch {
+            stillPending.push(item);
+        }
+    }
+
+    saveOfflineQueue(stillPending);
+    emitOfflineSyncStatus({
+        isFlushing: false,
+        pending: stillPending.length,
+        lastSyncAt: new Date().toISOString(),
+        lastFlushedCount: flushed,
+        lastError: stillPending.length ? 'partial' : null,
+    });
+    return { flushed, pending: stillPending.length };
     };
+
+    offlineFlushPromise = run().finally(() => {
+        offlineFlushPromise = null;
+    });
+
+    return offlineFlushPromise;
+};
+
+const enqueueIfOffline = async (
+    kind: OfflineMutationKind,
+    url: string,
+    method: 'POST' | 'PUT' | 'DELETE',
+    body: string,
+    isCMS = false
+) => {
+    if (typeof window !== 'undefined' && !navigator.onLine) {
+        enqueueOfflineMutation({
+            id: crypto.randomUUID(),
+            dedupeKey: `${method}:${url}:${body}`,
+            kind,
+            url,
+            method,
+            isCMS,
+            body,
+            createdAt: new Date().toISOString(),
+        });
+        return true;
+    }
+
+    return false;
+};
+
+const apiFetch = async (url: string, options: RequestInit = {}, isCMS: boolean = false) => {
+    const baseUrl = isCMS ? getCmsApiUrl() : getLmsApiUrl();
+    const headers = buildApiHeaders(options);
 
     const response = await fetch(`${baseUrl}${url}`, { ...options, headers });
     if (!response.ok) {
@@ -583,6 +811,18 @@ const apiFetch = async (url: string, options: RequestInit = {}, isCMS: boolean =
 };
 
 export const lmsApi = {
+    subscribeOfflineSync(listener: (status: OfflineSyncStatus) => void): () => void {
+        return subscribeOfflineSync(listener);
+    },
+
+    getOfflineSyncStatus(): OfflineSyncStatus {
+        return getOfflineSyncStatusSnapshot();
+    },
+
+    async flushOfflineQueue(): Promise<{ flushed: number; pending: number }> {
+        return flushOfflineQueueInternal();
+    },
+
     async getCatalog(orgId?: string, userId?: string): Promise<Course[]> {
         const params = new URLSearchParams();
         if (orgId) params.append('organization_id', orgId);
@@ -639,10 +879,37 @@ export const lmsApi = {
     },
 
     async trackXapiStatement(payload: TrackXapiPayload): Promise<{ id: string; message: string }> {
-        return apiFetch('/xapi/statements', {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
+        const url = '/xapi/statements';
+        const body = JSON.stringify(payload);
+
+        if (await enqueueIfOffline('xapi', url, 'POST', body)) {
+            return {
+                id: `offline-${Date.now()}`,
+                message: 'xAPI statement queued for sync',
+            };
+        }
+
+        try {
+            return await apiFetch(url, { method: 'POST', body });
+        } catch (error) {
+            if (typeof window !== 'undefined' && !navigator.onLine) {
+                enqueueOfflineMutation({
+                    id: crypto.randomUUID(),
+                    dedupeKey: `POST:${url}:${body}`,
+                    kind: 'xapi',
+                    url,
+                    method: 'POST',
+                    isCMS: false,
+                    body,
+                    createdAt: new Date().toISOString(),
+                });
+                return {
+                    id: `offline-${Date.now()}`,
+                    message: 'xAPI statement queued for sync',
+                };
+            }
+            throw error;
+        }
     },
 
     async getMe(): Promise<User> {
@@ -672,10 +939,49 @@ export const lmsApi = {
     },
 
     async submitScore(userId: string, course_id: string, lessonId: string, score: number, metadata: Record<string, unknown> = {}): Promise<UserGrade> {
-        return apiFetch('/grades', {
-            method: 'POST',
-            body: JSON.stringify({ user_id: userId, course_id, lesson_id: lessonId, score, metadata })
-        });
+        const url = '/grades';
+        const body = JSON.stringify({ user_id: userId, course_id, lesson_id: lessonId, score, metadata });
+
+        if (await enqueueIfOffline('grade', url, 'POST', body)) {
+            return {
+                id: `offline-${Date.now()}`,
+                user_id: userId,
+                course_id,
+                lesson_id: lessonId,
+                score,
+                attempts_count: 0,
+                metadata: { ...metadata, sync_pending: true },
+                created_at: new Date().toISOString(),
+            };
+        }
+
+        try {
+            return await apiFetch(url, { method: 'POST', body });
+        } catch (error) {
+            if (typeof window !== 'undefined' && !navigator.onLine) {
+                enqueueOfflineMutation({
+                    id: crypto.randomUUID(),
+                    dedupeKey: `POST:${url}:${body}`,
+                    kind: 'grade',
+                    url,
+                    method: 'POST',
+                    isCMS: false,
+                    body,
+                    createdAt: new Date().toISOString(),
+                });
+                return {
+                    id: `offline-${Date.now()}`,
+                    user_id: userId,
+                    course_id,
+                    lesson_id: lessonId,
+                    score,
+                    attempts_count: 0,
+                    metadata: { ...metadata, sync_pending: true },
+                    created_at: new Date().toISOString(),
+                };
+            }
+            throw error;
+        }
     },
 
     async getUserGrades(userId: string, courseId: string): Promise<UserGrade[]> {
@@ -692,6 +998,10 @@ export const lmsApi = {
 
     async getBranding(): Promise<Organization> {
         return apiFetch('/branding', {}, true);
+    },
+
+    async getCourseLanguageConfig(courseId: string): Promise<{ language_setting: 'auto' | 'fixed'; fixed_language: string | null }> {
+        return apiFetch(`/courses/${courseId}/language-config`);
     },
 
     async updateUser(userId: string, payload: { full_name?: string, avatar_url?: string, bio?: string, language?: string }): Promise<void> {
@@ -715,10 +1025,31 @@ export const lmsApi = {
     },
 
     async recordInteraction(lessonId: string, payload: { video_timestamp?: number, event_type: string, metadata?: any }): Promise<void> {
-        return apiFetch(`/lessons/${lessonId}/interactions`, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
+        const url = `/lessons/${lessonId}/interactions`;
+        const body = JSON.stringify(payload);
+
+        if (await enqueueIfOffline('interaction', url, 'POST', body)) {
+            return;
+        }
+
+        try {
+            await apiFetch(url, { method: 'POST', body });
+        } catch (error) {
+            if (typeof window !== 'undefined' && !navigator.onLine) {
+                enqueueOfflineMutation({
+                    id: crypto.randomUUID(),
+                    dedupeKey: `POST:${url}:${body}`,
+                    kind: 'interaction',
+                    url,
+                    method: 'POST',
+                    isCMS: false,
+                    body,
+                    createdAt: new Date().toISOString(),
+                });
+                return;
+            }
+            throw error;
+        }
     },
 
     async getHeatmap(lessonId: string): Promise<{ second: number, count: number }[]> {

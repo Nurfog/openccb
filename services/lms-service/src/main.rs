@@ -10,6 +10,8 @@ mod handlers_notes;
 mod handlers_payments;
 mod handlers_peer_review;
 mod handlers_embeddings;
+mod handlers_ai_audit;
+mod handlers_data_ethics;
 mod handlers_faq;
 mod handlers_certificates;
 mod progress_tracking;
@@ -20,6 +22,7 @@ mod live;
 mod portfolio;
 mod external_db;
 mod openapi;
+mod moderation;
 
 use axum::{
     Router, middleware,
@@ -237,6 +240,19 @@ async fn main() {
         .route(
             "/knowledge-base/{id}/embedding/regenerate",
             post(handlers_embeddings::regenerate_knowledge_embedding),
+        )
+        // Auditoría de respuestas IA para detección temprana de alucinaciones
+        .route(
+            "/ai/audit/logs",
+            get(handlers_ai_audit::list_ai_audit_logs),
+        )
+        .route(
+            "/ai/audit/logs/{id}/review",
+            post(handlers_ai_audit::review_ai_audit_log),
+        )
+        .route(
+            "/ai/data-ethics/summary",
+            get(handlers_data_ethics::get_data_ethics_summary),
         )
         // Moderación humana para FAQ basada en chats de alumnos
         .route(

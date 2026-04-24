@@ -37,6 +37,7 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
     const [handledMarkers, setHandledMarkers] = useState<Set<number>>(new Set());
     const [lastTime, setLastTime] = useState(0);
     const [feedback, setFeedback] = useState<{ isCorrect: boolean } | null>(null);
+    const [a11yStatus, setA11yStatus] = useState("");
 
     useEffect(() => {
         if (initialPlayCount !== undefined) {
@@ -83,6 +84,7 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
         if (!hasStarted) {
             setPlayCount(prev => prev + 1);
             setHasStarted(true);
+            setA11yStatus("Reproducción iniciada.");
             if (lessonId) {
                 await lmsApi.recordInteraction(lessonId, {
                     video_timestamp: 0,
@@ -97,6 +99,7 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
     if (locked) {
         return (
             <div className="space-y-4" id={id}>
+                <p className="sr-only" aria-live="polite" aria-atomic="true">Contenido bloqueado por límite de reproducciones.</p>
                 <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">{title || "Contenido Multimedia"}</h3>
                 <div className="glass-card aspect-video flex flex-col items-center justify-center gap-6 border-red-500/10 dark:border-red-500/20 bg-red-500/5">
                     <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-red-600 dark:text-red-500">
@@ -141,6 +144,7 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
 
     return (
         <div className="space-y-6" id={id}>
+            <p className="sr-only" aria-live="polite" aria-atomic="true">{a11yStatus}</p>
             <div className="flex items-center justify-between">
                 <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">{title || "Contenido Multimedia"}</h3>
                 {maxPlays > 0 && (
@@ -163,6 +167,7 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
                         controls
                         crossOrigin="anonymous"
                         className="w-full h-full rounded-xl"
+                        aria-label={title || "Reproductor de video"}
                         onPlay={handlePlay}
                         onTimeUpdate={(e) => {
                             const time = e.currentTarget.currentTime;
@@ -178,6 +183,7 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
                                     if (time >= marker.timestamp && lastTime < marker.timestamp && !handledMarkers.has(marker.timestamp)) {
                                         e.currentTarget.pause();
                                         setActiveMarker(marker);
+                                        setA11yStatus("Pausa por pregunta interactiva.");
                                         setHandledMarkers(prev => new Set(prev).add(marker.timestamp));
                                         break;
                                     }
@@ -201,20 +207,23 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
                     <iframe
                         src={getEmbedUrl(url)}
                         className="w-full h-full rounded-xl"
+                        title={title || "Contenido embebido"}
                         allowFullScreen
                     />
                 )}
 
                 {/* Simulated play tracker overlay for iframes (invisible but catches first click) */}
                 {!isLocalFile && playCount === 0 && (
-                    <div
+                    <button
+                        type="button"
                         onClick={handlePlay}
-                        className="absolute inset-0 bg-white/40 dark:bg-black/40 flex items-center justify-center cursor-pointer group-hover:bg-white/20 dark:group-hover:bg-black/20 transition-all"
+                        className="absolute inset-0 bg-white/40 dark:bg-black/40 flex items-center justify-center cursor-pointer group-hover:bg-white/20 dark:group-hover:bg-black/20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
+                        aria-label="Iniciar reproducción del contenido"
                     >
                         <div className="w-20 h-20 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center shadow-2xl shadow-blue-500/40 group-hover:scale-110 transition-transform">
                             <Play size={32} className="text-white fill-white ml-2" />
                         </div>
-                    </div>
+                    </button>
                 )}
             </div>
 
@@ -227,7 +236,7 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
             {/* Question Overlay */}
             {activeMarker && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-white/60 dark:bg-black/60 backdrop-blur-md rounded-xl animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6 rounded-2xl shadow-2xl max-w-sm w-full space-y-4 border border-black/5 dark:border-white/5">
+                    <div role="dialog" aria-modal="true" aria-label="Pregunta interactiva del video" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6 rounded-2xl shadow-2xl max-w-sm w-full space-y-4 border border-black/5 dark:border-white/5">
                         <div className="flex items-center gap-2 text-blue-600 font-bold text-xs uppercase tracking-widest">
                             <AlertCircle size={16} />
                             <span>Quick Check</span>
@@ -237,6 +246,7 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
                             {activeMarker.options.map((option, idx) => (
                                 <button
                                     key={idx}
+                                    type="button"
                                     disabled={!!feedback}
                                     onClick={() => {
                                         const isCorrect = idx === activeMarker.correctIndex;
@@ -244,6 +254,7 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
                                         if (isGraded) {
                                             // Graded Mode: Show feedback then continue
                                             setFeedback({ isCorrect });
+                                            setA11yStatus(isCorrect ? "Respuesta correcta." : "Respuesta incorrecta.");
                                             // Save answer to backend (mocked for now)
                                             console.log(`Submitted answer for marker at ${activeMarker}: ${isCorrect ? 'Correct' : 'Wrong'}`);
 
@@ -257,6 +268,7 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
                                             // Formative Mode: Block until correct
                                             if (isCorrect) {
                                                 setFeedback({ isCorrect: true });
+                                                setA11yStatus("Respuesta correcta.");
                                                 setTimeout(() => {
                                                     setFeedback(null);
                                                     setActiveMarker(null);
@@ -265,12 +277,13 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
                                                 }, 1000);
                                             } else {
                                                 setFeedback({ isCorrect: false });
+                                                setA11yStatus("Respuesta incorrecta. Intenta nuevamente.");
                                                 alert("Try again! (This is just practice)");
                                                 setFeedback(null);
                                             }
                                         }
                                     }}
-                                    className={`px-4 py-3 rounded-xl font-medium transition-all text-left ${feedback
+                                    className={`px-4 py-3 rounded-xl font-medium transition-all text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 ${feedback
                                         ? idx === activeMarker.correctIndex
                                             ? "bg-green-600 dark:bg-green-500 text-white"
                                             : feedback.isCorrect === false && "bg-red-600 dark:bg-red-500 text-white"

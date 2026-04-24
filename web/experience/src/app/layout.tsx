@@ -6,10 +6,15 @@ import { I18nProvider } from "@/context/I18nContext";
 import { BrandingProvider } from "@/context/BrandingContext";
 import AuthGuard from "@/components/AuthGuard";
 import { ThemeProvider } from "@/context/ThemeContext";
+import PwaRegistration from "@/components/PwaRegistration";
+import PwaInstallPrompt from "@/components/PwaInstallPrompt";
+import ConnectivityBanner from "@/components/ConnectivityBanner";
+import OfflineSyncPanel from "@/components/OfflineSyncPanel";
 
 export const metadata: Metadata = {
   title: "Experiencia de Aprendizaje",
   description: "Consume contenido educativo de alta fidelidad.",
+  manifest: "/manifest.webmanifest",
 };
 
 import AppHeader from "@/components/AppHeader";
@@ -27,6 +32,10 @@ export default function RootLayout({
             <AuthProvider>
               <I18nProvider>
                 <AuthGuard>
+                  <PwaRegistration />
+                  <PwaInstallPrompt />
+                  <ConnectivityBanner />
+                  <OfflineSyncPanel />
                   <AppHeader />
                   <main className="flex-1">
                     {children}

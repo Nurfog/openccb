@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sin conexion | OpenCCB</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: Arial, sans-serif;
+        background: radial-gradient(circle at 20% 20%, #1e40af, #0b1220 70%);
+        color: #f8fafc;
+      }
+      .card {
+        width: min(560px, 92vw);
+        padding: 2rem;
+        border-radius: 16px;
+        background: rgba(15, 23, 42, 0.82);
+        border: 1px solid rgba(148, 163, 184, 0.3);
+      }
+      h1 { margin: 0 0 0.75rem; font-size: 1.6rem; }
+      p { margin: 0.5rem 0; line-height: 1.5; color: #cbd5e1; }
+      button {
+        margin-top: 1rem;
+        border: 0;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        background: #2563eb;
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>No hay conexion a internet</h1>
+      <p>Puedes seguir usando partes ya cargadas de la plataforma mientras vuelve la conexion.</p>
+      <p>Cuando tengas internet, intenta recargar para sincronizar el contenido nuevo.</p>
+      <button onclick="location.reload()">Reintentar</button>
+    </main>
+  </body>
+</html>

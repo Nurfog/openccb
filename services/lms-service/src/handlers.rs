@@ -21,6 +21,7 @@ use common::models::{
     Module, Notification, Organization, RecommendationResponse, User, UserResponse,
     LessonDependency,
 };
+use crate::moderation::contains_inappropriate_language;
 use crate::external_db::MySqlPool;
 use crate::progress_tracking::{CourseCompletionMetrics, calculate_course_completion};
 use serde_json::json;
@@ -3484,6 +3485,13 @@ pub async fn chat_with_tutor(
     Path(lesson_id): Path<Uuid>,
     Json(payload): Json<ChatPayload>,
 ) -> Result<Json<ChatResponse>, (StatusCode, String)> {
+    if contains_inappropriate_language(&payload.message) {
+        return Err((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "El mensaje contiene lenguaje inapropiado. Reformula tu consulta para continuar.".to_string(),
+        ));
+    }
+
     // Check token limit before proceeding (estimate 1000 tokens for chat)
     if let Err(_) = common::token_limits::check_ai_token_limit(&pool, claims.sub, 1000).await {
         return Err((StatusCode::TOO_MANY_REQUESTS, "Monthly AI token limit exceeded. Please contact your administrator.".to_string()));
@@ -3931,6 +3939,13 @@ pub async fn chat_role_play(
     Path(lesson_id): Path<Uuid>,
     Json(payload): Json<ChatRolePlayPayload>,
 ) -> Result<Json<ChatResponse>, (StatusCode, String)> {
+    if contains_inappropriate_language(&payload.message) {
+        return Err((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "El mensaje contiene lenguaje inapropiado. Reformula tu consulta para continuar.".to_string(),
+        ));
+    }
+
     tracing::info!("Chat Role Play: lesson_id={}, org_id={}, user_id={}, role={}", lesson_id, org_ctx.id, claims.sub, claims.role);
     // 1. Obtener lección con verificación de acceso (coincide con la lógica de get_lesson_content)
     let is_preview = claims.token_type.as_deref() == Some("preview");

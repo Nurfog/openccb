@@ -200,6 +200,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
         <div className="flex h-[calc(100vh-64px)] overflow-hidden">
             {/* Navigation Sidebar */}
             <aside
+                aria-label="Navegación de lecciones"
                 className={`hidden lg:flex glass border-r border-black/5 dark:border-white/5 transition-all duration-500 bg-black/5 dark:bg-black/40 flex-col ${sidebarOpen ? 'w-80' : 'w-0 overflow-hidden border-none'}`}
             >
                 <div className="p-6 border-b border-black/5 dark:border-white/5">
@@ -207,7 +208,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                     <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{course.title}</p>
                 </div>
 
-                <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
+                <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6" aria-label="Módulos y lecciones">
                     {course.modules.map((module) => (
                         <div key={module.id} className="space-y-2">
                             <div className="flex items-center justify-between px-3 mb-2">
@@ -219,7 +220,8 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                     <Link
                                         key={l.id}
                                         href={`/courses/${params.id}/lessons/${l.id}`}
-                                        className={`sidebar-link ${l.id === params.lessonId ? 'sidebar-link-active' : 'sidebar-link-inactive'}`}
+                                        aria-current={l.id === params.lessonId ? 'page' : undefined}
+                                        className={`sidebar-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 ${l.id === params.lessonId ? 'sidebar-link-active' : 'sidebar-link-inactive'}`}
                                     >
                                         <div className="flex-1 truncate">{l.title}</div>
                                         <div className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${getStatusColor(getLessonStatus(l))}`} />
@@ -228,45 +230,57 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                             </div>
                         </div>
                     ))}
-                </div>
+                </nav>
             </aside>
 
             {/* Main Content Area */}
             <main className="flex-1 flex flex-col relative overflow-hidden">
                 <div className="relative z-10 flex flex-wrap gap-2 px-6 pt-4 pb-2">
                     <button
+                        type="button"
                         onClick={() => setSidebarOpen(!sidebarOpen)}
-                        className="hidden lg:block p-3 rounded-xl glass border-black/10 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all bg-black/5 dark:bg-black/40"
+                        className="hidden lg:block p-3 rounded-xl glass border-black/10 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all bg-black/5 dark:bg-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
                         title="Alternar Barra Lateral"
+                        aria-label="Alternar barra lateral"
+                        aria-pressed={sidebarOpen}
                     >
                         <Menu size={20} />
                     </button>
                     <button
+                        type="button"
                         onClick={handleToggleBookmark}
-                        className={`p-3 rounded-xl glass border-black/10 dark:border-white/10 transition-all bg-black/5 dark:bg-black/40 ${isBookmarked ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                        className={`p-3 rounded-xl glass border-black/10 dark:border-white/10 transition-all bg-black/5 dark:bg-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 ${isBookmarked ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                         title={isBookmarked ? "Quitar Marcador" : "Guardar Marcador"}
+                        aria-label={isBookmarked ? "Quitar marcador" : "Guardar marcador"}
+                        aria-pressed={isBookmarked}
                     >
                         <Bookmark size={20} fill={isBookmarked ? "currentColor" : "none"} />
                     </button>
                     {hasTranscription && (
                         <button
+                            type="button"
                             onClick={() => {
                                 setTranscriptOpen(!transcriptOpen);
                                 if (!transcriptOpen) setNotesOpen(false);
                             }}
-                            className={`p-3 rounded-xl glass border-black/10 dark:border-white/10 transition-all bg-black/5 dark:bg-black/40 ${transcriptOpen ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                            className={`p-3 rounded-xl glass border-black/10 dark:border-white/10 transition-all bg-black/5 dark:bg-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 ${transcriptOpen ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                             title="Alternar Transcripción"
+                            aria-label="Alternar transcripción"
+                            aria-pressed={transcriptOpen}
                         >
                             <ListMusic size={20} />
                         </button>
                     )}
                     <button
+                        type="button"
                         onClick={() => {
                             setNotesOpen(!notesOpen);
                             if (!notesOpen) setTranscriptOpen(false);
                         }}
-                        className={`p-3 rounded-xl glass border-black/10 dark:border-white/10 transition-all bg-black/5 dark:bg-black/40 ${notesOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                        className={`p-3 rounded-xl glass border-black/10 dark:border-white/10 transition-all bg-black/5 dark:bg-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 ${notesOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                         title="Alternar Notas"
+                        aria-label="Alternar notas"
+                        aria-pressed={notesOpen}
                     >
                         <StickyNote size={20} />
                     </button>
@@ -274,7 +288,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
 
                 <div className="flex-1 flex overflow-hidden">
                     <div className="flex-1 overflow-y-auto px-6 py-12">
-                        <div className="max-w-4xl mx-auto space-y-20 pb-40">
+                        <article className="max-w-4xl mx-auto space-y-20 pb-40" aria-labelledby="lesson-title">
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3">
                                     <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">
@@ -287,7 +301,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                         {getLessonStatus(lesson) === 'not-started' && "No Iniciada"}
                                     </div>
                                 </div>
-                                <h1 className="text-4xl font-black tracking-tighter text-gray-900 dark:text-white">{lesson.title}</h1>
+                                <h1 id="lesson-title" className="text-4xl font-black tracking-tighter text-gray-900 dark:text-white">{lesson.title}</h1>
                             </div>
 
                             {lesson.summary && (
@@ -389,7 +403,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                                                     userGrade?.metadata?.quiz_answers
                                                                         ? {
                                                                               score: userGrade.score,
-                                                                              answers: userGrade.metadata.quiz_answers[block.id] || userGrade.metadata.quiz_answers,
+                                                                              answers: ((userGrade.metadata.quiz_answers as Record<string, unknown>)[block.id] || userGrade.metadata.quiz_answers),
                                                                               created_at: userGrade.created_at,
                                                                           }
                                                                         : undefined
@@ -564,6 +578,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                     {userGrade && lesson.max_attempts && userGrade.attempts_count >= lesson.max_attempts ? null : (
                                         <>
                                             <button
+                                                type="button"
                                                 onClick={async () => {
                                                     if (user) {
                                                         try {
@@ -577,7 +592,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                                         }
                                                     }
                                                 }}
-                                                className="btn-premium px-12 py-4 rounded-2xl shadow-blue-500/40 shadow-xl group/btn"
+                                                className="btn-premium px-12 py-4 rounded-2xl shadow-blue-500/40 shadow-xl group/btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
                                             >
                                                 <span className="flex items-center gap-2 font-black italic">
                                                     {userGrade ? `ENVIAR INTENTO ${userGrade.attempts_count + 1}` : 'ENVIAR PARA CALIFICAR'}
@@ -593,28 +608,32 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                     )}
                                 </div>
                             )}
-                        </div>
+                        </article>
                     </div>
 
                     {/* Right Side Panels */}
                     {((hasTranscription && transcriptOpen) || notesOpen) && (
-                        <aside className="hidden xl:flex w-[400px] border-l border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-black/20 flex-col animate-in slide-in-from-right duration-500">
+                        <aside aria-label="Panel lateral de apoyo" className="hidden xl:flex w-[400px] border-l border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-black/20 flex-col animate-in slide-in-from-right duration-500">
                             {/* Panel Tabs */}
                             <div className="flex border-b border-black/5 dark:border-white/5">
                                 {hasTranscription && (
                                     <button
+                                        type="button"
                                         onClick={() => setTranscriptOpen(true)}
-                                        className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${transcriptOpen ? 'text-blue-600 dark:text-blue-400 bg-black/5 dark:bg-white/5' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'}`}
+                                        className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 ${transcriptOpen ? 'text-blue-600 dark:text-blue-400 bg-black/5 dark:bg-white/5' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'}`}
+                                        aria-pressed={transcriptOpen}
                                     >
                                         Transcripción
                                     </button>
                                 )}
                                 <button
+                                    type="button"
                                     onClick={() => {
                                         setNotesOpen(true);
                                         if (hasTranscription) setTranscriptOpen(false);
                                     }}
-                                    className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${notesOpen && (!transcriptOpen || !hasTranscription) ? 'text-indigo-600 dark:text-indigo-400 bg-black/5 dark:bg-white/5' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'}`}
+                                    className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 ${notesOpen && (!transcriptOpen || !hasTranscription) ? 'text-indigo-600 dark:text-indigo-400 bg-black/5 dark:bg-white/5' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'}`}
+                                    aria-pressed={notesOpen && (!transcriptOpen || !hasTranscription)}
                                 >
                                     Notas
                                 </button>
@@ -638,9 +657,9 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                 </div>
 
                 {/* Footer Controls */}
-                <footer className="h-20 glass border-t border-black/5 dark:border-white/5 px-6 flex items-center justify-between bg-white/60 dark:bg-black/60 backdrop-blur-3xl shrink-0">
+                <footer className="h-20 glass border-t border-black/5 dark:border-white/5 px-6 flex items-center justify-between bg-white/60 dark:bg-black/60 backdrop-blur-3xl shrink-0" aria-label="Navegación entre lecciones">
                     {prevLesson ? (
-                        <Link href={`/courses/${params.id}/lessons/${prevLesson.id}`} className="group flex items-center gap-3">
+                        <Link href={`/courses/${params.id}/lessons/${prevLesson.id}`} className="group flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 rounded-xl" aria-label={`Ir a la lección anterior: ${prevLesson.title}`}>
                             <div className="w-10 h-10 rounded-xl glass border-black/10 dark:border-white/10 flex items-center justify-center group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-all text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white">
                                 <ChevronLeft size={20} />
                             </div>
@@ -663,11 +682,11 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                     </div>
 
                     {nextLesson ? (
-                        <Link href={`/courses/${params.id}/lessons/${nextLesson.id}`} className="btn-premium !py-3 !px-6 text-xs !shadow-none">
+                        <Link href={`/courses/${params.id}/lessons/${nextLesson.id}`} className="btn-premium !py-3 !px-6 text-xs !shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70" aria-label={`Ir a la siguiente lección: ${nextLesson.title}`}>
                             Siguiente Lección <ChevronRight size={18} />
                         </Link>
                     ) : (
-                        <Link href="/" className="btn-premium !bg-green-600 !py-3 !px-6 text-xs !shadow-none">
+                        <Link href="/" className="btn-premium !bg-green-600 !py-3 !px-6 text-xs !shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70" aria-label="Finalizar curso y volver al catálogo">
                             Finalizar Curso <CheckCircle2 size={18} />
                         </Link>
                     )}

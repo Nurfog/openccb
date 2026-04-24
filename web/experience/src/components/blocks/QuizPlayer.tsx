@@ -20,6 +20,7 @@ interface QuizPlayerProps {
     title?: string;
     quizData: {
         questions: QuizQuestion[];
+        test_type?: string;
         instructions?: string;
         passing_score?: number;
         total_points?: number;
@@ -56,6 +57,7 @@ export default function QuizPlayer({
     const [submitting, setSubmitting] = useState(false);
     const [score, setScore] = useState<number | null>(null);
     const [showHistory, setShowHistory] = useState(false);
+    const [a11yStatus, setA11yStatus] = useState("");
 
     const questions = quizData?.questions || [];
     const isSingleAttempt = maxAttempts === 1 || quizData.max_attempts === 1;
@@ -118,11 +120,13 @@ export default function QuizPlayer({
 
     const handleValidate = async () => {
         if (maxAttempts > 0 && attempts >= maxAttempts) return;
+        setA11yStatus("Enviando respuestas del cuestionario.");
 
         // Check if all questions are answered
         const allAnswered = questions.every(q => userAnswers[q.id] && userAnswers[q.id].length > 0);
         if (!allAnswered) {
             if (!confirm('Hay preguntas sin responder. ¿Estás seguro de que deseas enviar?')) {
+                setA11yStatus("Envío cancelado. Puedes completar las preguntas pendientes.");
                 return;
             }
         }
@@ -150,11 +154,9 @@ export default function QuizPlayer({
                 quiz_type: quizData.test_type || 'quiz',
             };
 
-            // Submit to LMS API
-            await lmsApi.submitScore(userId, courseId, lessonId, calculatedScore, answersMetadata);
-
             setSubmitted(true);
             setAttempts(prev => prev + 1);
+            setA11yStatus(`Prueba enviada correctamente. Puntuación ${scorePercent} por ciento.`);
 
             if (onAttempt) {
                 onAttempt(calculatedScore, answersMetadata);
@@ -164,6 +166,7 @@ export default function QuizPlayer({
             alert(`¡Prueba enviada! Tu puntuación: ${scorePercent}%`);
         } catch (error) {
             console.error('Error submitting quiz:', error);
+            setA11yStatus('Error al enviar la prueba.');
             alert('Error al enviar la prueba. Por favor, inténtalo de nuevo.');
         } finally {
             setSubmitting(false);
@@ -301,6 +304,7 @@ export default function QuizPlayer({
     // Normal quiz mode (not yet submitted or allows retry)
     return (
         <div className="space-y-8 notranslate" id={id} translate="no">
+            <p className="sr-only" aria-live="polite" aria-atomic="true">{a11yStatus}</p>
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
                     <h3 className="text-xl font-bold border-l-4 border-blue-600 dark:border-blue-500 pl-4 py-1 tracking-tight text-gray-900 dark:text-white uppercase tracking-widest text-[10px]">
@@ -345,7 +349,8 @@ export default function QuizPlayer({
                         >
                             {q.options.map((opt, oIdx) => {
                                 const isSelected = userAnswers[q.id]?.includes(oIdx);
-                                const isCorrect = q.correct?.includes(oIdx);
+                                const correctAnswers = Array.isArray(q.correct) ? q.correct : [q.correct];
+                                const isCorrect = correctAnswers.includes(oIdx);
                                 const isActuallyCorrect = isCorrect && isSelected;
                                 const isWrongSelection = !isCorrect && isSelected;
                                 const missedCorrect = isCorrect && !isSelected;
@@ -367,8 +372,9 @@ export default function QuizPlayer({
                                         role={q.type === 'multiple-select' ? 'checkbox' : 'radio'}
                                         aria-checked={isSelected}
                                         aria-disabled={submitted || submitting}
+                                        aria-label={`Opción ${oIdx + 1}: ${opt}`}
                                         onClick={() => handleAnswer(q.id, oIdx, q.type === 'multiple-select')}
-                                        className={`p-5 rounded-xl border transition-all text-left text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/50 disabled:cursor-not-allowed ${style}`}
+                                        className={`p-5 rounded-xl border transition-all text-left text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 disabled:cursor-not-allowed ${style}`}
                                         disabled={submitted || submitting}
                                     >
                                         <div className="flex items-center justify-between">
@@ -404,9 +410,10 @@ export default function QuizPlayer({
                     <button
                         onClick={handleValidate}
                         disabled={submitting || (maxAttempts > 0 && attempts >= maxAttempts)}
-                        className={`btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed ${
+                        className={`btn-premium w-full py-5 font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 ${
                             isSingleAttempt ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800' : ''
                         }`}
+                        aria-describedby={`quiz-attempts-${id}`}
                     >
                         {submitting ? 'Enviando...' : (
                             isSingleAttempt 
@@ -417,6 +424,9 @@ export default function QuizPlayer({
                         )}
                     </button>
                 )}
+                <p id={`quiz-attempts-${id}`} className="sr-only">
+                    Intentos usados: {attempts}. Máximo permitido: {maxAttempts > 0 ? maxAttempts : 'sin límite'}.
+                </p>
 
                 {submitted && score !== null && (
                     <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 dark:border-green-700 rounded-2xl p-6 text-center">
