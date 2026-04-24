@@ -251,6 +251,10 @@ async fn main() {
             post(handlers_ai_audit::review_ai_audit_log),
         )
         .route(
+            "/ai/audit/metrics",
+            get(handlers_ai_audit::get_ai_audit_metrics),
+        )
+        .route(
             "/ai/data-ethics/summary",
             get(handlers_data_ethics::get_data_ethics_summary),
         )

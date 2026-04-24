@@ -1,19 +1,27 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, BrainCircuit, Calendar, CheckCircle2, Filter, RefreshCw, ShieldAlert, X } from 'lucide-react';
-import { AiAuditItem, lmsApi } from '@/lib/api';
+import { AlertCircle, BarChart2, BrainCircuit, Calendar, CheckCircle2, Filter, RefreshCw, ShieldAlert, X } from 'lucide-react';
+import { AiAuditItem, AiAuditMetrics, lmsApi } from '@/lib/api';
 
 type ReviewFilter = 'all' | 'pending' | 'reviewed';
 
-// Todas las señales que el backend puede emitir
+// Todas las señales que el backend puede emitir (sincronizadas con handlers_ai_audit.rs)
 const ALL_SIGNALS = [
     'missing_rag_context',
     'high_output_tokens',
     'long_response',
     'absolute_claim_language',
     'citation_without_rag',
+    'knowledge_disclaimer',
+    'url_fabrication',
+    'sensitive_data_mention',
+    'high_certainty_no_rag',
+    'repeated_content',
 ] as const;
+
+// Señales de peso alto (score ponderado ≥ 2)
+const HIGH_WEIGHT_SIGNALS = new Set(['sensitive_data_mention', 'url_fabrication', 'citation_without_rag', 'knowledge_disclaimer']);
 
 type RiskSignal = (typeof ALL_SIGNALS)[number];
 
@@ -34,6 +42,10 @@ export default function AdminAiAuditPage() {
     const [loading, setLoading] = useState(true);
     const [workingId, setWorkingId] = useState<string | null>(null);
     const [notes, setNotes] = useState<Record<string, string>>({});
+
+    // Métricas de auditoría
+    const [metrics, setMetrics] = useState<AiAuditMetrics | null>(null);
+    const [metricsOpen, setMetricsOpen] = useState(false);
 
     // Filtros de estado
     const [filter, setFilter] = useState<ReviewFilter>('pending');
@@ -59,8 +71,18 @@ export default function AdminAiAuditPage() {
         }
     };
 
+    const loadMetrics = async () => {
+        try {
+            const m = await lmsApi.getAiAuditMetrics(30);
+            setMetrics(m);
+        } catch (err) {
+            console.error('Error loading AI audit metrics', err);
+        }
+    };
+
     useEffect(() => {
         loadData();
+        loadMetrics();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -103,6 +125,83 @@ export default function AdminAiAuditPage() {
 
     return (
         <div className="space-y-6">
+
+            {/* ── Panel de métricas (30 días) ─────────────────────────────── */}
+            {metrics && (
+                <section className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900">
+                    <button
+                        onClick={() => setMetricsOpen((o) => !o)}
+                        className="flex w-full items-center justify-between rounded-2xl p-4 text-left hover:bg-slate-50 dark:hover:bg-white/5"
+                    >
+                        <span className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-200">
+                            <BarChart2 size={16} className="text-indigo-500" />
+                            Métricas de riesgo (últimos 30 días)
+                        </span>
+                        <span className="text-xs font-semibold text-slate-400">
+                            {metricsOpen ? '▲ ocultar' : '▼ expandir'}
+                        </span>
+                    </button>
+
+                    {metricsOpen && (
+                        <div className="border-t border-slate-200 p-4 dark:border-white/10">
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 mb-4">
+                                <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
+                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Chats totales</p>
+                                    <p className="text-xl font-black text-slate-900 dark:text-white">{metrics.total_chat_logs.toLocaleString('es-ES')}</p>
+                                </div>
+                                <div className="rounded-lg bg-rose-50 p-3 dark:bg-rose-900/20">
+                                    <p className="text-xs font-bold uppercase tracking-wide text-rose-600 dark:text-rose-400">Con señales</p>
+                                    <p className="text-xl font-black text-rose-700 dark:text-rose-300">
+                                        {metrics.total_flagged.toLocaleString('es-ES')}
+                                        <span className="ml-1 text-sm font-semibold opacity-70">({metrics.flagged_pct.toFixed(1)}%)</span>
+                                    </p>
+                                </div>
+                                <div className="rounded-lg bg-emerald-50 p-3 dark:bg-emerald-900/20">
+                                    <p className="text-xs font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Revisados</p>
+                                    <p className="text-xl font-black text-emerald-700 dark:text-emerald-300">
+                                        {metrics.total_reviewed.toLocaleString('es-ES')}
+                                        <span className="ml-1 text-sm font-semibold opacity-70">({metrics.reviewed_pct.toFixed(1)}%)</span>
+                                    </p>
+                                </div>
+                                <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
+                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Distribución score</p>
+                                    <div className="mt-1 flex gap-1 text-xs font-bold">
+                                        <span className="rounded bg-amber-100 px-2 py-1 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Bajo {metrics.weighted_score_distribution.low}</span>
+                                        <span className="rounded bg-orange-100 px-2 py-1 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">Medio {metrics.weighted_score_distribution.medium}</span>
+                                        <span className="rounded bg-rose-100 px-2 py-1 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">Alto {metrics.weighted_score_distribution.high}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Ranking de señales */}
+                            <div>
+                                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Frecuencia por señal</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {Object.entries(metrics.signal_counts)
+                                        .sort(([, a], [, b]) => b - a)
+                                        .map(([signal, count]) => (
+                                            <span
+                                                key={signal}
+                                                className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${
+                                                    HIGH_WEIGHT_SIGNALS.has(signal)
+                                                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
+                                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                                                }`}
+                                            >
+                                                {formatSignal(signal)}
+                                                <span className="rounded-full bg-white/60 px-1 text-[10px] dark:bg-black/30">{count}</span>
+                                            </span>
+                                        ))}
+                                    {Object.keys(metrics.signal_counts).length === 0 && (
+                                        <span className="text-sm text-slate-400">Sin señales detectadas en los últimos 30 días.</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </section>
+            )}
+
             <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-slate-900">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-3">

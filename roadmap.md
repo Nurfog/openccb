@@ -91,7 +91,7 @@
 ## 🚀 Fases Estratégicas (Nuevas)
 
 ### Fase 32: IA de Moderación y Ética 🛡️
-- [x] **Auditoría de IA**: Sistema de validación para prevenir "halucinaciones" en el Tutor RAG. *(MVP backend + UI Studio: endpoints protegidos para listar logs de chat con señales de riesgo y marcar revisión humana en `ai_usage_logs.request_metadata`, con panel operativo en Admin.)*
+- [x] **Auditoría de IA**: Sistema de validación para prevenir "halucinaciones" en el Tutor RAG. *(MVP backend + UI Studio: endpoints protegidos para listar logs de chat con señales de riesgo y marcar revisión humana en `ai_usage_logs.request_metadata`, con panel operativo en Admin. Señales endurecidas a 10 reglas con score ponderado + endpoint `GET /ai/audit/metrics` con distribución de scores y ranking de señales.)*
 - [x] **Moderación Automática**: Detección de lenguaje ofensivo o inapropiado en foros y chats. *(MVP backend por diccionario en creación de hilos/respuestas de foro y mensajes de chat tutor/role-play).* 
 - [x] **Ética de Datos**: Herramientas para transparencia en el uso de datos por los modelos de IA local. *(MVP backend + UI Studio: endpoint protegido `/ai/data-ethics/summary` con métricas de uso, eventos recientes y campos almacenados; panel Admin en `/admin/data-ethics`.)*
 

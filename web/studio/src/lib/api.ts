@@ -1756,6 +1756,11 @@ export const lmsApi = {
             method: 'POST',
             body: JSON.stringify(payload)
         }, true),
+    getAiAuditMetrics: (days = 30): Promise<AiAuditMetrics> =>
+        apiFetch('/ai/audit/metrics', {
+            method: 'GET',
+            query: { days }
+        }, true),
     getAiDataEthicsSummary: (
         days = 30,
         limit = 40
@@ -1862,6 +1867,23 @@ export interface AiAuditListResponse {
     items: AiAuditItem[];
     limit: number;
     offset: number;
+}
+
+export interface AiAuditWeightedScoreDist {
+    low: number;    // score 1–2
+    medium: number; // score 3–5
+    high: number;   // score ≥ 6
+}
+
+export interface AiAuditMetrics {
+    days: number;
+    total_chat_logs: number;
+    total_flagged: number;
+    total_reviewed: number;
+    flagged_pct: number;
+    reviewed_pct: number;
+    signal_counts: Record<string, number>;
+    weighted_score_distribution: AiAuditWeightedScoreDist;
 }
 
 export interface AiDataEthicsEventItem {
