@@ -53,8 +53,12 @@ pub async fn org_extractor_middleware(
     .map_err(|_| StatusCode::UNAUTHORIZED)?
     .claims;
 
-    // Forzar el uso de la organización por defecto para arquitectura single-tenant
-    let org_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+    let org_id = req
+        .headers()
+        .get("x-organization-id")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| Uuid::parse_str(value).ok())
+        .unwrap_or(claims.org);
 
     // Insertamos el contexto y las claims en las extensiones de la petición.
     req.extensions_mut().insert(OrgContext { id: org_id });
@@ -91,6 +95,10 @@ where
         // Intentar obtener OrgContext del middleware
         if let Some(org_context) = parts.extensions.get::<OrgContext>() {
             return Ok(Org(org_context.clone()));
+        }
+
+        if let Some(claims) = parts.extensions.get::<Claims>() {
+            return Ok(Org(OrgContext { id: claims.org }));
         }
         
         // Fallback: usar org por defecto (single-tenant architecture)
