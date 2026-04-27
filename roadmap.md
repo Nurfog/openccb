@@ -111,13 +111,13 @@
 - [x] **OpenCCB Market**: Galería en Studio (`/admin/plugins`) con toggle habilitado/deshabilitado, registro de nuevos plugins y tarjetas con estado visual.
 
 ### Fase 36: LTI 1.3 Tool Consumer 🔗
-- [x] **Consumo de herramientas externas**: MVP implementado con `lti_external_tools` por curso, gestión en Studio (`/courses/[id]/lti-tools`) y bloque embebido `lti-tool` en Experience vía iframe sandbox.
-- [x] **Delegación de Calificaciones**: MVP implementado con endpoint público `POST /lti/tools/{tool_id}/grade-passback`, validación por `x-openccb-lti-secret`, registro de eventos y sincronización a `user_grades`.
+- [x] **Consumo de herramientas externas**: MVP implementado con `lti_external_tools` por curso, gestión en Studio (`/courses/[id]/lti-tools`), selector visual en editor de lecciones y bloque embebido `lti-tool` en Experience vía iframe sandbox.
+- [x] **Delegación de Calificaciones**: MVP implementado con endpoint público `POST /lti/tools/{tool_id}/grade-passback`, firma HMAC-SHA256 (`x-openccb-lti-signature` + `x-openccb-lti-timestamp`), registro de eventos y sincronización a `user_grades`.
 
 ---
 
 **Estado Actual**: Plataforma madura con IA generativa integrada, arquitectura Premium Single-Tenant, búsqueda semántica y monetización operativa.
 **Próximas Prioridades**:
-1. Endurecer seguridad de **passback LTI**: rotación de secretos, firma HMAC y/o OAuth2 AGS en lugar de shared secret plano.
-2. Añadir selector de **herramienta LTI** en editor de lecciones para generar bloques `lti-tool` sin JSON manual.
+1. Migrar passback LTI de HMAC custom a **OAuth2 AGS** (estándar IMS) manteniendo compatibilidad transitoria.
+2. Añadir **rotación/revocación de secretos** y auditoría de intentos fallidos de passback.
 3. Evolucionar **Pizarras Compartidas** de polling a WebSocket/SSE tras validar carga en producción.
