@@ -96,19 +96,19 @@
 - [x] **Ética de Datos**: Herramientas para transparencia en el uso de datos por los modelos de IA local. *(MVP backend + UI Studio: endpoint protegido `/ai/data-ethics/summary` con métricas de uso, eventos recientes y campos almacenados; panel Admin en `/admin/data-ethics`.)*
 
 ### Fase 33: Aprendizaje Colaborativo Síncrono 🤝
-- [ ] **Pizarras Compartidas**: Espacio de dibujo colaborativo integrado en lecciones.
+- [x] **Pizarras Compartidas**: Espacio de dibujo colaborativo integrado en lecciones. *(MVP completo: backend REST + UI Experience con polling, autosave debounce 1.5s, control de conflictos optimista `revision`/`409` y panel de resolución con diff local vs remoto.)*
 - [ ] **Edición Multiusuario**: Soporte para documentos compartidos en tiempo real (tipo Google Docs).
 - [ ] **Salas de Estudio**: Grupos efímeros para resolución de dudas grupales por video.
 
 ### Fase 34: Análisis Pedagógico Profundo 📊
-- [ ] **Métricas de Calidad**: Análisis automático de la efectividad de las lecciones generadas.
-- [ ] **Índice de Discriminación**: Estadísticas sobre qué preguntas de quiz discriminan mejor el conocimiento.
-- [ ] **Sugerencias Curriculares**: IA recomendando cambios en la estructura del curso basada en el rendimiento real.
+- [x] **Métricas de Calidad**: Análisis automático de la efectividad de las lecciones (completion_rate, failure_rate, abandonment, avg_attempts). *(Backend `GET /courses/{id}/pedagogical/quality-metrics` + UI Studio con barras proporcionales.)*
+- [x] **Índice de Discriminación**: Estadísticas sobre qué preguntas de quiz discriminan mejor el conocimiento. *(Backend `GET /courses/{id}/pedagogical/discrimination-index` con agrupación por `metadata.block_scores` + clasificación Excelente/Buena/Aceptable/Revisar.)*
+- [x] **Sugerencias Curriculares**: Reglas automáticas (5 tipos) recomendando cambios en la estructura del curso basada en rendimiento real. *(Backend `GET /courses/{id}/pedagogical/suggestions` + panel Studio con severidad alta/media/info/positivo.)*
 
 ### Fase 35: Ecosistema de Plugins 🔌
-- [ ] **Arquitectura Modular**: Sistema para que desarrolladores externos agreguen nuevos "Content Blocks".
-- [ ] **Soporte para Web Components**: Permitir la inclusión de herramientas interactivas externas de forma segura.
-- [ ] **OpenCCB Market**: Galería interna para descargar y habilitar extensiones.
+- [x] **Arquitectura Modular**: Tabla `org_plugins` con CRUD completo en `cms-service` (`GET /plugins`, `POST /plugins`, `PUT /plugins/{id}`, `DELETE /plugins/{id}`). Validación HTTPS obligatoria.
+- [x] **Soporte para Web Components**: Bloque `plugin` en Experience carga el componente en `<iframe sandbox>` seguro con postMessage para config; sin acceso al DOM de OpenCCB.
+- [x] **OpenCCB Market**: Galería en Studio (`/admin/plugins`) con toggle habilitado/deshabilitado, registro de nuevos plugins y tarjetas con estado visual.
 
 ### Fase 36: LTI 1.3 Tool Consumer 🔗
 - [ ] **Consumo de herramientas externas**: Capacidad de embeber laboratorios externos (ej: MATLAB, Labster) dentro de OpenCCB.
@@ -118,7 +118,6 @@
 
 **Estado Actual**: Plataforma madura con IA generativa integrada, arquitectura Premium Single-Tenant, búsqueda semántica y monetización operativa.
 **Próximas Prioridades**:
-1. Finalización de **Certificados y Progreso Real**.
-2. Despliegue de **Infraestructura SMTP** para comunicación global.
-3. Validación en producción de **Ética de Datos** (panel + endpoint).
-4. Endurecimiento de **señales de riesgo IA** (reglas + umbrales + métricas).
+1. Implementar **Ecosistema de Plugins** (Fase 35): tabla `course_plugins`, CRUD en Studio, renderizador seguro de Web Components en Experience.
+2. Evaluar paso de polling a **WebSocket/SSE** en Pizarras Compartidas una vez validado uso real.
+3. Extender el modelo colaborativo a **Edición Multiusuario** de documentos.

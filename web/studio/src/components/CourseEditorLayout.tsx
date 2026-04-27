@@ -24,7 +24,8 @@ type TabKey =
     | "team"
     | "peer-reviews"
     | "students"
-    | "sessions";
+    | "sessions"
+    | "pedagogical";
 
 interface CourseEditorLayoutProps {
     children: React.ReactNode;
@@ -114,6 +115,7 @@ export default function CourseEditorLayout({
             icon: TrendingUp,
             tabs: [
                 { key: "analytics", label: "Analíticas", icon: BarChart2, href: `/courses/${id}/analytics` },
+                { key: "pedagogical", label: "Análisis Pedagógico", icon: TrendingUp, href: `/courses/${id}/analytics/pedagogical` },
                 { key: "settings", label: "Configuración", icon: Settings, href: `/courses/${id}/settings` },
             ],
         },

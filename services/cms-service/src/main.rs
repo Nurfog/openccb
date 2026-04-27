@@ -15,6 +15,7 @@ mod handlers_question_bank;
 mod handlers_admin;
 mod handlers_embeddings;
 mod handlers_sam;
+mod handlers_plugins;
 mod webhooks;
 
 use axum::{
@@ -547,6 +548,19 @@ async fn main() {
         .route(
             "/admin/users/{user_id}/token-limit/check",
             get(handlers_admin::check_user_token_limit),
+        )
+        // Fase 35: Ecosistema de Plugins
+        .route(
+            "/plugins",
+            get(handlers_plugins::list_plugins).post(handlers_plugins::create_plugin),
+        )
+        .route(
+            "/plugins/enabled",
+            get(handlers_plugins::list_enabled_plugins),
+        )
+        .route(
+            "/plugins/{id}",
+            put(handlers_plugins::update_plugin).delete(handlers_plugins::delete_plugin),
         )
         .route_layer(middleware::from_fn(
             common::middleware::org_extractor_middleware,

@@ -1,6 +1,7 @@
 mod db_util;
 mod handlers;
 mod handlers_announcements;
+mod handlers_pedagogical;
 mod handlers_email;
 mod handlers_scorm;
 mod handlers_search;
@@ -161,6 +162,11 @@ async fn main() {
         .route("/courses/{id}/outline", get(handlers::get_course_outline))
         .route("/courses/{id}/progress-stats", get(handlers::get_student_progress_stats))
         .route("/lessons/{id}", get(handlers::get_lesson_content))
+        .route(
+            "/lessons/{id}/collaborative-canvas",
+            get(handlers::get_lesson_collaborative_canvas)
+                .put(handlers::update_lesson_collaborative_canvas),
+        )
         .route("/lessons/{id}/bookmark", post(handlers::toggle_bookmark))
         .route("/bookmarks", get(handlers::get_user_bookmarks))
         .route("/grades", post(handlers::submit_lesson_score))
@@ -257,6 +263,19 @@ async fn main() {
         .route(
             "/ai/data-ethics/summary",
             get(handlers_data_ethics::get_data_ethics_summary),
+        )
+        // Análisis Pedagógico Profundo (Fase 34)
+        .route(
+            "/courses/{id}/pedagogical/quality-metrics",
+            get(handlers_pedagogical::get_lesson_quality_metrics),
+        )
+        .route(
+            "/courses/{id}/pedagogical/discrimination-index",
+            get(handlers_pedagogical::get_quiz_discrimination_index),
+        )
+        .route(
+            "/courses/{id}/pedagogical/suggestions",
+            get(handlers_pedagogical::get_curricular_suggestions),
         )
         // Moderación humana para FAQ basada en chats de alumnos
         .route(

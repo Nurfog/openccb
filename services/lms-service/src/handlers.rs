@@ -1434,6 +1434,278 @@ pub async fn get_lesson_content(
     Ok(Json(lesson))
 }
 
+#[derive(Debug, Serialize)]
+pub struct CollaborativeCanvasResponse {
+    pub lesson_id: Uuid,
+    pub canvas_state: serde_json::Value,
+    pub revision: i64,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateCollaborativeCanvasPayload {
+    pub canvas_state: serde_json::Value,
+    pub expected_revision: Option<i64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UpdateCollaborativeCanvasResponse {
+    pub lesson_id: Uuid,
+    pub revision: i64,
+    pub updated_at: DateTime<Utc>,
+}
+
+pub async fn get_lesson_collaborative_canvas(
+    Org(org_ctx): Org,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<CollaborativeCanvasResponse>, StatusCode> {
+    let lesson_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM lessons WHERE id = $1 AND organization_id = $2)",
+    )
+    .bind(id)
+    .bind(org_ctx.id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!(
+            "get_lesson_collaborative_canvas: failed to validate lesson {} in org {}: {}",
+            id,
+            org_ctx.id,
+            e
+        );
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    if !lesson_exists {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    #[derive(sqlx::FromRow)]
+    struct CanvasRow {
+        canvas_state: serde_json::Value,
+        revision: i64,
+        updated_at: DateTime<Utc>,
+    }
+
+    let canvas = sqlx::query_as::<_, CanvasRow>(
+        r#"
+        SELECT canvas_state, revision, updated_at
+        FROM lesson_collaborative_canvases
+        WHERE lesson_id = $1 AND organization_id = $2
+        "#,
+    )
+    .bind(id)
+    .bind(org_ctx.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!(
+            "get_lesson_collaborative_canvas: failed to fetch canvas for lesson {}: {}",
+            id,
+            e
+        );
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let response = if let Some(canvas) = canvas {
+        CollaborativeCanvasResponse {
+            lesson_id: id,
+            canvas_state: canvas.canvas_state,
+            revision: canvas.revision,
+            updated_at: Some(canvas.updated_at),
+        }
+    } else {
+        CollaborativeCanvasResponse {
+            lesson_id: id,
+            canvas_state: json!({}),
+            revision: 0,
+            updated_at: None,
+        }
+    };
+
+    Ok(Json(response))
+}
+
+pub async fn update_lesson_collaborative_canvas(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<UpdateCollaborativeCanvasPayload>,
+) -> Result<Json<UpdateCollaborativeCanvasResponse>, (StatusCode, String)> {
+    let lesson_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM lessons WHERE id = $1 AND organization_id = $2)",
+    )
+    .bind(id)
+    .bind(org_ctx.id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!(
+            "update_lesson_collaborative_canvas: failed to validate lesson {} in org {}: {}",
+            id,
+            org_ctx.id,
+            e
+        );
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Error validando lección para canvas colaborativo".to_string(),
+        )
+    })?;
+
+    if !lesson_exists {
+        return Err((StatusCode::NOT_FOUND, "Lección no encontrada".to_string()));
+    }
+
+    if let Some(expected_revision) = payload.expected_revision {
+        #[derive(sqlx::FromRow)]
+        struct RevisionRow {
+            revision: i64,
+            updated_at: DateTime<Utc>,
+        }
+
+        let updated = sqlx::query_as::<_, RevisionRow>(
+            r#"
+            UPDATE lesson_collaborative_canvases
+            SET
+                canvas_state = $3,
+                updated_by = $4,
+                updated_at = NOW(),
+                revision = revision + 1
+            WHERE lesson_id = $1
+              AND organization_id = $2
+              AND revision = $5
+            RETURNING revision, updated_at
+            "#,
+        )
+        .bind(id)
+        .bind(org_ctx.id)
+        .bind(&payload.canvas_state)
+        .bind(claims.sub)
+        .bind(expected_revision)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                "update_lesson_collaborative_canvas: optimistic update failed for lesson {}: {}",
+                id,
+                e
+            );
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Error actualizando canvas colaborativo".to_string(),
+            )
+        })?;
+
+        if let Some(row) = updated {
+            return Ok(Json(UpdateCollaborativeCanvasResponse {
+                lesson_id: id,
+                revision: row.revision,
+                updated_at: row.updated_at,
+            }));
+        }
+
+        if expected_revision == 0 {
+            let inserted = sqlx::query_as::<_, RevisionRow>(
+                r#"
+                INSERT INTO lesson_collaborative_canvases (
+                    lesson_id,
+                    organization_id,
+                    canvas_state,
+                    updated_by,
+                    revision,
+                    updated_at
+                )
+                VALUES ($1, $2, $3, $4, 1, NOW())
+                ON CONFLICT (lesson_id) DO NOTHING
+                RETURNING revision, updated_at
+                "#,
+            )
+            .bind(id)
+            .bind(org_ctx.id)
+            .bind(&payload.canvas_state)
+            .bind(claims.sub)
+            .fetch_optional(&pool)
+            .await
+            .map_err(|e| {
+                tracing::error!(
+                    "update_lesson_collaborative_canvas: insert-on-zero failed for lesson {}: {}",
+                    id,
+                    e
+                );
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Error creando canvas colaborativo".to_string(),
+                )
+            })?;
+
+            if let Some(row) = inserted {
+                return Ok(Json(UpdateCollaborativeCanvasResponse {
+                    lesson_id: id,
+                    revision: row.revision,
+                    updated_at: row.updated_at,
+                }));
+            }
+        }
+
+        return Err((
+            StatusCode::CONFLICT,
+            "Conflicto de edición: el canvas fue actualizado por otro usuario. Recarga y vuelve a intentar.".to_string(),
+        ));
+    }
+
+    #[derive(sqlx::FromRow)]
+    struct RevisionRow {
+        revision: i64,
+        updated_at: DateTime<Utc>,
+    }
+
+    let row = sqlx::query_as::<_, RevisionRow>(
+        r#"
+        INSERT INTO lesson_collaborative_canvases (
+            lesson_id,
+            organization_id,
+            canvas_state,
+            updated_by,
+            revision,
+            updated_at
+        )
+        VALUES ($1, $2, $3, $4, 1, NOW())
+        ON CONFLICT (lesson_id)
+        DO UPDATE SET
+            canvas_state = EXCLUDED.canvas_state,
+            updated_by = EXCLUDED.updated_by,
+            updated_at = NOW(),
+            revision = lesson_collaborative_canvases.revision + 1
+        RETURNING revision, updated_at
+        "#,
+    )
+    .bind(id)
+    .bind(org_ctx.id)
+    .bind(&payload.canvas_state)
+    .bind(claims.sub)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!(
+            "update_lesson_collaborative_canvas: failed to upsert canvas for lesson {}: {}",
+            id,
+            e
+        );
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Error guardando canvas colaborativo".to_string(),
+        )
+    })?;
+
+    Ok(Json(UpdateCollaborativeCanvasResponse {
+        lesson_id: id,
+        revision: row.revision,
+        updated_at: row.updated_at,
+    }))
+}
+
 pub async fn get_user_enrollments(
     Org(org_ctx): Org,
     State(pool): State<PgPool>,

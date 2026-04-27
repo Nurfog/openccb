@@ -71,6 +71,11 @@ export default function BackgroundTasksPage() {
                                     style={{ width: `${progress}%` }}
                                 ></div>
                                 <div className="text-[10px] text-gray-400 mt-1 font-medium">{progress}% completo</div>
+                                {(task.processed_items > 0 || task.failed_items > 0) && (
+                                    <div className="text-[10px] text-gray-400 font-medium">
+                                        ✓ {task.processed_items} / ✗ {task.failed_items}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -79,7 +84,21 @@ export default function BackgroundTasksPage() {
                 return <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-semibold w-fit">Queued</span>;
             case 'failed':
             case 'error':
-                return <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-semibold w-fit">Failed</span>;
+                return (
+                    <div className="flex flex-col gap-1">
+                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-semibold w-fit">Failed</span>
+                        {task.error_message && (
+                            <div className="text-[10px] text-red-500 max-w-[180px] leading-tight" title={task.error_message}>
+                                {task.error_message.length > 60 ? task.error_message.slice(0, 60) + '…' : task.error_message}
+                            </div>
+                        )}
+                        {task.task_type !== 'lesson_transcription' && (task.processed_items > 0 || task.failed_items > 0) && (
+                            <div className="text-[10px] text-gray-400 font-medium">
+                                ✓ {task.processed_items} ok / ✗ {task.failed_items} error
+                            </div>
+                        )}
+                    </div>
+                );
             case 'completed':
                 return <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold w-fit">Completed</span>;
             case 'idle':
@@ -179,7 +198,17 @@ export default function BackgroundTasksPage() {
                                                     Retry
                                                 </button>
                                             )}
-                                            {task.task_type === 'lesson_transcription' && (
+                                            {(task.task_type === 'lesson_transcription' && (task.status === 'queued' || task.status === 'processing')) && (
+                                                <button
+                                                    onClick={() => handleCancel(task.id)}
+                                                    disabled={actionLoading === task.id}
+                                                    className="inline-flex items-center px-3 py-1.5 border border-red-200 text-xs font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 disabled:opacity-50"
+                                                >
+                                                    {actionLoading === task.id ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <XCircle className="w-3 h-3 mr-1" />}
+                                                    Cancel
+                                                </button>
+                                            )}
+                                            {(task.task_type === 'zip_rag_import' && (task.status === 'queued' || task.status === 'processing')) && (
                                                 <button
                                                     onClick={() => handleCancel(task.id)}
                                                     disabled={actionLoading === task.id}

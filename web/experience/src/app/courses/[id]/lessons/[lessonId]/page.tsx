@@ -22,10 +22,12 @@ import RolePlayingPlayer from "@/components/blocks/RolePlayingPlayer";
 import PeerReviewPlayer from "@/components/blocks/PeerReviewPlayer";
 import MermaidViewer from "@/components/blocks/MermaidViewer";
 import ScormPlayer from "@/components/blocks/ScormPlayer";
+import PluginBlock from "@/components/blocks/PluginBlock";
 import InteractiveTranscript from "@/components/InteractiveTranscript";
 import AITutor from "@/components/AITutor";
 import LessonLockedView from "@/components/LessonLockedView";
 import StudentNotes from "@/components/StudentNotes";
+import CollaborativeWhiteboard from "@/components/CollaborativeWhiteboard";
 import { ListMusic, StickyNote } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 export default function LessonPlayerPage({ params }: { params: { id: string, lessonId: string } }) {
@@ -522,6 +524,15 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                                         );
                                                     case 'mermaid':
                                                         return <MermaidViewer block={block} />;
+                                                    case 'plugin':
+                                                        return (
+                                                            <PluginBlock
+                                                                pluginId={block.id}
+                                                                name={block.title || 'Plugin'}
+                                                                componentUrl={block.component_url || ''}
+                                                                config={block.config as Record<string, unknown> | undefined}
+                                                            />
+                                                        );
                                                     case 'scorm':
                                                         return (
                                                             <ScormPlayer
@@ -608,6 +619,10 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                     )}
                                 </div>
                             )}
+
+                            <div className="pt-12 border-t border-black/5 dark:border-white/5 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                                <CollaborativeWhiteboard lessonId={params.lessonId} />
+                            </div>
                         </article>
                     </div>
 

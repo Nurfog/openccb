@@ -184,7 +184,7 @@ export interface QuizQuestion {
 
 export interface Block {
     id: string;
-    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'code' | 'hotspot' | 'memory-match' | 'document' | 'audio-response' | 'video_marker' | 'peer-review' | 'role-playing' | 'mermaid' | 'code-lab' | 'scorm';
+    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'code' | 'hotspot' | 'memory-match' | 'document' | 'audio-response' | 'video_marker' | 'peer-review' | 'role-playing' | 'mermaid' | 'code-lab' | 'scorm' | 'plugin';
     title: string;
     content?: string;
     url?: string;
@@ -228,6 +228,21 @@ export interface Block {
     // SCORM/xAPI fields
     launch_url?: string;
     metadata?: any;
+    // Plugin fields
+    component_url?: string;
+}
+
+export interface OrgPlugin {
+    id: string;
+    organization_id: string;
+    name: string;
+    description: string;
+    component_url: string;
+    icon_url: string | null;
+    config: Record<string, unknown>;
+    enabled: boolean;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface TrackXapiPayload {
@@ -293,6 +308,28 @@ export interface LessonDependency {
     prerequisite_lesson_id: string;
     min_score_percentage: number | null;
     created_at: string;
+}
+
+export interface CollaborativeCanvasState {
+    strokes?: Array<{
+        points: Array<{ x: number; y: number }>;
+        color?: string;
+        width?: number;
+    }>;
+    [key: string]: unknown;
+}
+
+export interface CollaborativeCanvas {
+    lesson_id: string;
+    canvas_state: CollaborativeCanvasState;
+    revision: number;
+    updated_at?: string | null;
+}
+
+export interface CollaborativeCanvasUpdateResult {
+    lesson_id: string;
+    revision: number;
+    updated_at: string;
 }
 
 export interface UserGrade {
@@ -846,6 +883,24 @@ export const lmsApi = {
         return apiFetch(`/lessons/${id}`);
     },
 
+    async getLessonCollaborativeCanvas(lessonId: string): Promise<CollaborativeCanvas> {
+        return apiFetch(`/lessons/${lessonId}/collaborative-canvas`);
+    },
+
+    async updateLessonCollaborativeCanvas(
+        lessonId: string,
+        canvasState: CollaborativeCanvasState,
+        expectedRevision?: number
+    ): Promise<CollaborativeCanvasUpdateResult> {
+        return apiFetch(`/lessons/${lessonId}/collaborative-canvas`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                canvas_state: canvasState,
+                expected_revision: expectedRevision,
+            })
+        });
+    },
+
     async register(payload: AuthPayload): Promise<AuthResponse> {
         return apiFetch('/auth/register', {
             method: 'POST',
@@ -1278,5 +1333,10 @@ export const lmsApi = {
     },
     async verifyCertificate(code: string): Promise<any> {
         return apiFetch(`/certificates/verify/${code}`);
-    }
+    },
+
+    // Fase 35: Plugins
+    getEnabledPlugins(): Promise<OrgPlugin[]> {
+        return apiFetch('/plugins/enabled', {}, true);
+    },
 };

@@ -15,9 +15,12 @@ pub struct BackgroundTask {
     pub id: Uuid,
     pub title: String,
     pub course_title: Option<String>,
-    pub task_type: String, // 'transcription'
+    pub task_type: String,
     pub status: String,
     pub progress: i32,
+    pub processed_items: i64,
+    pub failed_items: i64,
+    pub error_message: Option<String>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -25,7 +28,8 @@ pub async fn get_background_tasks(
     State(pool): State<PgPool>,
 ) -> Result<Json<Vec<BackgroundTask>>, (StatusCode, String)> {
     let query = r#"
-        SELECT id, title, course_title, task_type, status, progress, updated_at
+        SELECT id, title, course_title, task_type, status, progress,
+               processed_items, failed_items, error_message, updated_at
         FROM (
             SELECT
                 l.id,
@@ -34,6 +38,9 @@ pub async fn get_background_tasks(
                 'lesson_transcription' as task_type,
                 l.transcription_status as status,
                 0 as progress,
+                0::bigint as processed_items,
+                0::bigint as failed_items,
+                NULL::text as error_message,
                 l.updated_at
             FROM lessons l
             JOIN modules m ON l.module_id = m.id
@@ -49,6 +56,9 @@ pub async fn get_background_tasks(
                 t.task_type,
                 t.status,
                 t.progress,
+                t.processed_items::bigint,
+                t.failed_items::bigint,
+                t.error_message,
                 t.updated_at
             FROM background_tasks t
             WHERE t.task_type = 'zip_rag_import'
@@ -289,13 +299,39 @@ pub async fn cancel_task(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    // Only cancel transcription in lessons
-    let _ = sqlx::query(
-        "UPDATE lessons SET transcription_status = 'idle' WHERE id = $1"
+    // Try to cancel a transcription lesson first
+    let lesson_result = sqlx::query(
+        "UPDATE lessons SET transcription_status = 'idle' WHERE id = $1 AND transcription_status IN ('queued', 'processing')"
     )
     .bind(id)
     .execute(&pool)
-    .await;
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    Ok(StatusCode::NO_CONTENT)
+    if lesson_result.rows_affected() > 0 {
+        return Ok(StatusCode::NO_CONTENT);
+    }
+
+    // Try to cancel a zip_rag_import background task
+    let task_result = sqlx::query(
+        r#"
+        UPDATE background_tasks
+        SET status = 'failed',
+            error_message = 'Cancelado manualmente',
+            updated_at = NOW()
+        WHERE id = $1
+          AND task_type = 'zip_rag_import'
+          AND status IN ('queued', 'processing')
+        "#
+    )
+    .bind(id)
+    .execute(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if task_result.rows_affected() > 0 {
+        return Ok(StatusCode::NO_CONTENT);
+    }
+
+    Ok(StatusCode::NOT_FOUND)
 }

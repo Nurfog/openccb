@@ -672,6 +672,47 @@ export interface CourseAnalytics {
     }[];
 }
 
+// Análisis Pedagógico Profundo (Fase 34)
+export interface LessonQualityMetric {
+    lesson_id: string;
+    lesson_title: string;
+    position: number;
+    completion_rate: number;
+    avg_attempts: number;
+    avg_score: number;
+    failure_rate: number;
+    abandonment_count: number;
+}
+export interface CourseQualityMetrics {
+    course_id: string;
+    enrolled: number;
+    lessons: LessonQualityMetric[];
+}
+export interface QuizDiscriminationItem {
+    lesson_id: string;
+    lesson_title: string;
+    block_id: string;
+    discrimination_index: number;
+    facility_index: number;
+    sample_size: number;
+}
+export interface CourseDiscriminationReport {
+    course_id: string;
+    items: QuizDiscriminationItem[];
+}
+export interface CurricularSuggestion {
+    lesson_id: string;
+    lesson_title: string;
+    kind: string;
+    message: string;
+    severity: string;
+}
+export interface CurricularSuggestionsReport {
+    course_id: string;
+    suggestions: CurricularSuggestion[];
+}
+
+
 export interface CohortData {
     period: string;
     count: number;
@@ -1769,6 +1810,24 @@ export const lmsApi = {
             method: 'GET',
             query: { days, limit }
         }, true),
+
+    // Análisis Pedagógico Profundo (Fase 34)
+    getCourseQualityMetrics: (courseId: string): Promise<CourseQualityMetrics> =>
+        apiFetch(`/courses/${courseId}/pedagogical/quality-metrics`, {}, true),
+    getCourseDiscriminationIndex: (courseId: string): Promise<CourseDiscriminationReport> =>
+        apiFetch(`/courses/${courseId}/pedagogical/discrimination-index`, {}, true),
+    getCourseSuggestions: (courseId: string): Promise<CurricularSuggestionsReport> =>
+        apiFetch(`/courses/${courseId}/pedagogical/suggestions`, {}, true),
+
+    // Fase 35: Ecosistema de Plugins
+    listPlugins: (): Promise<OrgPlugin[]> =>
+        apiFetch('/plugins', {}, true),
+    createPlugin: (payload: CreatePluginPayload): Promise<OrgPlugin> =>
+        apiFetch('/plugins', { method: 'POST', body: JSON.stringify(payload) }, true),
+    updatePlugin: (id: string, payload: UpdatePluginPayload): Promise<OrgPlugin> =>
+        apiFetch(`/plugins/${id}`, { method: 'PUT', body: JSON.stringify(payload) }, true),
+    deletePlugin: (id: string): Promise<void> =>
+        apiFetch(`/plugins/${id}`, { method: 'DELETE' }, true),
 };
 
 export interface Meeting {
@@ -1916,6 +1975,35 @@ export interface AiDataEthicsSummaryResponse {
     events: AiDataEthicsEventItem[];
 }
 
+// Fase 35: Ecosistema de Plugins
+export interface OrgPlugin {
+    id: string;
+    organization_id: string;
+    name: string;
+    description: string;
+    component_url: string;
+    icon_url: string | null;
+    config: Record<string, unknown>;
+    enabled: boolean;
+    created_at: string;
+    updated_at: string;
+}
+export interface CreatePluginPayload {
+    name: string;
+    description?: string;
+    component_url: string;
+    icon_url?: string;
+    config?: Record<string, unknown>;
+}
+export interface UpdatePluginPayload {
+    name?: string;
+    description?: string;
+    component_url?: string;
+    icon_url?: string;
+    config?: Record<string, unknown>;
+    enabled?: boolean;
+}
+
 export interface LtiDeepLinkingContentItem {
     type: 'ltiResourceLink';
     title?: string;
@@ -1942,6 +2030,9 @@ export interface BackgroundTask {
     task_type: 'lesson_transcription' | 'lesson_image' | 'course_image' | 'zip_rag_import';
     status: 'idle' | 'queued' | 'processing' | 'failed' | 'completed' | 'error';
     progress: number;
+    processed_items: number;
+    failed_items: number;
+    error_message?: string;
     updated_at: string;
 }
 
