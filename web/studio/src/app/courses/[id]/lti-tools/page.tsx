@@ -16,6 +16,9 @@ import {
     ToggleLeft,
     ToggleRight,
     ExternalLink,
+    KeyRound,
+    Copy,
+    CheckCheck,
 } from "lucide-react";
 
 export default function CourseLtiToolsPage() {
@@ -30,6 +33,12 @@ export default function CourseLtiToolsPage() {
         shared_secret: "",
         enabled: true,
     });
+
+    // Rotación de secreto
+    const [rotateModal, setRotateModal] = useState<{ toolId: string; toolName: string } | null>(null);
+    const [rotatingId, setRotatingId] = useState<string | null>(null);
+    const [newSecret, setNewSecret] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
 
     const loadTools = useCallback(async () => {
         setLoading(true);
@@ -86,8 +95,104 @@ export default function CourseLtiToolsPage() {
         }
     };
 
+    const confirmRotate = async () => {
+        if (!rotateModal) return;
+        setRotatingId(rotateModal.toolId);
+        setNewSecret(null);
+        setCopied(false);
+        try {
+            const result = await lmsApi.rotateCourseLtiToolSecret(id, rotateModal.toolId);
+            setNewSecret(result.new_secret);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "No se pudo rotar el secreto");
+            setRotateModal(null);
+        } finally {
+            setRotatingId(null);
+        }
+    };
+
+    const closeRotateModal = () => {
+        setRotateModal(null);
+        setNewSecret(null);
+        setCopied(false);
+    };
+
+    const copySecret = () => {
+        if (!newSecret) return;
+        void navigator.clipboard.writeText(newSecret);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+    };
+
     return (
         <CourseEditorLayout activeTab="lti-tools" pageTitle="Herramientas LTI" pageDescription="Configura laboratorios externos y su passback de notas.">
+            {/* Modal de rotación de secreto */}
+            {rotateModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-black/10 dark:border-white/10 shadow-2xl p-6 space-y-4">
+                        <h2 className="text-sm font-black flex items-center gap-2">
+                            <KeyRound className="w-4 h-4 text-amber-600" />
+                            Rotar secreto — {rotateModal.toolName}
+                        </h2>
+
+                        {!newSecret ? (
+                            <>
+                                <p className="text-xs text-black/60 dark:text-white/60">
+                                    Se generará un nuevo secreto aleatorio de 32 caracteres. El secreto actual dejará de funcionar inmediatamente. <strong>Actualiza tu herramienta LTI antes de confirmar.</strong>
+                                </p>
+                                <div className="flex gap-2 justify-end">
+                                    <button
+                                        onClick={closeRotateModal}
+                                        className="px-4 py-2 rounded-lg text-sm border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/10"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={() => void confirmRotate()}
+                                        disabled={rotatingId !== null}
+                                        className="px-4 py-2 rounded-lg text-sm bg-amber-500 text-white font-semibold hover:bg-amber-600 disabled:opacity-50"
+                                    >
+                                        {rotatingId ? "Rotando..." : "Confirmar rotación"}
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 p-4 space-y-2">
+                                    <p className="text-xs font-black text-green-800 dark:text-green-300">¡Secreto rotado exitosamente!</p>
+                                    <p className="text-[11px] text-green-700 dark:text-green-400">
+                                        Copia este secreto ahora. <strong>No se volverá a mostrar.</strong>
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <code className="flex-1 rounded-lg bg-white dark:bg-black border border-black/10 dark:border-white/10 px-3 py-2 text-xs font-mono break-all">
+                                            {newSecret}
+                                        </code>
+                                        <button
+                                            onClick={copySecret}
+                                            className="p-2 rounded-lg border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/10 shrink-0"
+                                            title="Copiar"
+                                        >
+                                            {copied ? (
+                                                <CheckCheck className="w-4 h-4 text-green-600" />
+                                            ) : (
+                                                <Copy className="w-4 h-4" />
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex justify-end">
+                                    <button
+                                        onClick={closeRotateModal}
+                                        className="px-4 py-2 rounded-lg text-sm bg-black text-white dark:bg-white dark:text-black font-semibold"
+                                    >
+                                        Cerrar
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
             <div className="space-y-6">
                 <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 p-5">
                     <div className="flex items-center justify-between mb-4">
@@ -171,6 +276,13 @@ export default function CourseLtiToolsPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setRotateModal({ toolId: tool.id, toolName: tool.name })}
+                                        className="p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                                        title="Rotar secreto"
+                                    >
+                                        <KeyRound className="w-4 h-4 text-amber-600" />
+                                    </button>
                                     <button
                                         onClick={() => void toggleTool(tool)}
                                         className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10"

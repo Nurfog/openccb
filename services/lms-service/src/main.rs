@@ -168,6 +168,10 @@ async fn main() {
             get(handlers::get_lesson_collaborative_canvas)
                 .put(handlers::update_lesson_collaborative_canvas),
         )
+        .route(
+            "/lessons/{id}/collaborative-canvas/stream",
+            get(handlers::stream_lesson_collaborative_canvas),
+        )
         .route("/lessons/{id}/bookmark", post(handlers::toggle_bookmark))
         .route("/bookmarks", get(handlers::get_user_bookmarks))
         .route("/grades", post(handlers::submit_lesson_score))
@@ -209,6 +213,10 @@ async fn main() {
             "/courses/{id}/lti-tools/{tool_id}",
             put(handlers_lti_consumer::update_course_lti_tool)
                 .delete(handlers_lti_consumer::delete_course_lti_tool),
+        )
+        .route(
+            "/courses/{id}/lti-tools/{tool_id}/rotate-secret",
+            post(handlers_lti_consumer::rotate_lti_tool_secret),
         )
         // Portafolio e insignias (Badges)
         .route("/profile/{user_id}", get(portfolio::get_public_profile))

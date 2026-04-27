@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import { lmsApi, CollaborativeCanvasState } from "@/lib/api";
+import { lmsApi, getLmsApiUrl, CollaborativeCanvasState } from "@/lib/api";
 import { AlertTriangle, CheckCircle, Loader2, RefreshCw, Save, Trash2 } from "lucide-react";
 
 type ConflictInfo = {
@@ -218,23 +218,42 @@ export default function CollaborativeWhiteboard({ lessonId }: Props) {
     }, [dirty, loading, saveCanvas, saving, strokes]);
 
     useEffect(() => {
-        const interval = setInterval(async () => {
+        const base = getLmsApiUrl();
+        // getToken no es exportada; leemos directamente de sessionStorage/localStorage
+        const token =
+            (typeof window !== "undefined" &&
+                (sessionStorage.getItem("preview_token") || localStorage.getItem("experience_token"))) ||
+            "";
+
+        const url = `${base}/lessons/${lessonId}/collaborative-canvas/stream${token ? `?preview_token=${encodeURIComponent(token)}` : ""}`;
+        const es = new EventSource(url);
+
+        es.onmessage = (ev) => {
             if (dirty || isDrawing.current) return;
             try {
-                const data = await lmsApi.getLessonCollaborativeCanvas(lessonId);
-                const serverStamp = data.updated_at || null;
-                if (serverStamp !== lastSavedAt) {
+                const data = JSON.parse(ev.data as string) as {
+                    revision: number;
+                    canvas_state: CollaborativeCanvasState;
+                    updated_at: string;
+                };
+                if (data.revision !== revision) {
                     setStrokes(toStrokeArray(data.canvas_state || DEFAULT_CANVAS));
-                    setLastSavedAt(serverStamp);
-                    setRevision(data.revision || 0);
+                    setRevision(data.revision);
+                    setLastSavedAt(data.updated_at);
                 }
-            } catch (e) {
-                console.error("Polling collaborative canvas failed", e);
+            } catch {
+                // Ignorar eventos malformados
             }
-        }, 5000);
+        };
 
-        return () => clearInterval(interval);
-    }, [dirty, lastSavedAt, lessonId]);
+        es.onerror = () => {
+            // EventSource reintenta automáticamente; no mostramos error al usuario
+        };
+
+        return () => {
+            es.close();
+        };
+    }, [dirty, lessonId, revision]);
 
     return (
         <section className="space-y-4 rounded-3xl border border-black/10 dark:border-white/10 bg-white dark:bg-black/20 p-5">

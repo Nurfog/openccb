@@ -1841,6 +1841,8 @@ export const lmsApi = {
         apiFetch(`/courses/${courseId}/lti-tools/${toolId}`, { method: 'PUT', body: JSON.stringify(payload) }, true),
     deleteCourseLtiTool: (courseId: string, toolId: string): Promise<void> =>
         apiFetch(`/courses/${courseId}/lti-tools/${toolId}`, { method: 'DELETE' }, true),
+    rotateCourseLtiToolSecret: (courseId: string, toolId: string): Promise<{ tool_id: string; new_secret: string; rotated_at: string }> =>
+        apiFetch(`/courses/${courseId}/lti-tools/${toolId}/rotate-secret`, { method: 'POST' }, true),
 };
 
 export interface Meeting {

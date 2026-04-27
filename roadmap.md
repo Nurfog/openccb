@@ -117,7 +117,12 @@
 ---
 
 **Estado Actual**: Plataforma madura con IA generativa integrada, arquitectura Premium Single-Tenant, búsqueda semántica y monetización operativa.
+
+### Fase 37: Tiempo Real y Seguridad Operacional ⚡
+- [x] **SSE para Pizarras Colaborativas**: Reemplazado polling de 5s por `EventSource` en `CollaborativeWhiteboard.tsx`. Endpoint `GET /lessons/{id}/collaborative-canvas/stream` en `lms-service` usa canal `tokio::sync::mpsc` + `ReceiverStream`; el servidor consulta la DB cada 2s y emite eventos SSE solo cuando cambia la `revision`. El cliente cierra la conexión al desmontar el componente.
+- [x] **Rotación de Secretos LTI**: Endpoint `POST /courses/{id}/lti-tools/{tool_id}/rotate-secret` genera un nuevo secreto alfanumérico de 32 chars, actualiza la DB y lo retorna una sola vez. UI en Studio (`/courses/[id]/lti-tools`) con botón 🔑 por herramienta, modal de confirmación de riesgo, y panel de copia-única del nuevo secreto con botón clipboard.
+
 **Próximas Prioridades**:
 1. Migrar passback LTI de HMAC custom a **OAuth2 AGS** (estándar IMS) manteniendo compatibilidad transitoria.
-2. Añadir **rotación/revocación de secretos** y auditoría de intentos fallidos de passback.
-3. Evolucionar **Pizarras Compartidas** de polling a WebSocket/SSE tras validar carga en producción.
+2. **Edición multiusuario** de documentos (tipo Google Docs) para Fase 33.
+3. **Salas de Estudio** — grupos efímeros por video para resolución de dudas grupales.

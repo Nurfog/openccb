@@ -4,6 +4,7 @@ use axum::{
     http::{HeaderMap, header::AUTHORIZATION},
     http::StatusCode,
     response::IntoResponse,
+    response::sse::{Event, KeepAlive, Sse},
     Extension,
 };
 use aws_config::BehaviorVersion;
@@ -4705,4 +4706,79 @@ fn extract_block_content(metadata: &Option<serde_json::Value>) -> String {
         }
     }
     block_content
+}
+
+// ─── SSE: Pizarra Colaborativa en Tiempo Real (Fase 37) ──────────────────────
+
+pub async fn stream_lesson_collaborative_canvas(
+    Org(org_ctx): Org,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, StatusCode> {
+    use std::convert::Infallible;
+    use tokio_stream::wrappers::ReceiverStream;
+
+    let lesson_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM lessons WHERE id = $1 AND organization_id = $2)",
+    )
+    .bind(id)
+    .bind(org_ctx.id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("stream_lesson_collaborative_canvas: lesson check failed: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    if !lesson_exists {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    let (tx, rx) = tokio::sync::mpsc::channel::<Result<Event, Infallible>>(16);
+
+    tokio::spawn(async move {
+        #[derive(sqlx::FromRow)]
+        struct CanvasRow {
+            canvas_state: serde_json::Value,
+            revision: i64,
+            updated_at: DateTime<Utc>,
+        }
+
+        let mut last_revision: i64 = -1;
+
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+
+            let result = sqlx::query_as::<_, CanvasRow>(
+                "SELECT canvas_state, revision, updated_at FROM lesson_collaborative_canvases WHERE lesson_id = $1 AND organization_id = $2",
+            )
+            .bind(id)
+            .bind(org_ctx.id)
+            .fetch_optional(&pool)
+            .await;
+
+            match result {
+                Ok(Some(row)) if row.revision != last_revision => {
+                    last_revision = row.revision;
+                    let payload = serde_json::json!({
+                        "lesson_id": id,
+                        "canvas_state": row.canvas_state,
+                        "revision": row.revision,
+                        "updated_at": row.updated_at.to_rfc3339(),
+                    });
+                    if tx.send(Ok(Event::default().data(payload.to_string()))).await.is_err() {
+                        break; // Cliente desconectado
+                    }
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    tracing::error!("stream_lesson_collaborative_canvas: poll error: {}", e);
+                    let _ = tx.send(Ok(Event::default().event("error").data("poll_error"))).await;
+                }
+            }
+        }
+    });
+
+    Ok(Sse::new(ReceiverStream::new(rx))
+        .keep_alive(KeepAlive::default()))
 }

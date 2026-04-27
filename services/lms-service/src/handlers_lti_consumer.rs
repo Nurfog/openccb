@@ -430,3 +430,66 @@ pub async fn lti_grade_passback(
         normalized_score: normalized,
     }))
 }
+
+// ─── Rotación de Secreto LTI (Fase 37) ───────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct RotateSecretResponse {
+    pub tool_id: Uuid,
+    pub new_secret: String,
+    pub rotated_at: chrono::DateTime<chrono::Utc>,
+}
+
+pub async fn rotate_lti_tool_secret(
+    Org(org_ctx): Org,
+    _claims: Claims,
+    State(pool): State<PgPool>,
+    Path((course_id, tool_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<RotateSecretResponse>, (StatusCode, String)> {
+    use rand::Rng;
+
+    // Verificar que la herramienta pertenece al curso y organización
+    let tool_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM lti_external_tools WHERE id = $1 AND course_id = $2 AND organization_id = $3)",
+    )
+    .bind(tool_id)
+    .bind(course_id)
+    .bind(org_ctx.id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if !tool_exists {
+        return Err((StatusCode::NOT_FOUND, "Herramienta LTI no encontrada".to_string()));
+    }
+
+    // Generar nuevo secreto aleatorio de 32 caracteres alfanuméricos
+    let new_secret: String = rand::thread_rng()
+        .sample_iter(&rand::distributions::Alphanumeric)
+        .take(32)
+        .map(char::from)
+        .collect();
+
+    let now = chrono::Utc::now();
+
+    sqlx::query(
+        "UPDATE lti_external_tools SET shared_secret = $1, updated_at = $2 WHERE id = $3",
+    )
+    .bind(&new_secret)
+    .bind(now)
+    .bind(tool_id)
+    .execute(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    tracing::info!(
+        "rotate_lti_tool_secret: rotated secret for tool {} in course {} org {}",
+        tool_id, course_id, org_ctx.id
+    );
+
+    Ok(Json(RotateSecretResponse {
+        tool_id,
+        new_secret,
+        rotated_at: now,
+    }))
+}
