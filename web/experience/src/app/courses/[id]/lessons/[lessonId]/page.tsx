@@ -44,6 +44,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
     const [allGrades, setAllGrades] = useState<UserGrade[]>([]);
     const [isBookmarked, setIsBookmarked] = useState(false);
     const { user } = useAuth();
+    const userId = user?.id ?? null;
 
     useEffect(() => {
         const fetchAll = async () => {
@@ -55,9 +56,9 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                 setLesson(lessonData);
                 setCourse({ ...outlineData.course, modules: outlineData.modules });
 
-                if (user) {
+                if (userId) {
                     const [grades, bookmarks] = await Promise.all([
-                        lmsApi.getUserGrades(user.id, params.id),
+                        lmsApi.getUserGrades(userId, params.id),
                         lmsApi.getBookmarks(params.id)
                     ]);
                     setAllGrades(grades);
@@ -72,7 +73,7 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
             }
         };
         fetchAll();
-    }, [params.id, params.lessonId, user]);
+    }, [params.id, params.lessonId, userId]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;

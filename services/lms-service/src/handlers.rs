@@ -4884,7 +4884,16 @@ pub async fn get_lesson_collaborative_doc(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!(
+            "get_lesson_collaborative_doc: failed to fetch doc for lesson {} org {}: {}",
+            id,
+            org_ctx.id,
+            e
+        );
+        StatusCode::INTERNAL_SERVER_ERROR
+    })
+    .unwrap_or(None);
 
     let doc = row.unwrap_or(DocRow {
         content: String::new(),
@@ -4967,9 +4976,16 @@ pub async fn update_lesson_collaborative_doc(
     if existing.is_none() && payload.base_revision == 0 {
         // Primer guardado
         let course_id = sqlx::query_scalar::<_, Uuid>(
-            "SELECT course_id FROM lessons WHERE id = $1",
+            r#"
+            SELECT m.course_id
+            FROM lessons l
+            JOIN modules m ON m.id = l.module_id
+            JOIN courses c ON c.id = m.course_id
+            WHERE l.id = $1 AND c.organization_id = $2
+            "#,
         )
         .bind(id)
+        .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;

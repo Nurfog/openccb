@@ -586,7 +586,7 @@ export interface UpdateAnnouncementPayload {
 
 
 
-const getToken = () => {
+export const getToken = () => {
     if (typeof window === 'undefined') return null;
 
     // Check for preview token in URL

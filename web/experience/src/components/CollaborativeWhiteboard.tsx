@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import { lmsApi, getLmsApiUrl, CollaborativeCanvasState } from "@/lib/api";
+import { lmsApi, getLmsApiUrl, getToken, CollaborativeCanvasState } from "@/lib/api";
 import { AlertTriangle, CheckCircle, Loader2, RefreshCw, Save, Trash2 } from "lucide-react";
 
 type ConflictInfo = {
@@ -61,6 +61,16 @@ export default function CollaborativeWhiteboard({ lessonId }: Props) {
     const [conflict, setConflict] = useState<ConflictInfo | null>(null);
 
     const isDrawing = useRef(false);
+    const dirtyRef = useRef(false);
+    const revisionRef = useRef(0);
+
+    useEffect(() => {
+        dirtyRef.current = dirty;
+    }, [dirty]);
+
+    useEffect(() => {
+        revisionRef.current = revision;
+    }, [revision]);
 
     const allStrokes = useMemo(() => {
         return draftStroke ? [...strokes, draftStroke] : strokes;
@@ -219,24 +229,20 @@ export default function CollaborativeWhiteboard({ lessonId }: Props) {
 
     useEffect(() => {
         const base = getLmsApiUrl();
-        // getToken no es exportada; leemos directamente de sessionStorage/localStorage
-        const token =
-            (typeof window !== "undefined" &&
-                (sessionStorage.getItem("preview_token") || localStorage.getItem("experience_token"))) ||
-            "";
+        const token = getToken() || "";
 
         const url = `${base}/lessons/${lessonId}/collaborative-canvas/stream${token ? `?preview_token=${encodeURIComponent(token)}` : ""}`;
         const es = new EventSource(url);
 
         es.onmessage = (ev) => {
-            if (dirty || isDrawing.current) return;
+            if (dirtyRef.current || isDrawing.current) return;
             try {
                 const data = JSON.parse(ev.data as string) as {
                     revision: number;
                     canvas_state: CollaborativeCanvasState;
                     updated_at: string;
                 };
-                if (data.revision !== revision) {
+                if (data.revision !== revisionRef.current) {
                     setStrokes(toStrokeArray(data.canvas_state || DEFAULT_CANVAS));
                     setRevision(data.revision);
                     setLastSavedAt(data.updated_at);
@@ -253,7 +259,7 @@ export default function CollaborativeWhiteboard({ lessonId }: Props) {
         return () => {
             es.close();
         };
-    }, [dirty, lessonId, revision]);
+    }, [lessonId]);
 
     return (
         <section className="space-y-4 rounded-3xl border border-black/10 dark:border-white/10 bg-white dark:bg-black/20 p-5">

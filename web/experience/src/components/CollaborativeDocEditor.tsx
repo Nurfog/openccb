@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { lmsApi, getLmsApiUrl, CollaborativeDoc, UpdateCollaborativeDocResponse } from "@/lib/api";
+import { lmsApi, getLmsApiUrl, getToken, CollaborativeDoc, UpdateCollaborativeDocResponse } from "@/lib/api";
 import {
     AlertTriangle,
     CheckCircle,
@@ -50,11 +50,9 @@ export default function CollaborativeDocEditor({ lessonId }: Props) {
 
     // SSE: escuchar cambios remotos
     useEffect(() => {
-        const token = typeof window !== "undefined"
-            ? localStorage.getItem("lms_token") ?? sessionStorage.getItem("lms_token") ?? ""
-            : "";
+        const token = getToken() || "";
         const baseUrl = getLmsApiUrl();
-        const url = `${baseUrl}/lessons/${lessonId}/collaborative-doc/stream?preview_token=${encodeURIComponent(token)}`;
+        const url = `${baseUrl}/lessons/${lessonId}/collaborative-doc/stream${token ? `?preview_token=${encodeURIComponent(token)}` : ""}`;
 
         const es = new EventSource(url);
         sseRef.current = es;

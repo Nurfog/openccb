@@ -144,8 +144,10 @@ async fn main() {
     use std::sync::Arc;
 
     let mut governor_conf = GovernorConfigBuilder::default()
-        .const_per_second(10)
-        .const_burst_size(50)
+        // La vista de lecciones abre varias solicitudes concurrentes + 2 streams SSE.
+        // Con límites muy bajos se generan 429 al navegar entre lecciones.
+        .const_per_second(80)
+        .const_burst_size(240)
         .key_extractor(SmartIpKeyExtractor);
 
     let governor_conf = Arc::new(governor_conf.finish().unwrap());
