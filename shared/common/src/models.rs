@@ -8,6 +8,8 @@ use uuid::Uuid;
 pub struct Course {
     pub id: Uuid,
     pub organization_id: Uuid,
+    #[serde(default, alias = "idcursoabierto", alias = "id_curso_abierto")]
+    pub external_sam_id: Option<i64>,
     pub title: String,
     pub description: Option<String>,
     pub instructor_id: Uuid,
@@ -31,6 +33,7 @@ impl Default for Course {
         Self {
             id: Uuid::new_v4(),
             organization_id: Uuid::new_v4(),
+            external_sam_id: None,
             title: String::new(),
             description: None,
             instructor_id: Uuid::new_v4(),

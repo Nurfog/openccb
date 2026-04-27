@@ -232,10 +232,9 @@ pub async fn sync_sam_assignments(
         // Obtener el ID del curso de OpenCCB a partir del ID del curso SAM
         // Esto asume que tienes una tabla de mapeo o que el ID del curso SAM coincide con el external_id del curso en OpenCCB
         let course_result = sqlx::query_as::<_, (Uuid,)>(
-            "SELECT id FROM courses WHERE external_sam_id = $1 OR id = $2"
+            "SELECT id FROM courses WHERE external_sam_id = $1"
         )
         .bind(assignment.id_curso_abierto as i64)
-        .bind(assignment.id_curso_abierto)
         .fetch_optional(&pool)
         .await;
 
@@ -484,10 +483,9 @@ pub async fn sync_all_sam(
 
         for assignment in sam_assignments {
             let course_result = sqlx::query_as::<_, (Uuid,)>(
-                "SELECT id FROM courses WHERE external_sam_id = $1 OR id = $2"
+                "SELECT id FROM courses WHERE external_sam_id = $1"
             )
             .bind(assignment.id_curso_abierto as i64)
-            .bind(assignment.id_curso_abierto)
             .fetch_optional(&pool)
             .await;
 

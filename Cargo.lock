@@ -840,6 +840,7 @@ dependencies = [
  "tower_governor",
  "tracing",
  "tracing-subscriber",
+ "utoipa",
  "uuid",
  "zip",
 ]

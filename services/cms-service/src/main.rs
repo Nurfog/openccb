@@ -16,6 +16,7 @@ mod handlers_admin;
 mod handlers_embeddings;
 mod handlers_sam;
 mod handlers_plugins;
+mod openapi;
 mod webhooks;
 
 use axum::{
@@ -34,6 +35,7 @@ use std::time::Duration;
 use tower_http::cors::CorsLayer;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
+use utoipa::OpenApi;
 
 #[tokio::main]
 async fn main() {
@@ -594,7 +596,26 @@ async fn main() {
             get(handlers_branding::get_organization_branding),
         );
 
-    let public_routes = Router::new()
+        let public_routes = Router::new()
+                .route("/api-docs/openapi.json", get(|| async {
+                        axum::Json(openapi::ApiDoc::openapi())
+                }))
+                .route("/scalar", get(|| async {
+                        axum::response::Html(r#"
+<!doctype html>
+<html>
+    <head>
+        <title>OpenCCB CMS API</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+    </head>
+    <body>
+        <script id="api-reference" data-url="./api-docs/openapi.json"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+    </body>
+</html>
+                        "#)
+                }))
         .nest("/api/external", api_routes)
         .route(
             "/api/assets/s3-proxy/{bucket}/{*key}",

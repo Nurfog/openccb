@@ -1009,8 +1009,8 @@ pub async fn ingest_course(
 
     // 2. Insertar o actualizar (Upsert) Curso
     sqlx::query(
-        "INSERT INTO courses (id, title, description, instructor_id, start_date, end_date, passing_percentage, certificate_template, updated_at, organization_id, pacing_mode, price, currency)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        "INSERT INTO courses (id, title, description, instructor_id, start_date, end_date, passing_percentage, certificate_template, updated_at, organization_id, pacing_mode, price, currency, external_sam_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
          ON CONFLICT (id) DO UPDATE SET
             title = EXCLUDED.title,
             description = EXCLUDED.description,
@@ -1023,7 +1023,8 @@ pub async fn ingest_course(
             organization_id = EXCLUDED.organization_id,
             pacing_mode = EXCLUDED.pacing_mode,
             price = EXCLUDED.price,
-            currency = EXCLUDED.currency"
+                currency = EXCLUDED.currency,
+                external_sam_id = EXCLUDED.external_sam_id"
     )
     .bind(payload.course.id)
     .bind(&payload.course.title)
@@ -1038,6 +1039,7 @@ pub async fn ingest_course(
     .bind(&payload.course.pacing_mode)
     .bind(payload.course.price)
     .bind(&payload.course.currency)
+    .bind(payload.course.external_sam_id)
     .execute(&mut *tx)
     .await
     .map_err(|e: sqlx::Error| {

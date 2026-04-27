@@ -42,10 +42,11 @@ pub async fn create_course_external(
     let description = payload.description.as_deref();
     
     let course = sqlx::query_as::<_, Course>(
-        "INSERT INTO courses (organization_id, title, description, instructor_id, pacing_mode) 
-         VALUES ($1, $2, $3, '00000000-0000-0000-0000-000000000001', $4) RETURNING *"
+        "INSERT INTO courses (organization_id, external_sam_id, title, description, instructor_id, pacing_mode) 
+         VALUES ($1, $2, $3, $4, '00000000-0000-0000-0000-000000000001', $5) RETURNING *"
     )
     .bind(org_id)
+    .bind(payload.external_sam_id)
     .bind(title)
     .bind(description)
     .bind(payload.pacing_mode.as_deref().unwrap_or("self_paced"))
@@ -94,6 +95,8 @@ pub struct ExternalCreateCoursePayload {
     pub title: String,
     pub description: Option<String>,
     pub pacing_mode: Option<String>,
+    #[serde(alias = "idcursoabierto", alias = "id_curso_abierto")]
+    pub external_sam_id: Option<i64>,
     // Selección directa de plantilla opcional
     pub template_id: Option<Uuid>,
     // Selección de respaldo (fallback) opcional por nivel/tipo de curso/tipo de test

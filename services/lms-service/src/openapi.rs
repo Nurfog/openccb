@@ -50,12 +50,25 @@ pub struct LessonSchema {
     pub created_at: String,
 }
 
-/// Módulo de curso
+/// Módulo de curso dentro de la ingesta.
+///
+/// `lessons` puede venir como `[]` (vacío), pero no debe venir `null`.
 #[derive(utoipa::ToSchema, serde::Serialize)]
-pub struct ModuleSchema {
+pub struct IngestModuleSchema {
     pub id: String,
     pub title: String,
     pub position: i32,
+    pub created_at: String,
+    pub lessons: Vec<LessonSchema>,
+}
+
+/// Instructor asignado al curso.
+#[derive(utoipa::ToSchema, serde::Serialize)]
+pub struct CourseInstructorSchema {
+    pub id: String,
+    pub user_id: String,
+    /// Ej: "primary", "instructor", "assistant"
+    pub role: String,
     pub created_at: String,
 }
 
@@ -71,6 +84,7 @@ pub struct OrgSchema {
 #[derive(utoipa::ToSchema, serde::Serialize)]
 pub struct CourseSchema {
     pub id: String,
+    pub external_sam_id: Option<i64>,
     pub title: String,
     pub description: Option<String>,
     pub price: f64,
@@ -82,12 +96,17 @@ pub struct CourseSchema {
 /// Payload completo de ingesta de curso — usado por el sistema externo para crear/actualizar cursos
 #[derive(utoipa::ToSchema, serde::Serialize)]
 pub struct IngestCourseRequest {
+    /// Obligatorio. No debe ser `null`.
     pub organization: OrgSchema,
+    /// Obligatorio. No debe ser `null`.
     pub course: CourseSchema,
+    /// Puede venir como `[]` (vacío), pero no `null`.
     pub grading_categories: Vec<GradingCategorySchema>,
-    pub modules: Vec<ModuleSchema>,
-    pub lessons: Vec<LessonSchema>,
-    pub instructors: Vec<String>,
+    /// Puede venir como `[]` (vacío), pero no `null`.
+    /// Las lecciones se envían dentro de cada módulo en `modules[].lessons`.
+    pub modules: Vec<IngestModuleSchema>,
+    /// Opcional. Puede omitirse o venir como `null` o `[]`.
+    pub instructors: Option<Vec<CourseInstructorSchema>>,
 }
 
 /// Entrada del catálogo Tipo Nota
@@ -107,7 +126,7 @@ pub struct TipoNotaSchema {
     info(
         title = "OpenCCB LMS — API de Integración",
         version = "1.0.0",
-        description = "API para integrar plataformas externas: creación de cursos, inscripción de alumnos y sincronización de notas."
+        description = "API para integrar plataformas externas: creación de cursos, inscripción de alumnos y sincronización de notas.\n\nReglas de nulabilidad y arreglos (aplican a todos los endpoints de esta API):\n- Campos opcionales (Option): pueden omitirse o enviarse como null.\n- Campos de arreglo no opcionales (Vec): deben enviarse como arreglo; pueden ser [] pero no null.\n- Objetos requeridos del payload: no deben enviarse como null.\n- En /ingest, enviar modules: [] reemplaza la estructura del curso y elimina módulos/lecciones previos en LMS."
     ),
     paths(
         ingest_course,
@@ -121,8 +140,9 @@ pub struct TipoNotaSchema {
             IngestCourseRequest,
             OrgSchema,
             CourseSchema,
-            ModuleSchema,
+            IngestModuleSchema,
             LessonSchema,
+            CourseInstructorSchema,
             GradingCategorySchema,
             EnrollRequest,
             GradeSubmissionRequest,
