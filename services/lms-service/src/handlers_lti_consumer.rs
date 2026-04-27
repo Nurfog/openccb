@@ -3,6 +3,7 @@ use axum::{
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
 };
+use base64::Engine;
 use common::{
     auth::Claims,
     middleware::Org,
@@ -491,5 +492,227 @@ pub async fn rotate_lti_tool_secret(
         tool_id,
         new_secret,
         rotated_at: now,
+    }))
+}
+
+// ─── LTI AGS: OAuth2 Assignment and Grade Services (Fase 39) ─────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct AgsPassbackPayload {
+    pub user_id: Uuid,
+    pub lesson_id: Option<Uuid>,
+    pub score: f32,
+    pub max_score: Option<f32>,
+    pub status: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AgsPassbackResponse {
+    pub success: bool,
+    pub tool_id: Uuid,
+    pub user_id: Uuid,
+    pub normalized_score: f32,
+    pub method: String,
+}
+
+/// Obtiene (o renueva desde caché) un access token OAuth2 para AGS.
+async fn get_ags_token(
+    pool: &PgPool,
+    tool_id: Uuid,
+    client_id: &str,
+    client_secret: &str,
+    token_url: &str,
+) -> Result<String, String> {
+    use chrono::Utc;
+
+    // Intentar token cacheado no expirado (con 60s de margen)
+    let cached = sqlx::query_scalar::<_, String>(
+        "SELECT access_token FROM lti_ags_tokens WHERE tool_id = $1 AND expires_at > NOW() + INTERVAL '60 seconds' ORDER BY created_at DESC LIMIT 1",
+    )
+    .bind(tool_id)
+    .fetch_optional(pool)
+    .await
+    .unwrap_or(None);
+
+    if let Some(token) = cached {
+        return Ok(token);
+    }
+
+    // Solicitar nuevo token con client_credentials
+    let params = [
+        ("grant_type", "client_credentials"),
+        ("client_id", client_id),
+        ("client_secret", client_secret),
+        ("scope", "https://purl.imsglobal.org/spec/lti-ags/scope/score"),
+    ];
+
+    let resp = reqwest::Client::new()
+        .post(token_url)
+        .form(&params)
+        .send()
+        .await
+        .map_err(|e| format!("AGS token request failed: {}", e))?;
+
+    if !resp.status().is_success() {
+        return Err(format!("AGS token server returned {}", resp.status()));
+    }
+
+    #[derive(serde::Deserialize)]
+    struct TokenResp {
+        access_token: String,
+        expires_in: Option<u64>,
+    }
+
+    let token_resp: TokenResp = resp
+        .json()
+        .await
+        .map_err(|e| format!("AGS token parse failed: {}", e))?;
+
+    let expires_secs = token_resp.expires_in.unwrap_or(3600) as i64;
+    let expires_at = Utc::now() + chrono::Duration::seconds(expires_secs);
+
+    // Guardar en caché (ignorar error de BD — el token sigue siendo válido)
+    let _ = sqlx::query(
+        "INSERT INTO lti_ags_tokens (tool_id, access_token, expires_at) VALUES ($1, $2, $3)",
+    )
+    .bind(tool_id)
+    .bind(&token_resp.access_token)
+    .bind(expires_at)
+    .execute(pool)
+    .await;
+
+    Ok(token_resp.access_token)
+}
+
+/// Passback AGS: POST score a lineitem_url con token OAuth2 Bearer.
+/// Acepta: Authorization: Bearer <ags_client_id>:<ags_client_secret>
+/// La herramienta debe tener configurados: ags_client_id, ags_client_secret, ags_token_url, ags_lineitem_url.
+pub async fn lti_ags_score_passback(
+    State(pool): State<PgPool>,
+    headers: HeaderMap,
+    Path(tool_id): Path<Uuid>,
+    Json(payload): Json<AgsPassbackPayload>,
+) -> Result<Json<AgsPassbackResponse>, (StatusCode, String)> {
+    // Leer credenciales AGS del header Authorization (Basic base64(client_id:client_secret))
+    let auth_header = headers
+        .get("authorization")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    let (req_client_id, req_client_secret) = if let Some(encoded) = auth_header.strip_prefix("Basic ") {
+        let decoded = base64::engine::general_purpose::STANDARD
+            .decode(encoded)
+            .map_err(|_| (StatusCode::UNAUTHORIZED, "Authorization inválido".to_string()))?;
+        let s = String::from_utf8(decoded)
+            .map_err(|_| (StatusCode::UNAUTHORIZED, "Authorization inválido".to_string()))?;
+        let mut parts = s.splitn(2, ':');
+        let id = parts.next().unwrap_or("").to_string();
+        let secret = parts.next().unwrap_or("").to_string();
+        (id, secret)
+    } else {
+        return Err((StatusCode::UNAUTHORIZED, "Se requiere Authorization: Basic <client_id>:<client_secret>".to_string()));
+    };
+
+    // Obtener config AGS de la herramienta
+    #[derive(sqlx::FromRow)]
+    struct AgsConfig {
+        ags_client_id: Option<String>,
+        ags_client_secret: Option<String>,
+        ags_token_url: Option<String>,
+        ags_lineitem_url: Option<String>,
+        organization_id: Uuid,
+        course_id: Uuid,
+    }
+
+    let config = sqlx::query_as::<_, AgsConfig>(
+        "SELECT ags_client_id, ags_client_secret, ags_token_url, ags_lineitem_url, organization_id, course_id FROM lti_external_tools WHERE id = $1",
+    )
+    .bind(tool_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or((StatusCode::NOT_FOUND, "Herramienta LTI no encontrada".to_string()))?;
+
+    let client_id = config.ags_client_id.as_deref().unwrap_or("");
+    let client_secret = config.ags_client_secret.as_deref().unwrap_or("");
+    let token_url = config.ags_token_url.as_deref().unwrap_or("");
+    let lineitem_url = config.ags_lineitem_url.as_deref().unwrap_or("");
+
+    if client_id.is_empty() || token_url.is_empty() || lineitem_url.is_empty() {
+        return Err((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "La herramienta no tiene AGS configurado (ags_client_id, ags_token_url, ags_lineitem_url son requeridos)".to_string(),
+        ));
+    }
+
+    // Validar credenciales del request contra la BD
+    if req_client_id != client_id || req_client_secret != client_secret {
+        return Err((StatusCode::UNAUTHORIZED, "Credenciales AGS inválidas".to_string()));
+    }
+
+    // Obtener token OAuth2
+    let access_token = get_ags_token(&pool, tool_id, client_id, client_secret, token_url)
+        .await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e))?;
+
+    let max_score = payload.max_score.unwrap_or(1.0);
+    let normalized = if max_score > 0.0 { payload.score / max_score } else { 0.0 };
+    let normalized = normalized.clamp(0.0, 1.0);
+
+    // Payload IMS AGS Score
+    let score_url = format!("{}/scores", lineitem_url.trim_end_matches('/'));
+    let score_body = serde_json::json!({
+        "userId": payload.user_id.to_string(),
+        "scoreGiven": payload.score,
+        "scoreMaximum": max_score,
+        "activityProgress": "Completed",
+        "gradingProgress": "FullyGraded",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+    });
+
+    let ags_resp = reqwest::Client::new()
+        .post(&score_url)
+        .bearer_auth(&access_token)
+        .header("Content-Type", "application/vnd.ims.lis.v1.score+json")
+        .json(&score_body)
+        .send()
+        .await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, format!("AGS score POST falló: {}", e)))?;
+
+    if !ags_resp.status().is_success() {
+        let status = ags_resp.status();
+        let body = ags_resp.text().await.unwrap_or_default();
+        return Err((StatusCode::BAD_GATEWAY, format!("AGS server returned {}: {}", status, body)));
+    }
+
+    // Sincronizar a user_grades localmente si hay lesson_id
+    if let Some(lesson_id) = payload.lesson_id {
+        let _ = sqlx::query(
+            r#"
+            INSERT INTO user_grades (user_id, course_id, lesson_id, score, max_score, normalized_score, passed, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+            ON CONFLICT (user_id, lesson_id) DO UPDATE
+            SET score = EXCLUDED.score, max_score = EXCLUDED.max_score,
+                normalized_score = EXCLUDED.normalized_score, passed = EXCLUDED.passed, updated_at = NOW()
+            "#,
+        )
+        .bind(payload.user_id)
+        .bind(config.course_id)
+        .bind(lesson_id)
+        .bind(payload.score)
+        .bind(max_score)
+        .bind(normalized)
+        .bind(normalized >= 0.6)
+        .execute(&pool)
+        .await;
+    }
+
+    Ok(Json(AgsPassbackResponse {
+        success: true,
+        tool_id,
+        user_id: payload.user_id,
+        normalized_score: normalized,
+        method: "ags_oauth2".to_string(),
     }))
 }

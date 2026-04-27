@@ -237,6 +237,10 @@ async fn main() {
             "/courses/{id}/study-rooms/{room_id}",
             delete(handlers_study_rooms::delete_study_room),
         )
+        .route(
+            "/courses/{id}/study-rooms/{room_id}/recordings",
+            get(handlers_study_rooms::get_study_room_recordings),
+        )
         // Portafolio e insignias (Badges)
         .route("/profile/{user_id}", get(portfolio::get_public_profile))
         .route("/my/badges", get(portfolio::get_my_badges))
@@ -480,6 +484,10 @@ async fn main() {
         .route(
             "/lti/tools/{tool_id}/grade-passback",
             post(handlers_lti_consumer::lti_grade_passback),
+        )
+        .route(
+            "/lti/tools/{tool_id}/ags-score",
+            post(handlers_lti_consumer::lti_ags_score_passback),
         )
         .route("/lti/jwks", get(jwks::lti_jwks_handler))
         .route("/lti/deep-linking/response", post(lti::lti_deep_linking_response))

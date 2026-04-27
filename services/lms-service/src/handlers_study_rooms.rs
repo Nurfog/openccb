@@ -388,3 +388,101 @@ pub async fn delete_study_room(
 
     Ok(StatusCode::NO_CONTENT)
 }
+
+// ─── Grabaciones BBB (Fase 39) ───────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct BbbRecording {
+    pub record_id: String,
+    pub meeting_id: String,
+    pub name: String,
+    pub state: String,
+    pub start_time: i64,
+    pub end_time: i64,
+    pub participants: i64,
+    pub playback_url: Option<String>,
+    pub duration_minutes: i64,
+}
+
+pub async fn get_study_room_recordings(
+    Org(org_ctx): Org,
+    State(pool): State<PgPool>,
+    Path((course_id, room_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<Vec<BbbRecording>>, (StatusCode, String)> {
+    let bbb_meeting_id = sqlx::query_scalar::<_, Option<String>>(
+        "SELECT bbb_meeting_id FROM study_rooms WHERE id = $1 AND course_id = $2 AND organization_id = $3",
+    )
+    .bind(room_id)
+    .bind(course_id)
+    .bind(org_ctx.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .flatten()
+    .ok_or((StatusCode::NOT_FOUND, "Sala no encontrada o sin ID BBB".to_string()))?;
+
+    let params = format!("meetingID={}", urlencoding::encode(&bbb_meeting_id));
+    let url = bbb_url("getRecordings", &params);
+
+    let xml_body = reqwest::Client::new()
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, format!("BBB getRecordings falló: {}", e)))?
+        .text()
+        .await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+
+    let recordings = parse_bbb_recordings(&xml_body);
+    Ok(Json(recordings))
+}
+
+/// Parsea el XML de BBB getRecordings extrayendo los campos relevantes.
+fn parse_bbb_recordings(xml: &str) -> Vec<BbbRecording> {
+    let mut recordings = Vec::new();
+
+    for recording_block in xml.split("<recording>").skip(1) {
+        let get = |tag: &str| -> String {
+            recording_block
+                .split(&format!("<{}>", tag))
+                .nth(1)
+                .and_then(|s| s.split(&format!("</{}>", tag)).next())
+                .unwrap_or("")
+                .trim()
+                .to_string()
+        };
+
+        let get_i64 = |tag: &str| -> i64 {
+            get(tag).parse::<i64>().unwrap_or(0)
+        };
+
+        let start_time = get_i64("startTime");
+        let end_time = get_i64("endTime");
+        let duration_minutes = if end_time > start_time {
+            (end_time - start_time) / 60_000
+        } else {
+            0
+        };
+
+        // Buscar URL de reproducción presentación/video
+        let playback_url = recording_block
+            .split("<url>")
+            .nth(1)
+            .and_then(|s| s.split("</url>").next())
+            .map(|s| s.trim().to_string());
+
+        recordings.push(BbbRecording {
+            record_id: get("recordID"),
+            meeting_id: get("meetingID"),
+            name: get("name"),
+            state: get("state"),
+            start_time,
+            end_time,
+            participants: get_i64("participants"),
+            playback_url,
+            duration_minutes,
+        });
+    }
+
+    recordings
+}
