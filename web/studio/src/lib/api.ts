@@ -1843,7 +1843,42 @@ export const lmsApi = {
         apiFetch(`/courses/${courseId}/lti-tools/${toolId}`, { method: 'DELETE' }, true),
     rotateCourseLtiToolSecret: (courseId: string, toolId: string): Promise<{ tool_id: string; new_secret: string; rotated_at: string }> =>
         apiFetch(`/courses/${courseId}/lti-tools/${toolId}/rotate-secret`, { method: 'POST' }, true),
+    listCourseStudyRooms: (courseId: string): Promise<StudyRoom[]> =>
+        apiFetch(`/courses/${courseId}/study-rooms`, {}, true),
+    createStudyRoom: (courseId: string, payload: CreateStudyRoomPayload): Promise<StudyRoom> =>
+        apiFetch(`/courses/${courseId}/study-rooms`, { method: 'POST', body: JSON.stringify(payload) }, true),
+    joinStudyRoom: (courseId: string, roomId: string): Promise<{ room_id: string; join_url: string }> =>
+        apiFetch(`/courses/${courseId}/study-rooms/${roomId}/join`, { method: 'POST' }, true),
+    endStudyRoom: (courseId: string, roomId: string): Promise<{ room_id: string; ended_at: string }> =>
+        apiFetch(`/courses/${courseId}/study-rooms/${roomId}/end`, { method: 'POST' }, true),
+    deleteStudyRoom: (courseId: string, roomId: string): Promise<void> =>
+        apiFetch(`/courses/${courseId}/study-rooms/${roomId}`, { method: 'DELETE' }, true),
 };
+
+export interface StudyRoom {
+    id: string;
+    organization_id: string;
+    course_id: string;
+    created_by: string;
+    title: string;
+    description?: string;
+    status: 'pending' | 'active' | 'ended';
+    bbb_meeting_id?: string;
+    join_url?: string;
+    scheduled_at?: string;
+    started_at?: string;
+    ended_at?: string;
+    max_participants: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateStudyRoomPayload {
+    title: string;
+    description?: string;
+    scheduled_at?: string;
+    max_participants?: number;
+}
 
 export interface Meeting {
     id: string;

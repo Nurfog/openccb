@@ -433,6 +433,25 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                             </div>
                         )}
 
+                        {/* Salas de Estudio BBB */}
+                        <div className="mb-8">
+                            <Link
+                                href={`/courses/${params.id}/study-rooms`}
+                                className="flex items-center justify-between rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 px-5 py-4 hover:border-blue-400/50 dark:hover:border-blue-500/40 transition-colors group"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                        <Video size={16} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Salas de Estudio</p>
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">Sesiones grupales con BigBlueButton</p>
+                                    </div>
+                                </div>
+                                <ExternalLink size={14} className="text-gray-400 group-hover:text-blue-500 transition-colors" />
+                            </Link>
+                        </div>
+
                         {/* Announcements Section */}
                         <div className="mb-16">
                             <AnnouncementsList courseId={params.id} isInstructor={user?.role === 'instructor' || user?.role === 'admin'} />

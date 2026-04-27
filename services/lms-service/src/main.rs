@@ -3,6 +3,7 @@ mod handlers;
 mod handlers_announcements;
 mod handlers_pedagogical;
 mod handlers_lti_consumer;
+mod handlers_study_rooms;
 mod handlers_email;
 mod handlers_scorm;
 mod handlers_search;
@@ -217,6 +218,24 @@ async fn main() {
         .route(
             "/courses/{id}/lti-tools/{tool_id}/rotate-secret",
             post(handlers_lti_consumer::rotate_lti_tool_secret),
+        )
+        // Salas de Estudio con BBB (Fase 38)
+        .route(
+            "/courses/{id}/study-rooms",
+            get(handlers_study_rooms::list_course_study_rooms)
+                .post(handlers_study_rooms::create_study_room),
+        )
+        .route(
+            "/courses/{id}/study-rooms/{room_id}/join",
+            post(handlers_study_rooms::join_study_room),
+        )
+        .route(
+            "/courses/{id}/study-rooms/{room_id}/end",
+            post(handlers_study_rooms::end_study_room),
+        )
+        .route(
+            "/courses/{id}/study-rooms/{room_id}",
+            delete(handlers_study_rooms::delete_study_room),
         )
         // Portafolio e insignias (Badges)
         .route("/profile/{user_id}", get(portfolio::get_public_profile))

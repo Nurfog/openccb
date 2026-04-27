@@ -122,7 +122,13 @@
 - [x] **SSE para Pizarras Colaborativas**: Reemplazado polling de 5s por `EventSource` en `CollaborativeWhiteboard.tsx`. Endpoint `GET /lessons/{id}/collaborative-canvas/stream` en `lms-service` usa canal `tokio::sync::mpsc` + `ReceiverStream`; el servidor consulta la DB cada 2s y emite eventos SSE solo cuando cambia la `revision`. El cliente cierra la conexión al desmontar el componente.
 - [x] **Rotación de Secretos LTI**: Endpoint `POST /courses/{id}/lti-tools/{tool_id}/rotate-secret` genera un nuevo secreto alfanumérico de 32 chars, actualiza la DB y lo retorna una sola vez. UI en Studio (`/courses/[id]/lti-tools`) con botón 🔑 por herramienta, modal de confirmación de riesgo, y panel de copia-única del nuevo secreto con botón clipboard.
 
+### Fase 38: Salas de Estudio con BigBlueButton 🎥
+- [x] **Tabla `study_rooms`**: migración con campos `status` (pending/active/ended), `bbb_meeting_id`, `attendee_pw`, `moderator_pw`, `max_participants`, `scheduled_at`, `started_at`, `ended_at`.
+- [x] **Integración BBB**: `handlers_study_rooms.rs` construye URLs BBB con checksum SHA256 (`action + params + BBB_SECRET`). Endpoints: `GET /courses/{id}/study-rooms`, `POST /courses/{id}/study-rooms`, `POST .../join`, `POST .../end`, `DELETE .../`. Variables de entorno: `BBB_URL` y `BBB_SECRET`.
+- [x] **Studio**: página `/courses/[id]/study-rooms` — crear sala, lista con estado, botones Iniciar/Unirse (BBB en nueva pestaña)/Finalizar/Eliminar, instrucciones de configuración integradas. Tab "Salas de Estudio" en `CourseEditorLayout`.
+- [x] **Experience**: página `/courses/[id]/study-rooms` con lista de salas activas/programadas y botón "Unirse". Acceso directo desde la página del curso como tarjeta de navegación.
+
 **Próximas Prioridades**:
-1. Migrar passback LTI de HMAC custom a **OAuth2 AGS** (estándar IMS) manteniendo compatibilidad transitoria.
-2. **Edición multiusuario** de documentos (tipo Google Docs) para Fase 33.
-3. **Salas de Estudio** — grupos efímeros por video para resolución de dudas grupales.
+1. **OAuth2 AGS** — estándar IMS para passback de calificaciones (reemplaza HMAC custom).
+2. **Edición Multiusuario** — documentos compartidos tipo Google Docs en lecciones.
+3. **Grabaciones BBB** — listar grabaciones de salas finalizadas desde la API de BBB.

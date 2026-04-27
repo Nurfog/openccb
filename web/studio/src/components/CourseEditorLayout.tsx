@@ -26,7 +26,8 @@ type TabKey =
     | "students"
     | "sessions"
     | "pedagogical"
-    | "lti-tools";
+    | "lti-tools"
+    | "study-rooms";
 
 interface CourseEditorLayoutProps {
     children: React.ReactNode;
@@ -79,6 +80,7 @@ export default function CourseEditorLayout({
                 { key: "marketing", label: "Marketing", icon: Megaphone, href: `/courses/${id}/marketing` },
                 { key: "files", label: "Archivos", icon: Folder, href: `/courses/${id}/files` },
                 { key: "sessions", label: "Sesiones en Vivo", icon: Video, href: `/courses/${id}/sessions` },
+                { key: "study-rooms", label: "Salas de Estudio", icon: Video, href: `/courses/${id}/study-rooms` },
             ],
         },
         {
