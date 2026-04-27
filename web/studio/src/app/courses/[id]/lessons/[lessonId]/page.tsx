@@ -429,7 +429,14 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                     <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em]">
                         <Link href={`/courses/${params.id}`} className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Outline</Link>
                         <span className="text-slate-300 dark:text-gray-700">/</span>
-                        <span className="text-blue-600 dark:text-blue-500">Activity Builder</span>
+                            <span className="text-blue-600 dark:text-blue-500">Activity Builder</span>
+                            <span className="text-slate-300 dark:text-gray-700">/</span>
+                            <Link
+                                href={`/courses/${params.id}/lessons/${params.lessonId}/collaborative-doc`}
+                                className="text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                            >
+                                Doc. Colaborativo
+                            </Link>
                     </div>
                     <div className="flex items-center gap-4">
                         {editingId === 'lesson-title' ? (

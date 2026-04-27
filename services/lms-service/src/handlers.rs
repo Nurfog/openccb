@@ -1717,7 +1717,7 @@ pub async fn get_user_enrollments(
         user_id,
         org_ctx.id
     );
-    let enrollments = sqlx::query_as::<_, Enrollment>(
+    let enrollments = match sqlx::query_as::<_, Enrollment>(
         r#"
         SELECT
             e.id,
@@ -1766,8 +1766,48 @@ pub async fn get_user_enrollments(
     .bind(user_id)
     .bind(org_ctx.id)
     .fetch_all(&pool)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .await {
+        Ok(rows) => rows,
+        Err(primary_err) => {
+            tracing::error!(
+                "get_user_enrollments: advanced query failed for user_id={} org_id={}: {}",
+                user_id,
+                org_ctx.id,
+                primary_err
+            );
+
+            // Fallback para esquemas legacy donde faltan tablas/columnas usadas en el cálculo avanzado.
+            sqlx::query_as::<_, Enrollment>(
+                r#"
+                SELECT
+                    e.id,
+                    e.user_id,
+                    e.organization_id,
+                    e.course_id,
+                    NULL::INT AS external_id,
+                    0.0::FLOAT4 AS progress,
+                    e.enrolled_at
+                FROM enrollments e
+                WHERE e.user_id = $1
+                  AND e.organization_id = $2
+                ORDER BY e.enrolled_at DESC
+                "#,
+            )
+            .bind(user_id)
+            .bind(org_ctx.id)
+            .fetch_all(&pool)
+            .await
+            .map_err(|fallback_err| {
+                tracing::error!(
+                    "get_user_enrollments: fallback query failed for user_id={} org_id={}: {}",
+                    user_id,
+                    org_ctx.id,
+                    fallback_err
+                );
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+        }
+    };
 
     Ok(Json(enrollments))
 }
@@ -4884,7 +4924,7 @@ pub async fn update_lesson_collaborative_doc(
         return Err((StatusCode::NOT_FOUND, "Lección no encontrada".into()));
     }
 
-    let user_id: Uuid = claims.sub.parse().map_err(|_| (StatusCode::UNAUTHORIZED, "Token inválido".into()))?;
+        let user_id: Uuid = claims.sub;
 
     // Intento de actualización optimista
     let rows_updated = sqlx::query(

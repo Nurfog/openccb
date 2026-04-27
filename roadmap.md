@@ -137,6 +137,14 @@
 - [x] **Studio lti-tools**: sección AGS colapsable en el formulario de creación — 4 campos opcionales (client_id, client_secret, token_url, lineitem_url).
 - [x] **api.ts**: Interface `BbbRecording`, `getStudyRoomRecordings()` en Studio y Experience. Campos AGS en `LtiExternalTool`, `CreateLtiExternalToolPayload`, `UpdateLtiExternalToolPayload`.
 
+### Fase 40: Edición Colaborativa de Documentos 📝 ✅
+- [x] **Tabla `lesson_collaborative_docs`**: migración con campos `content TEXT`, `revision BIGINT`, `last_modified_by UUID`. Índice único por `(lesson_id, organization_id)`.
+- [x] **Backend**: 3 endpoints — `GET /lessons/{id}/collaborative-doc`, `PUT /lessons/{id}/collaborative-doc` (concurrencia optimista por `revision`), `GET /lessons/{id}/collaborative-doc/stream` (SSE, polling 2s). Respuesta 409 con `server_content`/`server_revision` en conflicto.
+- [x] **Experience — CollaborativeDocEditor**: componente SSE con autosave debounce 1.5s, toolbar Markdown básico (negrita, cursiva, H1/H2, listas), resolución de conflictos con diff visual (conservar la mía / usar la del servidor). Solo actualiza desde SSE si no hay cambios locales pendientes.
+- [x] **Experience — Lesson Player**: sección "Documento Colaborativo" integrada en la página de la lección, después de la pizarra colaborativa.
+- [x] **Studio**: página `/courses/[id]/lessons/[lessonId]/collaborative-doc` con metadatos (revisión, palabras, caracteres, última edición) + vista previa + botón "Borrar documento". Link desde el breadcrumb del editor de lección.
+- [x] **api.ts Studio + Experience**: funciones `getLessonCollaborativeDoc`, `updateLessonCollaborativeDoc`, interfaces `CollaborativeDoc`, `UpdateCollaborativeDocPayload`, `UpdateCollaborativeDocResponse`.
+
 **Próximas Prioridades**:
-1. **Edición Multiusuario** — documentos compartidos tipo Google Docs en lecciones.
-2. **Notificaciones en tiempo real** — WebSocket o SSE para alertas de actividad del curso.
+1. **Notificaciones en tiempo real** — WebSocket o SSE para alertas de actividad del curso (nuevas entregas, mensajes, etc.).
+2. **Progreso del curso** — Endpoint de porcentaje de avance por alumno; barra de progreso en Experience.

@@ -1855,7 +1855,9 @@ export const lmsApi = {
         apiFetch(`/courses/${courseId}/study-rooms/${roomId}`, { method: 'DELETE' }, true),
     getStudyRoomRecordings: (courseId: string, roomId: string): Promise<BbbRecording[]> =>
         apiFetch(`/courses/${courseId}/study-rooms/${roomId}/recordings`, {}, true),
-};
+        updateLessonCollaborativeDoc: (lessonId: string, payload: UpdateCollaborativeDocPayload): Promise<UpdateCollaborativeDocResponse> =>
+            apiFetch(`/lessons/${lessonId}/collaborative-doc`, { method: 'PUT', body: JSON.stringify(payload) }, true),
+    };
 
 export interface StudyRoom {
     id: string;
