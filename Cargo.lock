@@ -2221,6 +2221,8 @@ dependencies = [
  "chrono",
  "common",
  "dotenvy",
+ "hex",
+ "hmac",
  "http 1.4.0",
  "jsonwebtoken",
  "lettre",

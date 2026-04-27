@@ -184,7 +184,7 @@ export interface QuizQuestion {
 
 export interface Block {
     id: string;
-    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'code' | 'hotspot' | 'memory-match' | 'document' | 'audio-response' | 'video_marker' | 'peer-review' | 'role-playing' | 'mermaid' | 'code-lab' | 'scorm' | 'plugin';
+    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'code' | 'hotspot' | 'memory-match' | 'document' | 'audio-response' | 'video_marker' | 'peer-review' | 'role-playing' | 'mermaid' | 'code-lab' | 'scorm' | 'plugin' | 'lti-tool';
     title: string;
     content?: string;
     url?: string;

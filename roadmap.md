@@ -111,13 +111,13 @@
 - [x] **OpenCCB Market**: Galería en Studio (`/admin/plugins`) con toggle habilitado/deshabilitado, registro de nuevos plugins y tarjetas con estado visual.
 
 ### Fase 36: LTI 1.3 Tool Consumer 🔗
-- [ ] **Consumo de herramientas externas**: Capacidad de embeber laboratorios externos (ej: MATLAB, Labster) dentro de OpenCCB.
-- [ ] **Delegación de Calificaciones**: Recibir notas de herramientas externas y sincronizarlas con el Gradebook de OpenCCB.
+- [x] **Consumo de herramientas externas**: MVP implementado con `lti_external_tools` por curso, gestión en Studio (`/courses/[id]/lti-tools`) y bloque embebido `lti-tool` en Experience vía iframe sandbox.
+- [x] **Delegación de Calificaciones**: MVP implementado con endpoint público `POST /lti/tools/{tool_id}/grade-passback`, validación por `x-openccb-lti-secret`, registro de eventos y sincronización a `user_grades`.
 
 ---
 
 **Estado Actual**: Plataforma madura con IA generativa integrada, arquitectura Premium Single-Tenant, búsqueda semántica y monetización operativa.
 **Próximas Prioridades**:
-1. Implementar **Ecosistema de Plugins** (Fase 35): tabla `course_plugins`, CRUD en Studio, renderizador seguro de Web Components en Experience.
-2. Evaluar paso de polling a **WebSocket/SSE** en Pizarras Compartidas una vez validado uso real.
-3. Extender el modelo colaborativo a **Edición Multiusuario** de documentos.
+1. Endurecer seguridad de **passback LTI**: rotación de secretos, firma HMAC y/o OAuth2 AGS en lugar de shared secret plano.
+2. Añadir selector de **herramienta LTI** en editor de lecciones para generar bloques `lti-tool` sin JSON manual.
+3. Evolucionar **Pizarras Compartidas** de polling a WebSocket/SSE tras validar carga en producción.

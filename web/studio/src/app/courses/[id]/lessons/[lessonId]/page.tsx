@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { cmsApi, Lesson, Block, GradingCategory, LibraryBlock, Rubric, RubricLevel, RubricCriterion, LessonDependency, OrganizationExerciseSettings, getImageUrl, generateUUID } from '@/lib/api';
+import { cmsApi, lmsApi, Lesson, Block, GradingCategory, LibraryBlock, Rubric, RubricLevel, RubricCriterion, LessonDependency, OrganizationExerciseSettings, LtiExternalTool, getImageUrl, generateUUID } from '@/lib/api';
 import {
     Layout,
     CheckCircle2,
@@ -39,6 +39,7 @@ import RolePlayingBlock from "@/components/blocks/RolePlayingBlock";
 import PeerReviewBlock from "@/components/blocks/PeerReviewBlock";
 import MermaidBlock from "@/components/blocks/MermaidBlock";
 import CodeLabBlock from "@/components/blocks/CodeLabBlock";
+import LtiToolBlock from "@/components/blocks/LtiToolBlock";
 import SaveToLibraryModal from "@/components/modals/SaveToLibraryModal";
 import LibraryPanel from "@/components/LibraryPanel";
 import Modal from "@/components/Modal";
@@ -95,6 +96,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
     const [aiQuizContext, setAiQuizContext] = useState("");
     const [aiQuizType, setAiQuizType] = useState("multiple-choice");
     const [exerciseSettings, setExerciseSettings] = useState<OrganizationExerciseSettings>(defaultExerciseSettings);
+    const [ltiTools, setLtiTools] = useState<LtiExternalTool[]>([]);
 
     const [editValue, setEditValue] = useState("");
 
@@ -105,12 +107,14 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
         const loadData = async () => {
             try {
                 // Use cmsApi for consistency
-                const [lessonData, orgExerciseSettings] = await Promise.all([
+                const [lessonData, orgExerciseSettings, courseLtiTools] = await Promise.all([
                     cmsApi.getLesson(params.lessonId),
                     cmsApi.getOrganizationExerciseSettings(),
+                    lmsApi.listCourseLtiTools(params.id),
                 ]);
                 setLesson(lessonData);
                 setExerciseSettings(orgExerciseSettings);
+                setLtiTools(courseLtiTools);
                 setSummary(lessonData.summary || "");
                 setIsGraded(lessonData.is_graded || false);
                 setSelectedCategoryId(lessonData.grading_category_id || "");
@@ -280,6 +284,12 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                 user_role: "Rol del estudiante...",
                 objectives: "Objetivos...",
                 initial_message: "Hola, ¿cómo puedo ayudarte?"
+            }),
+            ...(type === 'lti-tool' && {
+                title: "Herramienta LTI",
+                lti_tool_id: "",
+                launch_url: "",
+                url: "",
             }),
         };
         setBlocks([...blocks, newBlock]);
@@ -1173,6 +1183,16 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                     onChange={(updates) => updateBlock(block.id, updates)}
                                 />
                             )}
+                            {block.type === 'lti-tool' && (
+                                <LtiToolBlock
+                                    title={block.title}
+                                    lti_tool_id={block.lti_tool_id}
+                                    launch_url={block.launch_url || block.url}
+                                    availableTools={ltiTools}
+                                    editMode={editMode}
+                                    onChange={(updates) => updateBlock(block.id, updates)}
+                                />
+                            )}
                         </div>
                     </div>
                 ))}
@@ -1218,6 +1238,7 @@ export default function LessonEditor({ params }: { params: { id: string; lessonI
                                     ...(exerciseSettings.mermaid_enabled ? [{ type: 'mermaid', icon: '📊', label: 'Mermaid Diagram', color: 'indigo' }] : []),
                                     ...(exerciseSettings.role_playing_enabled ? [{ type: 'role-playing', icon: '🎭', label: 'Role-Playing AI', color: 'purple' }] : []),
                                     ...(exerciseSettings.code_lab_enabled ? [{ type: 'code-lab', icon: '💻', label: 'Code Lab', color: 'slate' }] : []),
+                                    { type: 'lti-tool', icon: '🔗', label: 'LTI Tool', color: 'emerald' },
                                 ].map((item) => (
                                     <button
                                         key={item.type}

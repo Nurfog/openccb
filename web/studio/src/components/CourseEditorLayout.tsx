@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
     Layout, CheckCircle2, BarChart2, Settings, Folder,
     GraduationCap, Megaphone, Users, Award, Video,
-    BookOpen, ShieldCheck, Radio, TrendingUp, ChevronLeft
+    BookOpen, ShieldCheck, Radio, TrendingUp, ChevronLeft, Link2
 } from "lucide-react";
 import { cmsApi, Course } from "@/lib/api";
 
@@ -25,7 +25,8 @@ type TabKey =
     | "peer-reviews"
     | "students"
     | "sessions"
-    | "pedagogical";
+    | "pedagogical"
+    | "lti-tools";
 
 interface CourseEditorLayoutProps {
     children: React.ReactNode;
@@ -116,6 +117,7 @@ export default function CourseEditorLayout({
             tabs: [
                 { key: "analytics", label: "Analíticas", icon: BarChart2, href: `/courses/${id}/analytics` },
                 { key: "pedagogical", label: "Análisis Pedagógico", icon: TrendingUp, href: `/courses/${id}/analytics/pedagogical` },
+                { key: "lti-tools", label: "Herramientas LTI", icon: Link2, href: `/courses/${id}/lti-tools` },
                 { key: "settings", label: "Configuración", icon: Settings, href: `/courses/${id}/settings` },
             ],
         },

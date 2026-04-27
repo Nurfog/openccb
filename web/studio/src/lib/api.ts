@@ -163,7 +163,7 @@ export interface QuizQuestion {
 
 export interface Block {
     id: string;
-    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'document' | 'video_marker' | 'audio-response' | 'memory-match' | 'hotspot' | 'peer-review' | 'role-playing' | 'mermaid' | 'code-lab';
+    type: 'description' | 'media' | 'quiz' | 'fill-in-the-blanks' | 'matching' | 'ordering' | 'short-answer' | 'document' | 'video_marker' | 'audio-response' | 'memory-match' | 'hotspot' | 'peer-review' | 'role-playing' | 'mermaid' | 'code-lab' | 'lti-tool';
     title?: string;
     content?: string;
     url?: string;
@@ -208,6 +208,9 @@ export interface Block {
     initial_code?: string;
     solution?: string;
     test_cases?: { description: string; expected: string }[];
+    // LTI Tool fields
+    lti_tool_id?: string;
+    launch_url?: string;
 }
 
 export interface Lesson {
@@ -1828,6 +1831,16 @@ export const lmsApi = {
         apiFetch(`/plugins/${id}`, { method: 'PUT', body: JSON.stringify(payload) }, true),
     deletePlugin: (id: string): Promise<void> =>
         apiFetch(`/plugins/${id}`, { method: 'DELETE' }, true),
+
+    // Fase 36: LTI 1.3 Tool Consumer
+    listCourseLtiTools: (courseId: string): Promise<LtiExternalTool[]> =>
+        apiFetch(`/courses/${courseId}/lti-tools`, {}, true),
+    createCourseLtiTool: (courseId: string, payload: CreateLtiExternalToolPayload): Promise<LtiExternalTool> =>
+        apiFetch(`/courses/${courseId}/lti-tools`, { method: 'POST', body: JSON.stringify(payload) }, true),
+    updateCourseLtiTool: (courseId: string, toolId: string, payload: UpdateLtiExternalToolPayload): Promise<LtiExternalTool> =>
+        apiFetch(`/courses/${courseId}/lti-tools/${toolId}`, { method: 'PUT', body: JSON.stringify(payload) }, true),
+    deleteCourseLtiTool: (courseId: string, toolId: string): Promise<void> =>
+        apiFetch(`/courses/${courseId}/lti-tools/${toolId}`, { method: 'DELETE' }, true),
 };
 
 export interface Meeting {
@@ -2002,6 +2015,33 @@ export interface UpdatePluginPayload {
     icon_url?: string;
     config?: Record<string, unknown>;
     enabled?: boolean;
+}
+
+// Fase 36: LTI 1.3 Tool Consumer
+export interface LtiExternalTool {
+    id: string;
+    organization_id: string;
+    course_id: string;
+    name: string;
+    launch_url: string;
+    enabled: boolean;
+    config: Record<string, unknown>;
+    created_at: string;
+    updated_at: string;
+}
+export interface CreateLtiExternalToolPayload {
+    name: string;
+    launch_url: string;
+    shared_secret: string;
+    enabled?: boolean;
+    config?: Record<string, unknown>;
+}
+export interface UpdateLtiExternalToolPayload {
+    name?: string;
+    launch_url?: string;
+    shared_secret?: string;
+    enabled?: boolean;
+    config?: Record<string, unknown>;
 }
 
 export interface LtiDeepLinkingContentItem {

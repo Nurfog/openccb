@@ -2,6 +2,7 @@ mod db_util;
 mod handlers;
 mod handlers_announcements;
 mod handlers_pedagogical;
+mod handlers_lti_consumer;
 mod handlers_email;
 mod handlers_scorm;
 mod handlers_search;
@@ -198,6 +199,17 @@ async fn main() {
         // Aprendizaje en Vivo (Live Learning)
         .route("/courses/{id}/meetings", get(live::get_course_meetings).post(live::create_meeting))
         .route("/courses/{id}/meetings/{meeting_id}", delete(live::delete_meeting))
+        // LTI 1.3 Tool Consumer (Fase 36)
+        .route(
+            "/courses/{id}/lti-tools",
+            get(handlers_lti_consumer::list_course_lti_tools)
+                .post(handlers_lti_consumer::create_course_lti_tool),
+        )
+        .route(
+            "/courses/{id}/lti-tools/{tool_id}",
+            put(handlers_lti_consumer::update_course_lti_tool)
+                .delete(handlers_lti_consumer::delete_course_lti_tool),
+        )
         // Portafolio e insignias (Badges)
         .route("/profile/{user_id}", get(portfolio::get_public_profile))
         .route("/my/badges", get(portfolio::get_my_badges))
@@ -438,6 +450,10 @@ async fn main() {
         )
         .route("/lti/login", get(lti::lti_login_initiation))
         .route("/lti/launch", post(lti::lti_launch))
+        .route(
+            "/lti/tools/{tool_id}/grade-passback",
+            post(handlers_lti_consumer::lti_grade_passback),
+        )
         .route("/lti/jwks", get(jwks::lti_jwks_handler))
         .route("/lti/deep-linking/response", post(lti::lti_deep_linking_response))
         .merge(protected_routes)

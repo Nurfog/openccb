@@ -23,6 +23,7 @@ import PeerReviewPlayer from "@/components/blocks/PeerReviewPlayer";
 import MermaidViewer from "@/components/blocks/MermaidViewer";
 import ScormPlayer from "@/components/blocks/ScormPlayer";
 import PluginBlock from "@/components/blocks/PluginBlock";
+import LtiToolPlayer from "@/components/blocks/LtiToolPlayer";
 import InteractiveTranscript from "@/components/InteractiveTranscript";
 import AITutor from "@/components/AITutor";
 import LessonLockedView from "@/components/LessonLockedView";
@@ -540,6 +541,13 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                                                 courseId={params.id}
                                                                 title={block.title || lesson.title}
                                                                 launchUrl={block.launch_url || block.url || lesson.content_url || ""}
+                                                            />
+                                                        );
+                                                    case 'lti-tool':
+                                                        return (
+                                                            <LtiToolPlayer
+                                                                title={block.title || 'Herramienta LTI'}
+                                                                launchUrl={block.launch_url || block.url || ''}
                                                             />
                                                         );
                                                     default:
