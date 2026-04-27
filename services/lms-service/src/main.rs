@@ -173,6 +173,15 @@ async fn main() {
             "/lessons/{id}/collaborative-canvas/stream",
             get(handlers::stream_lesson_collaborative_canvas),
         )
+        .route(
+            "/lessons/{id}/collaborative-doc",
+            get(handlers::get_lesson_collaborative_doc)
+                .put(handlers::update_lesson_collaborative_doc),
+        )
+        .route(
+            "/lessons/{id}/collaborative-doc/stream",
+            get(handlers::stream_lesson_collaborative_doc),
+        )
         .route("/lessons/{id}/bookmark", post(handlers::toggle_bookmark))
         .route("/bookmarks", get(handlers::get_user_bookmarks))
         .route("/grades", post(handlers::submit_lesson_score))

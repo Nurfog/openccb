@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import CourseEditorLayout from "@/components/CourseEditorLayout";
-import { lmsApi, StudyRoom, CreateStudyRoomPayload } from "@/lib/api";
+import { lmsApi, StudyRoom, BbbRecording, CreateStudyRoomPayload } from "@/lib/api";
 import {
     Video,
     Plus,
@@ -14,6 +14,9 @@ import {
     Clock,
     Users,
     ExternalLink,
+    Film,
+    ChevronDown,
+    ChevronRight,
 } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -38,6 +41,9 @@ export default function CourseStudyRoomsPage() {
         description: "",
         max_participants: 50,
     });
+    const [recordings, setRecordings] = useState<Record<string, BbbRecording[]>>({});
+    const [loadingRec, setLoadingRec] = useState<Record<string, boolean>>({});
+    const [expandedRec, setExpandedRec] = useState<Record<string, boolean>>({});
 
     const loadRooms = useCallback(async () => {
         setLoading(true);
@@ -104,6 +110,22 @@ export default function CourseStudyRoomsPage() {
             setRooms((prev) => prev.filter((r) => r.id !== room.id));
         } catch (e) {
             setError(e instanceof Error ? e.message : "No se pudo eliminar la sala");
+        }
+    };
+
+    const toggleRecordings = async (room: StudyRoom) => {
+        const isExpanded = expandedRec[room.id];
+        setExpandedRec((prev) => ({ ...prev, [room.id]: !isExpanded }));
+        if (!isExpanded && !recordings[room.id]) {
+            setLoadingRec((prev) => ({ ...prev, [room.id]: true }));
+            try {
+                const recs = await lmsApi.getStudyRoomRecordings(id, room.id);
+                setRecordings((prev) => ({ ...prev, [room.id]: recs }));
+            } catch {
+                setRecordings((prev) => ({ ...prev, [room.id]: [] }));
+            } finally {
+                setLoadingRec((prev) => ({ ...prev, [room.id]: false }));
+            }
         }
     };
 
@@ -175,10 +197,8 @@ export default function CourseStudyRoomsPage() {
 
                     <div className="space-y-3">
                         {rooms.map((room) => (
-                            <div
-                                key={room.id}
-                                className="rounded-xl border border-black/10 dark:border-white/10 px-4 py-3 flex flex-wrap items-center justify-between gap-3"
-                            >
+                            <div key={room.id} className="rounded-xl border border-black/10 dark:border-white/10">
+                                <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-3">
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className="text-sm font-semibold truncate">{room.title}</span>
@@ -229,6 +249,14 @@ export default function CourseStudyRoomsPage() {
                                         </button>
                                     )}
                                     {room.status === "ended" && (
+                                        <>
+                                        <button
+                                            onClick={() => void toggleRecordings(room)}
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-semibold hover:bg-blue-100"
+                                        >
+                                            {expandedRec[room.id] ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                            <Film className="w-3 h-3" /> Grabaciones
+                                        </button>
                                         <button
                                             onClick={() => void deleteRoom(room)}
                                             className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
@@ -236,9 +264,41 @@ export default function CourseStudyRoomsPage() {
                                         >
                                             <Trash2 className="w-4 h-4 text-red-600" />
                                         </button>
+                                        </>
                                     )}
                                 </div>
                             </div>
+
+                            {/* Grabaciones BBB dentro del wrapper */}
+                            {room.status === "ended" && expandedRec[room.id] && (
+                                <div className="px-4 pb-3 rounded-b-xl bg-gray-50 dark:bg-white/5 border-t border-black/5 dark:border-white/5">
+                                    {loadingRec[room.id] ? (
+                                        <p className="text-xs text-black/50 dark:text-white/50 pt-3">Cargando grabaciones…</p>
+                                    ) : recordings[room.id]?.length ? (
+                                        <div className="space-y-2 pt-3">
+                                            {recordings[room.id].map((rec) => (
+                                                <div key={rec.record_id} className="flex items-center justify-between gap-3 text-xs">
+                                                    <div>
+                                                        <span className="font-semibold">{rec.name}</span>
+                                                        <span className="ml-2 text-black/40 dark:text-white/40">{rec.duration_minutes} min · {rec.participants} participantes</span>
+                                                    </div>
+                                                    <a
+                                                        href={rec.playback_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline shrink-0"
+                                                    >
+                                                        <ExternalLink className="w-3 h-3" /> Ver
+                                                    </a>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-black/50 dark:text-white/50">No hay grabaciones disponibles para esta sala.</p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                         ))}
                         {!loading && rooms.length === 0 && (
                             <p className="text-sm text-black/50 dark:text-white/50">No hay salas creadas para este curso.</p>

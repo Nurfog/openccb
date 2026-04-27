@@ -1853,6 +1853,8 @@ export const lmsApi = {
         apiFetch(`/courses/${courseId}/study-rooms/${roomId}/end`, { method: 'POST' }, true),
     deleteStudyRoom: (courseId: string, roomId: string): Promise<void> =>
         apiFetch(`/courses/${courseId}/study-rooms/${roomId}`, { method: 'DELETE' }, true),
+    getStudyRoomRecordings: (courseId: string, roomId: string): Promise<BbbRecording[]> =>
+        apiFetch(`/courses/${courseId}/study-rooms/${roomId}/recordings`, {}, true),
 };
 
 export interface StudyRoom {
@@ -1871,6 +1873,18 @@ export interface StudyRoom {
     max_participants: number;
     created_at: string;
     updated_at: string;
+}
+
+export interface BbbRecording {
+    record_id: string;
+    meeting_id: string;
+    name: string;
+    state: string;
+    start_time: string;
+    end_time: string;
+    participants: number;
+    playback_url: string;
+    duration_minutes: number;
 }
 
 export interface CreateStudyRoomPayload {
@@ -2063,6 +2077,10 @@ export interface LtiExternalTool {
     launch_url: string;
     enabled: boolean;
     config: Record<string, unknown>;
+    ags_client_id?: string;
+    ags_client_secret?: string;
+    ags_token_url?: string;
+    ags_lineitem_url?: string;
     created_at: string;
     updated_at: string;
 }
@@ -2072,6 +2090,10 @@ export interface CreateLtiExternalToolPayload {
     shared_secret: string;
     enabled?: boolean;
     config?: Record<string, unknown>;
+    ags_client_id?: string;
+    ags_client_secret?: string;
+    ags_token_url?: string;
+    ags_lineitem_url?: string;
 }
 export interface UpdateLtiExternalToolPayload {
     name?: string;
@@ -2079,6 +2101,10 @@ export interface UpdateLtiExternalToolPayload {
     shared_secret?: string;
     enabled?: boolean;
     config?: Record<string, unknown>;
+    ags_client_id?: string;
+    ags_client_secret?: string;
+    ags_token_url?: string;
+    ags_lineitem_url?: string;
 }
 
 export interface LtiDeepLinkingContentItem {
@@ -2326,4 +2352,42 @@ export async function evaluateAudioResponse(
 
 export async function getCourseAudioResponseStats(courseId: string): Promise<AudioResponseStats> {
     return apiFetch(`/courses/${courseId}/audio-responses/stats`, { method: 'GET' }, true);
+}
+
+// ─── Documentos Colaborativos (Fase 40) ──────────────────────────────────────
+
+export interface CollaborativeDoc {
+    lesson_id: string;
+    organization_id: string;
+    content: string;
+    revision: number;
+    last_modified_by: string | null;
+    updated_at: string;
+}
+
+export interface UpdateCollaborativeDocPayload {
+    content: string;
+    base_revision: number;
+}
+
+export interface UpdateCollaborativeDocResponse {
+    lesson_id: string;
+    revision: number;
+    conflict: boolean;
+    server_content?: string;
+    server_revision?: number;
+}
+
+export async function getLessonCollaborativeDoc(lessonId: string): Promise<CollaborativeDoc> {
+    return apiFetch(`/lessons/${lessonId}/collaborative-doc`, {}, true);
+}
+
+export async function updateLessonCollaborativeDoc(
+    lessonId: string,
+    payload: UpdateCollaborativeDocPayload
+): Promise<UpdateCollaborativeDocResponse> {
+    return apiFetch(`/lessons/${lessonId}/collaborative-doc`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+    }, true);
 }

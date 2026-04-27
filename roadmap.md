@@ -128,7 +128,15 @@
 - [x] **Studio**: página `/courses/[id]/study-rooms` — crear sala, lista con estado, botones Iniciar/Unirse (BBB en nueva pestaña)/Finalizar/Eliminar, instrucciones de configuración integradas. Tab "Salas de Estudio" en `CourseEditorLayout`.
 - [x] **Experience**: página `/courses/[id]/study-rooms` con lista de salas activas/programadas y botón "Unirse". Acceso directo desde la página del curso como tarjeta de navegación.
 
+### Fase 39: Grabaciones BBB + OAuth2 AGS ✅
+- [x] **Grabaciones BBB**: `GET /courses/{id}/study-rooms/{room_id}/recordings` — llama a `getRecordings` de la API BBB y parsea XML de respuesta. Struct `BbbRecording` con `record_id`, `name`, `state`, `start_time`, `end_time`, `participants`, `playback_url`, `duration_minutes`.
+- [x] **Studio study-rooms**: botón "Grabaciones" en salas finalizadas — panel expandible con lista de grabaciones + links de reproducción.
+- [x] **Experience study-rooms**: sección de grabaciones en salas finalizadas con botón toggle y lista de grabaciones con links.
+- [x] **OAuth2 AGS** (`handlers_lti_consumer.rs`): `POST /lti/tools/{tool_id}/ags-score` — token caching en tabla `lti_ags_tokens`, client_credentials grant, POST de scores al `ags_lineitem_url` del LMS externo. Modo dual: HMAC legacy sigue funcionando.
+- [x] **Migración AGS**: ALTER TABLE `lti_external_tools` agrega campos `ags_client_id`, `ags_client_secret`, `ags_token_url`, `ags_lineitem_url`. CREATE TABLE `lti_ags_tokens`.
+- [x] **Studio lti-tools**: sección AGS colapsable en el formulario de creación — 4 campos opcionales (client_id, client_secret, token_url, lineitem_url).
+- [x] **api.ts**: Interface `BbbRecording`, `getStudyRoomRecordings()` en Studio y Experience. Campos AGS en `LtiExternalTool`, `CreateLtiExternalToolPayload`, `UpdateLtiExternalToolPayload`.
+
 **Próximas Prioridades**:
-1. **OAuth2 AGS** — estándar IMS para passback de calificaciones (reemplaza HMAC custom).
-2. **Edición Multiusuario** — documentos compartidos tipo Google Docs en lecciones.
-3. **Grabaciones BBB** — listar grabaciones de salas finalizadas desde la API de BBB.
+1. **Edición Multiusuario** — documentos compartidos tipo Google Docs en lecciones.
+2. **Notificaciones en tiempo real** — WebSocket o SSE para alertas de actividad del curso.

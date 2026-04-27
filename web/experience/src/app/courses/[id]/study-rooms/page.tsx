@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { lmsApi, StudyRoom } from "@/lib/api";
-import { Video, Users, Clock, ExternalLink, ArrowLeft, RefreshCw } from "lucide-react";
+import { lmsApi, StudyRoom, BbbRecording } from "@/lib/api";
+import { Video, Users, Clock, ExternalLink, ArrowLeft, RefreshCw, Film, ChevronDown, ChevronRight } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
     pending: "Programada",
@@ -23,6 +23,9 @@ export default function StudyRoomsPage() {
     const [loading, setLoading] = useState(true);
     const [joiningId, setJoiningId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [recordings, setRecordings] = useState<Record<string, BbbRecording[]>>({});
+    const [loadingRec, setLoadingRec] = useState<Record<string, boolean>>({});
+    const [expandedRec, setExpandedRec] = useState<Record<string, boolean>>({});
 
     const loadRooms = useCallback(async () => {
         setLoading(true);
@@ -57,6 +60,22 @@ export default function StudyRoomsPage() {
 
     const activeRooms = rooms.filter((r) => r.status !== "ended");
     const endedRooms = rooms.filter((r) => r.status === "ended");
+
+    const toggleRecordings = async (room: StudyRoom) => {
+        const isExpanded = expandedRec[room.id];
+        setExpandedRec((prev) => ({ ...prev, [room.id]: !isExpanded }));
+        if (!isExpanded && !recordings[room.id]) {
+            setLoadingRec((prev) => ({ ...prev, [room.id]: true }));
+            try {
+                const recs = await lmsApi.getStudyRoomRecordings(id, room.id);
+                setRecordings((prev) => ({ ...prev, [room.id]: recs }));
+            } catch {
+                setRecordings((prev) => ({ ...prev, [room.id]: [] }));
+            } finally {
+                setLoadingRec((prev) => ({ ...prev, [room.id]: false }));
+            }
+        }
+    };
 
     return (
         <main className="min-h-screen bg-gray-50 dark:bg-zinc-950 px-4 py-8 max-w-3xl mx-auto">
@@ -156,21 +175,57 @@ export default function StudyRoomsPage() {
                         Salas finalizadas
                     </h2>
                     {endedRooms.map((room) => (
-                        <div
-                            key={room.id}
-                            className="rounded-xl border border-black/5 dark:border-white/5 bg-white/50 dark:bg-white/5 px-4 py-3 flex items-center justify-between gap-3 opacity-60"
-                        >
-                            <div>
-                                <span className="text-sm font-medium">{room.title}</span>
-                                {room.ended_at && (
-                                    <span className="ml-2 text-[11px] text-black/40 dark:text-white/40">
-                                        Finalizada {new Date(room.ended_at).toLocaleDateString()}
+                        <div key={room.id} className="rounded-xl border border-black/5 dark:border-white/5 bg-white/50 dark:bg-white/5">
+                            <div className="px-4 py-3 flex items-center justify-between gap-3">
+                                <div>
+                                    <span className="text-sm font-medium">{room.title}</span>
+                                    {room.ended_at && (
+                                        <span className="ml-2 text-[11px] text-black/40 dark:text-white/40">
+                                            Finalizada {new Date(room.ended_at).toLocaleDateString()}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => void toggleRecordings(room)}
+                                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-semibold hover:bg-blue-100"
+                                    >
+                                        {expandedRec[room.id] ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                        <Film className="w-3 h-3" /> Grabaciones
+                                    </button>
+                                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_COLOR.ended}`}>
+                                        {STATUS_LABEL.ended}
                                     </span>
-                                )}
+                                </div>
                             </div>
-                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_COLOR.ended}`}>
-                                {STATUS_LABEL.ended}
-                            </span>
+                            {expandedRec[room.id] && (
+                                <div className="px-4 pb-3">
+                                    {loadingRec[room.id] ? (
+                                        <p className="text-xs text-black/50 dark:text-white/50">Cargando grabaciones…</p>
+                                    ) : recordings[room.id]?.length ? (
+                                        <div className="space-y-2">
+                                            {recordings[room.id].map((rec) => (
+                                                <div key={rec.record_id} className="flex items-center justify-between gap-3 text-xs bg-gray-50 dark:bg-white/5 rounded-lg px-3 py-2">
+                                                    <div>
+                                                        <span className="font-semibold">{rec.name}</span>
+                                                        <span className="ml-2 text-black/40 dark:text-white/40">{rec.duration_minutes} min</span>
+                                                    </div>
+                                                    <a
+                                                        href={rec.playback_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline shrink-0"
+                                                    >
+                                                        <ExternalLink className="w-3 h-3" /> Ver grabación
+                                                    </a>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-black/40 dark:text-white/40">No hay grabaciones disponibles.</p>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </section>

@@ -1347,6 +1347,24 @@ export const lmsApi = {
     joinStudyRoom(courseId: string, roomId: string): Promise<{ room_id: string; join_url: string }> {
         return apiFetch(`/courses/${courseId}/study-rooms/${roomId}/join`, { method: 'POST' });
     },
+
+    getStudyRoomRecordings(courseId: string, roomId: string): Promise<BbbRecording[]> {
+        return apiFetch(`/courses/${courseId}/study-rooms/${roomId}/recordings`);
+    },
+
+    getLessonCollaborativeDoc(lessonId: string): Promise<CollaborativeDoc> {
+        return apiFetch(`/lessons/${lessonId}/collaborative-doc`);
+    },
+
+    updateLessonCollaborativeDoc(
+        lessonId: string,
+        payload: { content: string; base_revision: number }
+    ): Promise<UpdateCollaborativeDocResponse> {
+        return apiFetch(`/lessons/${lessonId}/collaborative-doc`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+        });
+    },
 };
 
 export interface StudyRoom {
@@ -1365,4 +1383,35 @@ export interface StudyRoom {
     max_participants: number;
     created_at: string;
     updated_at: string;
+}
+
+export interface BbbRecording {
+    record_id: string;
+    meeting_id: string;
+    name: string;
+    state: string;
+    start_time: string;
+    end_time: string;
+    participants: number;
+    playback_url: string;
+    duration_minutes: number;
+}
+
+// ─── Documentos Colaborativos (Fase 40) ──────────────────────────────────────
+
+export interface CollaborativeDoc {
+    lesson_id: string;
+    organization_id: string;
+    content: string;
+    revision: number;
+    last_modified_by: string | null;
+    updated_at: string;
+}
+
+export interface UpdateCollaborativeDocResponse {
+    lesson_id: string;
+    revision: number;
+    conflict: boolean;
+    server_content?: string;
+    server_revision?: number;
 }

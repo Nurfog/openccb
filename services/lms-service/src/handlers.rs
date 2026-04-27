@@ -4782,3 +4782,276 @@ pub async fn stream_lesson_collaborative_canvas(
     Ok(Sse::new(ReceiverStream::new(rx))
         .keep_alive(KeepAlive::default()))
 }
+
+// ─── Documentos Colaborativos en Tiempo Real (Fase 40) ───────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct CollaborativeDocResponse {
+    pub lesson_id: Uuid,
+    pub organization_id: Uuid,
+    pub content: String,
+    pub revision: i64,
+    pub last_modified_by: Option<Uuid>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateCollaborativeDocPayload {
+    pub content: String,
+    pub base_revision: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UpdateCollaborativeDocResponse {
+    pub lesson_id: Uuid,
+    pub revision: i64,
+    pub conflict: bool,
+    pub server_content: Option<String>,
+    pub server_revision: Option<i64>,
+}
+
+/// GET /lessons/{id}/collaborative-doc
+pub async fn get_lesson_collaborative_doc(
+    Org(org_ctx): Org,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<CollaborativeDocResponse>, StatusCode> {
+    let lesson_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM lessons WHERE id = $1 AND organization_id = $2)",
+    )
+    .bind(id)
+    .bind(org_ctx.id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if !lesson_exists {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    #[derive(sqlx::FromRow)]
+    struct DocRow {
+        content: String,
+        revision: i64,
+        last_modified_by: Option<Uuid>,
+        updated_at: DateTime<Utc>,
+    }
+
+    let row = sqlx::query_as::<_, DocRow>(
+        "SELECT content, revision, last_modified_by, updated_at FROM lesson_collaborative_docs WHERE lesson_id = $1 AND organization_id = $2",
+    )
+    .bind(id)
+    .bind(org_ctx.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let doc = row.unwrap_or(DocRow {
+        content: String::new(),
+        revision: 0,
+        last_modified_by: None,
+        updated_at: Utc::now(),
+    });
+
+    Ok(Json(CollaborativeDocResponse {
+        lesson_id: id,
+        organization_id: org_ctx.id,
+        content: doc.content,
+        revision: doc.revision,
+        last_modified_by: doc.last_modified_by,
+        updated_at: doc.updated_at,
+    }))
+}
+
+/// PUT /lessons/{id}/collaborative-doc
+pub async fn update_lesson_collaborative_doc(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<UpdateCollaborativeDocPayload>,
+) -> Result<Json<UpdateCollaborativeDocResponse>, (StatusCode, String)> {
+    let lesson_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM lessons WHERE id = $1 AND organization_id = $2)",
+    )
+    .bind(id)
+    .bind(org_ctx.id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if !lesson_exists {
+        return Err((StatusCode::NOT_FOUND, "Lección no encontrada".into()));
+    }
+
+    let user_id: Uuid = claims.sub.parse().map_err(|_| (StatusCode::UNAUTHORIZED, "Token inválido".into()))?;
+
+    // Intento de actualización optimista
+    let rows_updated = sqlx::query(
+        r#"
+        UPDATE lesson_collaborative_docs
+        SET content = $1, revision = revision + 1, last_modified_by = $2, updated_at = NOW()
+        WHERE lesson_id = $3 AND organization_id = $4 AND revision = $5
+        "#,
+    )
+    .bind(&payload.content)
+    .bind(user_id)
+    .bind(id)
+    .bind(org_ctx.id)
+    .bind(payload.base_revision)
+    .execute(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .rows_affected();
+
+    if rows_updated == 1 {
+        return Ok(Json(UpdateCollaborativeDocResponse {
+            lesson_id: id,
+            revision: payload.base_revision + 1,
+            conflict: false,
+            server_content: None,
+            server_revision: None,
+        }));
+    }
+
+    // Verificar si existe (puede ser primer guardado con revision=0)
+    let existing = sqlx::query_scalar::<_, i64>(
+        "SELECT revision FROM lesson_collaborative_docs WHERE lesson_id = $1 AND organization_id = $2",
+    )
+    .bind(id)
+    .bind(org_ctx.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if existing.is_none() && payload.base_revision == 0 {
+        // Primer guardado
+        let course_id = sqlx::query_scalar::<_, Uuid>(
+            "SELECT course_id FROM lessons WHERE id = $1",
+        )
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        sqlx::query(
+            r#"
+            INSERT INTO lesson_collaborative_docs (lesson_id, organization_id, course_id, content, revision, last_modified_by)
+            VALUES ($1, $2, $3, $4, 1, $5)
+            "#,
+        )
+        .bind(id)
+        .bind(org_ctx.id)
+        .bind(course_id)
+        .bind(&payload.content)
+        .bind(user_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        return Ok(Json(UpdateCollaborativeDocResponse {
+            lesson_id: id,
+            revision: 1,
+            conflict: false,
+            server_content: None,
+            server_revision: None,
+        }));
+    }
+
+    // Conflicto — devolver versión del servidor
+    #[derive(sqlx::FromRow)]
+    struct ConflictRow { content: String, revision: i64 }
+    let server = sqlx::query_as::<_, ConflictRow>(
+        "SELECT content, revision FROM lesson_collaborative_docs WHERE lesson_id = $1 AND organization_id = $2",
+    )
+    .bind(id)
+    .bind(org_ctx.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let (sc, sr) = server.map(|r| (r.content, r.revision)).unwrap_or_default();
+
+    Err((
+        StatusCode::CONFLICT,
+        serde_json::json!({
+            "conflict": true,
+            "lesson_id": id,
+            "server_content": sc,
+            "server_revision": sr,
+        }).to_string(),
+    ))
+}
+
+/// GET /lessons/{id}/collaborative-doc/stream  (SSE)
+pub async fn stream_lesson_collaborative_doc(
+    Org(org_ctx): Org,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, StatusCode> {
+    use std::convert::Infallible;
+    use tokio_stream::wrappers::ReceiverStream;
+
+    let lesson_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM lessons WHERE id = $1 AND organization_id = $2)",
+    )
+    .bind(id)
+    .bind(org_ctx.id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if !lesson_exists {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    let (tx, rx) = tokio::sync::mpsc::channel::<Result<Event, Infallible>>(16);
+
+    tokio::spawn(async move {
+        #[derive(sqlx::FromRow)]
+        struct DocRow {
+            content: String,
+            revision: i64,
+            last_modified_by: Option<Uuid>,
+            updated_at: DateTime<Utc>,
+        }
+
+        let mut last_revision: i64 = -1;
+
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+
+            let result = sqlx::query_as::<_, DocRow>(
+                "SELECT content, revision, last_modified_by, updated_at FROM lesson_collaborative_docs WHERE lesson_id = $1 AND organization_id = $2",
+            )
+            .bind(id)
+            .bind(org_ctx.id)
+            .fetch_optional(&pool)
+            .await;
+
+            match result {
+                Ok(Some(row)) if row.revision != last_revision => {
+                    last_revision = row.revision;
+                    let payload = serde_json::json!({
+                        "lesson_id": id,
+                        "content": row.content,
+                        "revision": row.revision,
+                        "last_modified_by": row.last_modified_by,
+                        "updated_at": row.updated_at.to_rfc3339(),
+                    });
+                    if tx.send(Ok(Event::default().data(payload.to_string()))).await.is_err() {
+                        break;
+                    }
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    tracing::error!("stream_lesson_collaborative_doc: poll error: {}", e);
+                    let _ = tx.send(Ok(Event::default().event("error").data("poll_error"))).await;
+                }
+            }
+        }
+    });
+
+    Ok(Sse::new(ReceiverStream::new(rx))
+        .keep_alive(KeepAlive::default()))
+}

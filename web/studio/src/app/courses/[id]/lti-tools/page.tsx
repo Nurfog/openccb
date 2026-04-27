@@ -19,6 +19,8 @@ import {
     KeyRound,
     Copy,
     CheckCheck,
+    ChevronDown,
+    ChevronRight,
 } from "lucide-react";
 
 export default function CourseLtiToolsPage() {
@@ -33,6 +35,7 @@ export default function CourseLtiToolsPage() {
         shared_secret: "",
         enabled: true,
     });
+    const [showAgs, setShowAgs] = useState(false);
 
     // Rotación de secreto
     const [rotateModal, setRotateModal] = useState<{ toolId: string; toolName: string } | null>(null);
@@ -68,6 +71,7 @@ export default function CourseLtiToolsPage() {
             const created = await lmsApi.createCourseLtiTool(id, form);
             setTools((prev) => [...prev, created]);
             setForm({ name: "", launch_url: "", shared_secret: "", enabled: true });
+            setShowAgs(false);
         } catch (e) {
             setError(e instanceof Error ? e.message : "No se pudo crear la herramienta");
         } finally {
@@ -221,6 +225,49 @@ export default function CourseLtiToolsPage() {
                             onChange={(e) => setForm((f) => ({ ...f, shared_secret: e.target.value }))}
                         />
                     </div>
+                    {/* Configuración AGS (OAuth2) — colapsable */}
+                    <div className="mt-3">
+                        <button
+                            type="button"
+                            onClick={() => setShowAgs((v) => !v)}
+                            className="flex items-center gap-1 text-xs text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white"
+                        >
+                            {showAgs ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                            Configuración AGS / OAuth2 (opcional)
+                        </button>
+                        {showAgs && (
+                            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700">
+                                <p className="md:col-span-2 text-xs text-blue-700 dark:text-blue-300">
+                                    LTI AGS (Assignment and Grade Services) — permite passback de notas sin HMAC, usando OAuth2 client_credentials. Endpoint: <span className="font-mono">/lti/tools/{'{tool_id}'}/ags-score</span>
+                                </p>
+                                <input
+                                    className="rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+                                    placeholder="AGS Client ID"
+                                    value={form.ags_client_id ?? ""}
+                                    onChange={(e) => setForm((f) => ({ ...f, ags_client_id: e.target.value || undefined }))}
+                                />
+                                <input
+                                    type="password"
+                                    className="rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+                                    placeholder="AGS Client Secret"
+                                    value={form.ags_client_secret ?? ""}
+                                    onChange={(e) => setForm((f) => ({ ...f, ags_client_secret: e.target.value || undefined }))}
+                                />
+                                <input
+                                    className="rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+                                    placeholder="Token URL (https://lms.example/oauth/token)"
+                                    value={form.ags_token_url ?? ""}
+                                    onChange={(e) => setForm((f) => ({ ...f, ags_token_url: e.target.value || undefined }))}
+                                />
+                                <input
+                                    className="rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+                                    placeholder="LineItem URL (https://lms.example/lineitems/123)"
+                                    value={form.ags_lineitem_url ?? ""}
+                                    onChange={(e) => setForm((f) => ({ ...f, ags_lineitem_url: e.target.value || undefined }))}
+                                />
+                            </div>
+                        )}
+                    </div>
                     <div className="mt-3 flex items-center gap-3">
                         <button
                             onClick={() => void createTool()}
@@ -230,7 +277,7 @@ export default function CourseLtiToolsPage() {
                             {saving ? "Guardando..." : "Crear herramienta"}
                         </button>
                         <p className="text-xs text-black/50 dark:text-white/50">
-                            Passback endpoint: <span className="font-mono">/lti/tools/{'{tool_id}'}/grade-passback</span>. Headers requeridos: <span className="font-mono">x-openccb-lti-timestamp</span> y <span className="font-mono">x-openccb-lti-signature</span> (HMAC-SHA256).
+                            Passback HMAC: <span className="font-mono">/lti/tools/{'{tool_id}'}/grade-passback</span>. Passback AGS: <span className="font-mono">/lti/tools/{'{tool_id}'}/ags-score</span>.
                         </p>
                     </div>
                 </section>
