@@ -979,6 +979,7 @@ mod tests {
             course: Course {
                 id: course_id,
                 organization_id: Uuid::new_v4(),
+                external_sam_id: None,
                 title: "Test Course".to_string(),
                 description: None,
                 instructor_id: Uuid::new_v4(),
@@ -1020,6 +1021,7 @@ mod tests {
         let course_with_price = Course {
             id: course_id,
             organization_id: Uuid::new_v4(),
+            external_sam_id: None,
             title: "Test Course".to_string(),
             description: None,
             instructor_id: Uuid::new_v4(),
