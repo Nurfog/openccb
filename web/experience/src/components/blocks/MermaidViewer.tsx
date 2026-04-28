@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
+import DOMPurify from "isomorphic-dompurify";
 import { Block } from "@/lib/api";
 
 interface MermaidViewerProps {
@@ -29,7 +30,8 @@ export default function MermaidViewer({ block }: MermaidViewerProps) {
                 mermaidRef.current.innerHTML = "";
                 const { svg } = await mermaid.render(`mermaid-exp-${block.id}`, block.mermaid_code);
                 if (mermaidRef.current) {
-                    mermaidRef.current.innerHTML = svg;
+                    // Sanitizar SVG antes de inyectar
+                    mermaidRef.current.innerHTML = DOMPurify.sanitize(svg);
                 }
             } catch (error: any) {
                 console.error("Mermaid parsing error:", error);

@@ -74,7 +74,7 @@ pub async fn generate_question_embeddings(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     let _total = questions.len();
     let mut processed = 0;
@@ -181,7 +181,7 @@ pub async fn regenerate_question_embedding(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Pregunta no encontrada".to_string()))?;
     
     // Generar texto de la incrustación
@@ -226,7 +226,7 @@ pub async fn regenerate_question_embedding(
     .bind(question_id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     Ok(StatusCode::OK)
 }
@@ -310,7 +310,7 @@ pub async fn semantic_search(
     let results = sql_query
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     Ok(Json(results))
 }
@@ -348,7 +348,7 @@ pub async fn find_similar_questions(
     .bind(limit)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .into_iter()
     .filter(|r| r.similarity >= threshold)
     .collect();

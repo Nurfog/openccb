@@ -73,7 +73,7 @@ pub async fn generate_knowledge_embeddings(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     let _total = entries.len();
     let mut processed = 0;
@@ -157,7 +157,7 @@ pub async fn regenerate_knowledge_embedding(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Entrada de la base de conocimientos no encontrada".to_string()))?;
     
     // Generar embedding
@@ -180,7 +180,7 @@ pub async fn regenerate_knowledge_embedding(
     .bind(entry_id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     Ok(StatusCode::OK)
 }
@@ -264,7 +264,7 @@ pub async fn semantic_search_knowledge(
     let results = sql_query
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     Ok(Json(results))
 }

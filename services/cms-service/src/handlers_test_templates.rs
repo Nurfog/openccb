@@ -108,7 +108,7 @@ pub async fn create_test_template(
     .bind(payload.tags.as_deref())
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(template))
 }
@@ -198,7 +198,7 @@ pub async fn list_test_templates(
     let templates = sql_query
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(templates))
 }
@@ -225,7 +225,7 @@ pub async fn get_test_template(
     .await
     .map_err(|e| match e {
         sqlx::Error::RowNotFound => (StatusCode::NOT_FOUND, "Plantilla no encontrada".to_string()),
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+        _ => (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()),
     })?;
 
     // Obtener secciones
@@ -240,7 +240,7 @@ pub async fn get_test_template(
     .bind(template_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Obtener preguntas
     let questions: Vec<TestTemplateQuestion> = sqlx::query_as(
@@ -255,7 +255,7 @@ pub async fn get_test_template(
     .bind(template_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(TestTemplateWithQuestions {
         template,
@@ -317,7 +317,7 @@ pub async fn update_test_template(
     .await
     .map_err(|e| match e {
         sqlx::Error::RowNotFound => (StatusCode::NOT_FOUND, "Plantilla no encontrada".to_string()),
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+        _ => (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()),
     })?;
 
     Ok(Json(template))
@@ -341,7 +341,7 @@ pub async fn delete_test_template(
     .bind(org_ctx.id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Plantilla no encontrada".to_string()));
@@ -367,7 +367,7 @@ pub async fn create_template_question(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !exists.0 {
         return Err((StatusCode::NOT_FOUND, "Plantilla no encontrada".to_string()));
@@ -396,7 +396,7 @@ pub async fn create_template_question(
     .bind(payload.metadata.as_ref())
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(question))
 }
@@ -428,7 +428,7 @@ pub async fn delete_template_question(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !exists.0 {
         return Err((StatusCode::NOT_FOUND, "Plantilla no encontrada".to_string()));
@@ -444,7 +444,7 @@ pub async fn delete_template_question(
     .bind(template_id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Pregunta no encontrada".to_string()));
@@ -470,7 +470,7 @@ pub async fn create_template_section(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !exists.0 {
         return Err((StatusCode::NOT_FOUND, "Plantilla no encontrada".to_string()));
@@ -494,7 +494,7 @@ pub async fn create_template_section(
     .bind(payload.section_data.as_ref())
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(section))
 }
@@ -525,7 +525,7 @@ pub async fn delete_template_section(
     .bind(template_id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Sección no encontrada".to_string()));
@@ -560,7 +560,7 @@ pub async fn apply_template_to_lesson(
     .await
     .map_err(|e| match e {
         sqlx::Error::RowNotFound => (StatusCode::NOT_FOUND, "Plantilla no encontrada".to_string()),
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+        _ => (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()),
     })?;
 
     // Verificar que la lección existe y pertenece a la organización
@@ -571,7 +571,7 @@ pub async fn apply_template_to_lesson(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !lesson_exists.0 {
         return Err((StatusCode::NOT_FOUND, "Lección no encontrada".to_string()));
@@ -590,7 +590,7 @@ pub async fn apply_template_to_lesson(
     .bind(template_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if template_questions.is_empty() {
         return Err((StatusCode::BAD_REQUEST, "La plantilla no tiene preguntas".to_string()));
@@ -647,14 +647,14 @@ pub async fn apply_template_to_lesson(
     .bind(org_ctx.id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Incrementar el contador de uso de la plantilla
     sqlx::query("SELECT increment_template_usage($1)")
         .bind(template_id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     tracing::info!(
         "Plantilla '{}' aplicada a la lección '{}' con {} preguntas",

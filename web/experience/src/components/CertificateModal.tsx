@@ -2,6 +2,7 @@
 
 import { X, Printer, Download, Award, ShieldCheck } from "lucide-react";
 import { CertificateResponse } from "@/lib/api";
+import DOMPurify from "isomorphic-dompurify";
 
 interface CertificateModalProps {
     certificate: CertificateResponse;
@@ -49,13 +50,10 @@ export default function CertificateModal({ certificate, onClose }: CertificateMo
                 {/* Certificate Content Wrapper */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-12 flex items-center justify-center bg-slate-100 dark:bg-black/40">
                     <div className="certificate-container shadow-2xl ring-1 ring-black/5">
-                        {/* 
-                            We inject the HTML directly. 
-                            Note: The backend must sanitize this OR we trust our own generated template.
-                        */}
+                        {/* Sanitizar HTML con DOMPurify antes de inyectar */}
                         <div 
                             className="bg-white"
-                            dangerouslySetInnerHTML={{ __html: certificate.certificate_html }} 
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(certificate.certificate_html) }} 
                         />
                     </div>
                 </div>

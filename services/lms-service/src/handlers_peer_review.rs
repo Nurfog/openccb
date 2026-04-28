@@ -81,7 +81,7 @@ pub async fn submit_assignment(
     .bind(lesson_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if let Some(_) = existing {
         // Actualizar entrega existente
@@ -98,7 +98,7 @@ pub async fn submit_assignment(
         .bind(lesson_id)
         .fetch_one(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         return Ok(Json(updated));
     }
@@ -118,7 +118,7 @@ pub async fn submit_assignment(
     .bind(&payload.content)
     .fetch_one(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(submission))
 }
@@ -158,7 +158,7 @@ pub async fn get_peer_review_assignment(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(submission))
 }
@@ -177,7 +177,7 @@ pub async fn submit_peer_review(
     .bind(payload.submission_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let submission_user_id = match submission_row {
         Some(row) => row.get::<Uuid, _>("user_id"),
@@ -199,7 +199,7 @@ pub async fn submit_peer_review(
     .bind(claims.sub)
     .fetch_optional(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if existing.is_some() {
         return Err((
@@ -223,7 +223,7 @@ pub async fn submit_peer_review(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Recalcular nota final ponderada tras nueva revisión de par
     let lesson_id_for_calc: Uuid = sqlx::query_scalar(
@@ -232,7 +232,7 @@ pub async fn submit_peer_review(
     .bind(payload.submission_id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let _ = recalculate_final_score(&pool, payload.submission_id, lesson_id_for_calc).await;
 
@@ -258,7 +258,7 @@ pub async fn get_my_submission_feedback(
     .bind(lesson_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(reviews))
 }
@@ -287,7 +287,7 @@ pub async fn list_lesson_submissions(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(submissions))
 }
@@ -304,7 +304,7 @@ pub async fn get_submission_reviews(
     .bind(submission_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(reviews))
 }
@@ -325,7 +325,7 @@ pub async fn get_peer_review_settings(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(settings))
 }
@@ -376,7 +376,7 @@ pub async fn upsert_peer_review_settings(
     .bind(auto_assign)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(settings))
 }
@@ -400,7 +400,7 @@ pub async fn auto_assign_peer_reviews(
     .bind(lesson_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .unwrap_or(2);
 
     // Entregar todas las submissions de esta lección
@@ -411,7 +411,7 @@ pub async fn auto_assign_peer_reviews(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let mut assignments_created: i64 = 0;
 
@@ -423,7 +423,7 @@ pub async fn auto_assign_peer_reviews(
         .bind(sub_id)
         .fetch_one(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         let needed = (required as i64) - existing_count;
         if needed <= 0 {
@@ -437,7 +437,7 @@ pub async fn auto_assign_peer_reviews(
         .bind(sub_id)
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         // Candidatos: otros alumnos que no sean el autor y no hayan revisado ya
         let candidates: Vec<Uuid> = submissions
@@ -486,7 +486,7 @@ pub async fn auto_assign_peer_reviews(
     .bind(lesson_id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(serde_json::json!({
         "lesson_id": lesson_id,
@@ -517,7 +517,7 @@ pub async fn instructor_grade_submission(
     .bind(lesson_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if sub_exists.is_none() {
         return Err((StatusCode::NOT_FOUND, "Entrega no encontrada".to_string()));
@@ -542,7 +542,7 @@ pub async fn instructor_grade_submission(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Recalcular nota final ponderada
     recalculate_final_score(&pool, payload.submission_id, lesson_id).await?;
@@ -570,7 +570,7 @@ pub async fn get_my_submission(
     .bind(lesson_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(sub))
 }
@@ -594,7 +594,7 @@ async fn recalculate_final_score(
     .bind(submission_id)
     .fetch_optional(pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .unwrap_or((70i32, 30i32, 2i32));
 
     // Promedio de revisiones de pares (no instructor)
@@ -604,7 +604,7 @@ async fn recalculate_final_score(
     .bind(submission_id)
     .fetch_optional(pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .flatten();
 
     // Calificación del instructor
@@ -614,7 +614,7 @@ async fn recalculate_final_score(
     .bind(submission_id)
     .fetch_optional(pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .flatten();
 
     // Solo calcular nota final si hay suficientes revisiones de pares O hay nota del instructor
@@ -624,7 +624,7 @@ async fn recalculate_final_score(
     .bind(submission_id)
     .fetch_one(pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let has_enough_peers = peer_count >= required as i64;
     let final_score = match (peer_avg, instructor_score, has_enough_peers) {
@@ -653,7 +653,7 @@ async fn recalculate_final_score(
     .bind(submission_id)
     .execute(pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // También actualizar review_count en todas las submissions del mismo lesson
     let _ = sqlx::query(

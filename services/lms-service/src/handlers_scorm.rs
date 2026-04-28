@@ -74,7 +74,7 @@ pub async fn track_xapi_statement(
     .bind(payload.raw_statement)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(XapiStatementResponse {
         id: statement_id,

@@ -109,7 +109,7 @@ pub async fn sync_sam_students(
         .await
         .map_err(|e| {
             errors.push(format!("Error al comprobar el usuario {}: {}", sam_student.email, e));
-            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+            (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string())
         })
         .ok()
         .flatten();
@@ -422,7 +422,7 @@ pub async fn sync_all_sam(
             .await
             .map_err(|e| {
                 errors.push(format!("Error al comprobar el usuario {}: {}", sam_student.email, e));
-                (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+                (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string())
             })
             .ok()
             .flatten();

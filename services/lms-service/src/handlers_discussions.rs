@@ -454,7 +454,7 @@ pub async fn list_threads(
     let threads = sql_query
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(threads))
 }
@@ -497,7 +497,7 @@ pub async fn create_thread(
     .bind(&payload.content)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Suscribir automáticamente al autor al hilo
     let _ = sqlx::query(
@@ -654,7 +654,7 @@ fn get_thread_posts_recursive<'a>(
         let mut posts = sql_query
             .fetch_all(pool)
             .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         // Obtener respuestas recursivamente para cada mensaje
         for post in &mut posts {
@@ -691,7 +691,7 @@ pub async fn pin_thread(
         .bind(org_ctx.id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(StatusCode::OK)
 }
@@ -721,7 +721,7 @@ pub async fn lock_thread(
         .bind(org_ctx.id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(StatusCode::OK)
 }
@@ -779,7 +779,7 @@ pub async fn create_post(
     .bind(payload.content)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Notificar a los suscritos al hilo (excepto autor de la respuesta)
     let mut recipients = sqlx::query_as::<_, (Uuid, String, Option<String>)>(
@@ -883,7 +883,7 @@ pub async fn endorse_post(
         .bind(org_ctx.id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(StatusCode::OK)
 }
@@ -912,7 +912,7 @@ pub async fn vote_post(
     .bind(&payload.vote_type)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Recalcular votos positivos
     let upvote_count: i64 = sqlx::query_scalar(
@@ -928,7 +928,7 @@ pub async fn vote_post(
         .bind(post_id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(StatusCode::OK)
 }
@@ -951,7 +951,7 @@ pub async fn subscribe_thread(
     .bind(claims.sub)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(StatusCode::OK)
 }
@@ -971,7 +971,7 @@ pub async fn unsubscribe_thread(
     .bind(org_ctx.id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(StatusCode::OK)
 }

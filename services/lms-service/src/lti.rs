@@ -33,7 +33,7 @@ pub async fn lti_login_initiation(
     .bind(&params.client_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::BAD_REQUEST, "Registro LTI no encontrado".to_string()))?;
 
     // 2. Generar estado y nonce
@@ -45,7 +45,7 @@ pub async fn lti_login_initiation(
         .bind(&nonce)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 4. Construir URL de redirección
     let mut url = format!(
@@ -130,7 +130,7 @@ pub async fn lti_launch(
     .bind(aud)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Registro LTI no encontrado para emisor/audiencia".to_string()))?;
 
     // 3. Validar JWT
@@ -143,7 +143,7 @@ pub async fn lti_launch(
         .bind(&lti_claims.nonce)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
         .rows_affected() > 0;
 
     if !nonce_exists {
@@ -161,7 +161,7 @@ pub async fn lti_launch(
     .bind(registration.organization_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if user.is_none() {
         let new_user_id = Uuid::new_v4();
@@ -182,7 +182,7 @@ pub async fn lti_launch(
         .bind(role)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         user = Some(User {
             id: new_user_id,
@@ -228,7 +228,7 @@ pub async fn lti_launch(
         .bind(&settings.data)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         Ok(Redirect::to(&format!("{}/lti/deep-linking?token={}&dl_token={}", studio_url, token, dl_request_id)))
     } else {
@@ -258,7 +258,7 @@ pub async fn lti_deep_linking_response(
     .bind(dl_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::UNAUTHORIZED, "Solicitud de DL inválida o expirada".to_string()))?;
 
     // Mapeo manual ya que no podemos usar query!/query_as! fácilmente para RETURNING sin una estructura
@@ -274,7 +274,7 @@ pub async fn lti_deep_linking_response(
     .bind(registration_id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let now = chrono::Utc::now().timestamp();
     let response_claims = common::models::LtiDeepLinkingResponseClaims {
@@ -301,7 +301,7 @@ pub async fn lti_deep_linking_response(
         &response_claims,
         &private_key,
     )
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(json!({
         "jwt": response_jwt,

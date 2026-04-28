@@ -82,7 +82,7 @@ pub async fn list_course_lti_tools(
     .bind(course_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let tools = rows
         .into_iter()
@@ -139,7 +139,7 @@ pub async fn create_course_lti_tool(
     .bind(payload.config.unwrap_or(serde_json::json!({})))
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok((
         StatusCode::CREATED,
@@ -206,7 +206,7 @@ pub async fn update_course_lti_tool(
     .bind(payload.config)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Herramienta LTI no encontrada".to_string()))?;
 
     Ok(Json(LtiExternalTool {
@@ -236,7 +236,7 @@ pub async fn delete_course_lti_tool(
     .bind(course_id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if res.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Herramienta LTI no encontrada".to_string()));
@@ -276,7 +276,7 @@ pub async fn lti_grade_passback(
     .bind(tool_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Herramienta LTI no encontrada".to_string()))?;
 
     let organization_id: Uuid = tool_row.get("organization_id");
@@ -323,7 +323,7 @@ pub async fn lti_grade_passback(
     .bind(organization_id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !user_exists {
         return Err((StatusCode::UNPROCESSABLE_ENTITY, "user_id inválido para esta organización".to_string()));
@@ -348,7 +348,7 @@ pub async fn lti_grade_passback(
         .bind(organization_id)
         .fetch_one(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         if !lesson_ok {
             return Err((StatusCode::UNPROCESSABLE_ENTITY, "lesson_id no pertenece al curso".to_string()));
@@ -384,7 +384,7 @@ pub async fn lti_grade_passback(
     .bind(payload.metadata.clone().unwrap_or(serde_json::json!({})))
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Sincronizar con gradebook solo cuando hay lesson_id
     if let Some(lesson_id) = payload.lesson_id {
@@ -419,7 +419,7 @@ pub async fn lti_grade_passback(
         .bind(metadata)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     }
 
     Ok(Json(LtiGradePassbackResponse {
@@ -458,7 +458,7 @@ pub async fn rotate_lti_tool_secret(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !tool_exists {
         return Err((StatusCode::NOT_FOUND, "Herramienta LTI no encontrada".to_string()));
@@ -481,7 +481,7 @@ pub async fn rotate_lti_tool_secret(
     .bind(tool_id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     tracing::info!(
         "rotate_lti_tool_secret: rotated secret for tool {} in course {} org {}",
@@ -634,7 +634,7 @@ pub async fn lti_ags_score_passback(
     .bind(tool_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Herramienta LTI no encontrada".to_string()))?;
 
     let client_id = config.ags_client_id.as_deref().unwrap_or("");

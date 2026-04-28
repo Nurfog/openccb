@@ -379,7 +379,7 @@ pub async fn create_question(
     .bind(media_type.as_deref())
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(question))
 }
@@ -501,7 +501,7 @@ pub async fn list_questions(
         .fetch_all(&pool)
         .await
     }
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(questions))
 }
@@ -531,7 +531,7 @@ pub async fn get_question(
     .await
     .map_err(|e| match e {
         sqlx::Error::RowNotFound => (StatusCode::NOT_FOUND, "Pregunta no encontrada".to_string()),
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+        _ => (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()),
     })?;
 
     Ok(Json(question))
@@ -602,7 +602,7 @@ pub async fn update_question(
     .await
     .map_err(|e| match e {
         sqlx::Error::RowNotFound => (StatusCode::NOT_FOUND, "Pregunta no encontrada".to_string()),
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+        _ => (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()),
     })?;
 
     Ok(Json(question))
@@ -627,7 +627,7 @@ pub async fn delete_question(
     .bind(org_ctx.id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Pregunta no encontrada".to_string()));

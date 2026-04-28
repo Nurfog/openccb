@@ -121,7 +121,7 @@ pub async fn create_rubric(
     .bind(&payload.description)
     .fetch_one(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(rubric))
 }
@@ -144,7 +144,7 @@ pub async fn list_course_rubrics(
     .bind(course_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(rubrics))
 }
@@ -167,7 +167,7 @@ pub async fn get_rubric_with_details(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Rúbrica no encontrada".to_string()))?;
 
     // Get criteria
@@ -182,7 +182,7 @@ pub async fn get_rubric_with_details(
     .bind(rubric_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Get levels for each criterion
     let mut criteria_with_levels = Vec::new();
@@ -198,7 +198,7 @@ pub async fn get_rubric_with_details(
         .bind(criterion.id)
         .fetch_all(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         criteria_with_levels.push(CriterionWithLevels { criterion, levels });
     }
@@ -232,7 +232,7 @@ pub async fn update_rubric(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Rúbrica no encontrada".to_string()))?;
 
     Ok(Json(rubric))
@@ -249,7 +249,7 @@ pub async fn delete_rubric(
         .bind(org_ctx.id)
         .execute(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Rúbrica no encontrada".to_string()));
@@ -273,7 +273,7 @@ pub async fn create_criterion(
         .bind(org_ctx.id)
         .fetch_optional(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
         .ok_or((StatusCode::NOT_FOUND, "Rúbrica no encontrada".to_string()))?;
 
     let position = payload.position.unwrap_or(0);
@@ -292,7 +292,7 @@ pub async fn create_criterion(
     .bind(position)
     .fetch_one(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Update rubric total_points
     let _= sqlx::query(
@@ -306,7 +306,7 @@ pub async fn create_criterion(
     .bind(rubric_id)
     .execute(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(criterion))
 }
@@ -338,7 +338,7 @@ pub async fn update_criterion(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Criterio no encontrado".to_string()))?;
 
     // Update rubric total_points if max_points changed
@@ -354,7 +354,7 @@ pub async fn update_criterion(
         .bind(criterion.rubric_id)
         .execute(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     }
 
     Ok(Json(criterion))
@@ -371,7 +371,7 @@ pub async fn delete_criterion(
         .bind(criterion_id)
         .fetch_optional(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
         .ok_or((StatusCode::NOT_FOUND, "Criterio no encontrado".to_string()))?;
     
     let rubric_id: Uuid = criterion_row.get("rubric_id");
@@ -387,7 +387,7 @@ pub async fn delete_criterion(
     .bind(org_ctx.id)
     .execute(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Criterio no encontrado".to_string()));
@@ -405,7 +405,7 @@ pub async fn delete_criterion(
     .bind(rubric_id)
     .execute(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -425,7 +425,7 @@ pub async fn create_level(
         .bind(org_ctx.id)
         .fetch_optional(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
         .ok_or((StatusCode::NOT_FOUND, "Criterio no encontrado".to_string()))?;
 
     let position = payload.position.unwrap_or(0);
@@ -444,7 +444,7 @@ pub async fn create_level(
     .bind(position)
     .fetch_one(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(level))
 }
@@ -479,7 +479,7 @@ pub async fn update_level(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Nivel no encontrado".to_string()))?;
 
     Ok(Json(level))
@@ -505,7 +505,7 @@ pub async fn delete_level(
     .bind(org_ctx.id)
     .execute(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Nivel no encontrado".to_string()));
@@ -534,7 +534,7 @@ pub async fn assign_rubric_to_lesson(
     .bind(rubric_id)
     .fetch_one(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(lesson_rubric))
 }
@@ -550,7 +550,7 @@ pub async fn unassign_rubric_from_lesson(
         .bind(rubric_id)
         .execute(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Vínculo lección-rúbrica no encontrado".to_string()));
@@ -578,7 +578,7 @@ pub async fn get_lesson_rubrics(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(rubrics))
 }

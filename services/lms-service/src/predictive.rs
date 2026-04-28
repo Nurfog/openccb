@@ -20,7 +20,7 @@ pub async fn get_course_dropout_risks(
     }
 
     calculate_risks_for_course(&pool, course_id, claims.org).await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let rows = sqlx::query(
         r#"

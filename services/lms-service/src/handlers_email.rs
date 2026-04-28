@@ -188,7 +188,7 @@ pub async fn forgot_password(
     .bind(&email)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let Some(user) = user else {
         // Respuesta genérica — no revelar si el email existe
@@ -210,7 +210,7 @@ pub async fn forgot_password(
         .bind(user.id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Insertar nuevo token (expira en 1 hora)
     sqlx::query(
@@ -220,7 +220,7 @@ pub async fn forgot_password(
     .bind(&token)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Intentar enviar email (fire-and-forget en caso de error SMTP)
     let base_url = env::var("EXPERIENCE_URL").unwrap_or_else(|_| "https://openccb.local".to_string());
@@ -283,7 +283,7 @@ pub async fn reset_password(
     .bind(&token)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let Some((user_id,)) = row else {
         return Err((
@@ -303,14 +303,14 @@ pub async fn reset_password(
         .bind(user_id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Marcar token como usado
     sqlx::query("UPDATE password_reset_tokens SET used_at = NOW() WHERE token = $1")
         .bind(&token)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(MessageResponse {
         message: "Contraseña actualizada correctamente. Ya puedes iniciar sesión.".to_string(),

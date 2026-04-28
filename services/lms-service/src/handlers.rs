@@ -28,6 +28,7 @@ use crate::progress_tracking::{CourseCompletionMetrics, calculate_course_complet
 use serde_json::json;
 use base64::Engine;
 use tokio::time::{Duration, timeout};
+use regex;
 
 // Contador simple de tokens (aproximado: 1 token ≈ 4 caracteres en inglés, ~3-5 en español)
 fn count_tokens(text: &str) -> i32 {
@@ -36,6 +37,12 @@ fn count_tokens(text: &str) -> i32 {
     }
     // Promedio en español: ~4 caracteres por token
     (text.len() / 4) as i32 + 1
+}
+
+// Validar que OPENAI_API_KEY esté configurado cuando se use proveedor OpenAI
+fn get_openai_api_key() -> Result<String, (StatusCode, String)> {
+    std::env::var("OPENAI_API_KEY")
+        .map_err(|_| (StatusCode::SERVICE_UNAVAILABLE, "OPENAI_API_KEY env var must be set".into()))
 }
 
 fn scope_rejection_message(lesson_title: &str) -> String {
@@ -147,7 +154,7 @@ pub async fn get_me(
         .bind(claims.sub)
         .fetch_optional(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if let Some(user) = user {
         return Ok(Json(UserResponse {
@@ -506,7 +513,7 @@ pub async fn export_course_grades(
     .bind(course_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 2. Obtener datos generales de los estudiantes
     #[derive(sqlx::FromRow)]
@@ -539,7 +546,7 @@ pub async fn export_course_grades(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 3. Obtener calificaciones detalladas por usuario/categoría
     #[derive(sqlx::FromRow)]
@@ -564,7 +571,7 @@ pub async fn export_course_grades(
     .bind(course_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 4. Construir CSV
     let mut csv = "Name,Email,Cohort,Progress,Overall Score".to_string();
@@ -820,6 +827,14 @@ pub async fn register(
     if payload.password.len() < 8 {
         return Err((StatusCode::BAD_REQUEST, "La contraseña debe tener al menos 8 caracteres".into()));
     }
+    
+    // Validar formato de email (validación básica)
+    let email_regex = regex::Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Email validation error".into()))?;
+    if !email_regex.is_match(&payload.email) {
+        return Err((StatusCode::BAD_REQUEST, "Formato de email inválido".into()));
+    }
+    
     let password_hash = hash(payload.password, 13).map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -840,7 +855,7 @@ pub async fn register(
     let mut tx = pool
         .begin()
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let organization = if let Some(org_name) = payload.organization_name {
         sqlx::query_as::<_, Organization>(
@@ -877,7 +892,7 @@ pub async fn register(
 
     tx.commit()
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let token = create_jwt(user.id, user.organization_id, "student").map_err(|_| {
         (
@@ -1857,7 +1872,7 @@ pub async fn submit_lesson_score(
     let mut tx = pool
         .begin()
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let ip = headers
         .get("x-forwarded-for")
@@ -1879,7 +1894,7 @@ pub async fn submit_lesson_score(
         Some("EVENTO_DEL_SISTEMA".to_string()),
     )
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 1. Obtener reglas de intentos de la lección
     let max_attempts: Option<Option<i32>> =
@@ -1887,7 +1902,7 @@ pub async fn submit_lesson_score(
             .bind(payload.lesson_id)
             .fetch_optional(&mut *tx)
             .await
-            .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if max_attempts.is_none() {
         return Err((StatusCode::NOT_FOUND, "Lección no encontrada".into()));
@@ -1901,7 +1916,7 @@ pub async fn submit_lesson_score(
         .bind(org_ctx.id)
         .fetch_optional(&mut *tx)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if let Some(count) = existing_attempts {
         if let Some(max) = max_attempts {
@@ -1926,7 +1941,7 @@ pub async fn submit_lesson_score(
     .bind(payload.metadata)
     .fetch_one(&mut *tx)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 3.1 Sincronizar con MySQL externo si está disponible
     if let Some(mysql_pool) = mysql_pool {
@@ -1991,7 +2006,7 @@ pub async fn submit_lesson_score(
 
     tx.commit()
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 4. Enviar Webhooks
     let webhook_service = common::webhooks::WebhookService::new(pool.clone());
@@ -2152,7 +2167,7 @@ pub async fn get_course_grades(
     .await
     .map_err(|e: sqlx::Error| {
         tracing::error!("Error al obtener las calificaciones del curso: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string())
     })?;
 
     Ok(Json(rows))
@@ -2202,7 +2217,7 @@ pub async fn get_course_analytics(
     .bind(filter.cohort_id)
     .fetch_one(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 2. Puntaje promedio del curso (General)
     let average_score: Option<f32> = sqlx::query_scalar(
@@ -2221,7 +2236,7 @@ pub async fn get_course_analytics(
     .bind(filter.cohort_id)
     .fetch_one(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 3. Analítica por lección
     // Nota: Convertimos AVG a float4 para compatibilidad con PostgreSQL
@@ -2247,7 +2262,7 @@ pub async fn get_course_analytics(
     .bind(filter.cohort_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let lessons = rows
         .into_iter()
@@ -2290,7 +2305,7 @@ pub async fn notify_student(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     match role.as_deref() {
         Some("instructor") | Some("admin") => {}
@@ -2305,7 +2320,7 @@ pub async fn notify_student(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !enrolled {
         return Err((StatusCode::NOT_FOUND, "El alumno no está inscrito en este curso".to_string()));
@@ -2322,7 +2337,7 @@ pub async fn notify_student(
     .bind(&payload.link_url)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -2353,7 +2368,7 @@ pub async fn get_course_progress(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .flatten();
 
     let progress_percentage = enrollment_progress
@@ -2722,7 +2737,7 @@ pub async fn toggle_bookmark(
     .bind(lesson_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if let Some(id) = existing_id {
         // Eliminar marcador
@@ -2730,7 +2745,7 @@ pub async fn toggle_bookmark(
             .bind(id)
             .execute(&pool)
             .await
-            .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
         Ok(StatusCode::NO_CONTENT)
     } else {
         // Añadir marcador
@@ -2743,7 +2758,7 @@ pub async fn toggle_bookmark(
         .bind(lesson_id)
         .execute(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
         Ok(StatusCode::CREATED)
     }
 }
@@ -2765,7 +2780,7 @@ pub async fn get_user_bookmarks(
     // Wait, let's create a better filter for this.
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(bookmarks))
 }
@@ -2797,7 +2812,7 @@ pub async fn update_user(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(UserResponse {
         id: user.id,
@@ -2831,7 +2846,7 @@ pub async fn get_recommendations(
     .bind(course_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 2. Obtener metadatos de la lección (títulos y etiquetas) para contexto
     #[derive(sqlx::FromRow)]
@@ -2863,7 +2878,7 @@ pub async fn get_recommendations(
     .bind(course_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 3. Preparar contexto de IA con Análisis de Habilidades
     use std::collections::HashMap;
@@ -2917,6 +2932,12 @@ pub async fn get_recommendations(
 
     // 4. Llamar a Ollama
     let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+    // Validar que OPENAI_API_KEY esté configurado si no estamos usando Ollama local
+    let openai_api_key = if provider != "local" {
+        get_openai_api_key()?
+    } else {
+        String::new()
+    };
     // Mantener las solicitudes de IA por debajo del tiempo de espera del proxy para que podamos devolver un JSON de respaldo en lugar de un 504.
     let client = reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(10))
@@ -2935,7 +2956,7 @@ pub async fn get_recommendations(
     } else {
         (
             "https://api.openai.com/v1/chat/completions".to_string(),
-            format!("Bearer {}", env::var("OPENAI_API_KEY").unwrap_or_default()),
+            format!("Bearer {}", openai_api_key),
             "gpt-4-turbo".to_string(),
         )
     };
@@ -3012,6 +3033,11 @@ pub async fn evaluate_audio_response(
     let client = reqwest::Client::new();
 
     let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+    let openai_api_key = if provider != "local" {
+        get_openai_api_key()?
+    } else {
+        String::new()
+    };
     let (url, auth_header, model) = if provider == "local" {
         let base_url = get_ai_url("OLLAMA_URL", "http://ollama:11434");
         let model = env::var("LOCAL_LLM_MODEL").unwrap_or_else(|_| "llama3.2:3b".to_string());
@@ -3023,7 +3049,7 @@ pub async fn evaluate_audio_response(
     } else {
         (
             "https://api.openai.com/v1/chat/completions".to_string(),
-            format!("Bearer {}", env::var("OPENAI_API_KEY").unwrap_or_default()),
+            format!("Bearer {}", openai_api_key),
             "gpt-4-turbo".to_string(),
         )
     };
@@ -3054,7 +3080,7 @@ pub async fn evaluate_audio_response(
         }))
         .send()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let ai_data: serde_json::Value = response.json().await.map_err(|e| {
         (
@@ -3126,7 +3152,7 @@ pub async fn evaluate_audio_file(
                 audio_data = field
                     .bytes()
                     .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
                     .to_vec();
                 tracing::info!("Received audio file: {} bytes", audio_data.len());
             }
@@ -3223,6 +3249,11 @@ pub async fn evaluate_audio_file(
 
     // 2. Realizar calificación por IA
     let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+    let openai_api_key = if provider != "local" {
+        get_openai_api_key()?
+    } else {
+        String::new()
+    };
     let (url, auth_header, model) = if provider == "local" {
         let base_url =
             env::var("LOCAL_OLLAMA_URL").unwrap_or_else(|_| "http://ollama:11434".to_string());
@@ -3235,7 +3266,7 @@ pub async fn evaluate_audio_file(
     } else {
         (
             "https://api.openai.com/v1/chat/completions".to_string(),
-            format!("Bearer {}", env::var("OPENAI_API_KEY").unwrap_or_default()),
+            format!("Bearer {}", openai_api_key),
             "gpt-4-turbo".to_string(),
         )
     };
@@ -3932,6 +3963,11 @@ pub async fn get_code_hint(
     }
 
     let provider = std::env::var("AI_PROVIDER").unwrap_or_else(|_| "local".to_string());
+    let openai_api_key = if provider != "local" {
+        get_openai_api_key()?
+    } else {
+        String::new()
+    };
     let client = reqwest::Client::new();
 
     let (url, auth_header, model) = if provider == "local" {
@@ -3941,7 +3977,7 @@ pub async fn get_code_hint(
     } else {
         (
             "https://api.openai.com/v1/chat/completions".to_string(),
-            format!("Bearer {}", std::env::var("OPENAI_API_KEY").unwrap_or_default()),
+            format!("Bearer {}", openai_api_key),
             "gpt-4o".to_string(),
         )
     };
@@ -4126,6 +4162,11 @@ pub async fn chat_with_tutor(
 
     // 2. Configurar solicitud de IA
     let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+    let openai_api_key = if provider != "local" {
+        get_openai_api_key()?
+    } else {
+        String::new()
+    };
     let _client = reqwest::Client::new();
 
     // 2.1 Manejar Sesión y Memoria
@@ -4286,7 +4327,7 @@ pub async fn chat_with_tutor(
     } else {
         (
             "https://api.openai.com/v1/chat/completions".to_string(),
-            format!("Bearer {}", env::var("OPENAI_API_KEY").unwrap_or_default()),
+            format!("Bearer {}", openai_api_key),
             "gpt-4-turbo".to_string(),
         )
     };
@@ -4579,6 +4620,11 @@ pub async fn chat_role_play(
 
     // 6. Solicitud de IA
     let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+    let openai_api_key = if provider != "local" {
+        get_openai_api_key()?
+    } else {
+        String::new()
+    };
     let client = reqwest::Client::new();
 
     let (url, auth_header, model) = if provider == "local" {
@@ -4587,7 +4633,7 @@ pub async fn chat_role_play(
         (format!("{}/v1/chat/completions", base_url), "".to_string(), model)
     } else {
         ("https://api.openai.com/v1/chat/completions".to_string(), 
-         format!("Bearer {}", env::var("OPENAI_API_KEY").unwrap_or_default()), 
+         format!("Bearer {}", openai_api_key), 
          "gpt-4-turbo".to_string())
     };
 
@@ -4668,7 +4714,7 @@ pub async fn get_lesson_feedback(
     .bind(lesson_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((
         StatusCode::BAD_REQUEST,
         "No se encontró calificación para esta lección".into(),
@@ -4717,6 +4763,11 @@ pub async fn get_lesson_feedback(
 
     // 3. Configurar solicitud de IA
     let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+    let openai_api_key = if provider != "local" {
+        get_openai_api_key()?
+    } else {
+        String::new()
+    };
     let client = reqwest::Client::new();
 
     let (url, auth_header, model) = if provider == "local" {
@@ -4731,7 +4782,7 @@ pub async fn get_lesson_feedback(
     } else {
         (
             "https://api.openai.com/v1/chat/completions".to_string(),
-            format!("Bearer {}", env::var("OPENAI_API_KEY").unwrap_or_default()),
+            format!("Bearer {}", openai_api_key),
             "gpt-4-turbo".to_string(),
         )
     };
@@ -5146,7 +5197,7 @@ pub async fn update_lesson_collaborative_doc(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !lesson_exists {
         return Err((StatusCode::NOT_FOUND, "Lección no encontrada".into()));
@@ -5169,7 +5220,7 @@ pub async fn update_lesson_collaborative_doc(
     .bind(payload.base_revision)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .rows_affected();
 
     if rows_updated == 1 {
@@ -5190,7 +5241,7 @@ pub async fn update_lesson_collaborative_doc(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if existing.is_none() && payload.base_revision == 0 {
         // Primer guardado
@@ -5207,7 +5258,7 @@ pub async fn update_lesson_collaborative_doc(
         .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         sqlx::query(
             r#"
@@ -5222,7 +5273,7 @@ pub async fn update_lesson_collaborative_doc(
         .bind(user_id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         return Ok(Json(UpdateCollaborativeDocResponse {
             lesson_id: id,
@@ -5243,7 +5294,7 @@ pub async fn update_lesson_collaborative_doc(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let (sc, sr) = server.map(|r| (r.content, r.revision)).unwrap_or_default();
 
@@ -5377,7 +5428,7 @@ pub async fn list_lesson_annotations(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     Ok(Json(rows))
 }
 
@@ -5413,7 +5464,7 @@ pub async fn create_lesson_annotation(
     .bind(payload.position_data)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     Ok((StatusCode::CREATED, Json(row)))
 }
 
@@ -5460,7 +5511,7 @@ pub async fn delete_lesson_annotation(
     .bind(lesson_id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .rows_affected();
     if affected == 0 {
         Err((StatusCode::NOT_FOUND, "Anotación no encontrada".to_string()))
@@ -5484,7 +5535,7 @@ pub async fn get_my_annotations(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     Ok(Json(rows))
 }
 
@@ -5544,7 +5595,7 @@ pub async fn assign_mentor(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     match role.as_deref() {
         Some("instructor") | Some("admin") => {}
@@ -5569,7 +5620,7 @@ pub async fn assign_mentor(
     .bind(&payload.notes)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(row))
 }
@@ -5603,7 +5654,7 @@ pub async fn list_course_mentorships(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(rows))
 }
@@ -5622,7 +5673,7 @@ pub async fn delete_mentorship(
     .bind(org_ctx.id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .rows_affected();
 
     if affected == 0 {
@@ -5663,7 +5714,7 @@ pub async fn get_my_mentor(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(row))
 }
@@ -5699,7 +5750,7 @@ pub async fn get_my_mentees(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(rows))
 }

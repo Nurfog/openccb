@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Wand2, Loader2, Code2, Play } from "lucide-react";
 import { cmsApi } from "@/lib/api";
 import mermaid from "mermaid";
+import DOMPurify from "isomorphic-dompurify";
 
 interface MermaidBlockProps {
     id: string;
@@ -48,7 +49,8 @@ export default function MermaidBlock({
             mermaidRef.current.innerHTML = "";
             const { svg } = await mermaid.render(`mermaid-${id}`, mermaid_code);
             if (mermaidRef.current) {
-                mermaidRef.current.innerHTML = svg;
+                // Sanitizar SVG antes de inyectar
+                mermaidRef.current.innerHTML = DOMPurify.sanitize(svg);
             }
         } catch (error: any) {
             console.error("Mermaid parsing error:", error);

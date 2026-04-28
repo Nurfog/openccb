@@ -66,7 +66,7 @@ pub async fn global_search(
     .bind(limit)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     for (id, title, description) in courses {
         let snippet = description.map(|d| truncate(&d, 150));
@@ -99,7 +99,7 @@ pub async fn global_search(
     .bind(limit)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     for (id, title, summary, course_id, course_title) in lessons {
         let snippet = summary.map(|s| truncate(&s, 150));

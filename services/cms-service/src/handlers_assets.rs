@@ -408,7 +408,7 @@ pub async fn upload_asset(
             data = field
                 .bytes()
                 .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
                 .to_vec();
         } else if name == "course_id" {
             if let Ok(txt) = field.text().await {
@@ -447,7 +447,7 @@ pub async fn upload_asset(
     // Asegurar que el directorio de subidas existe
     tokio::fs::create_dir_all("uploads")
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let (storage_filename, storage_path, stored_filename, stored_mimetype) =
         if is_flv_media(&filename, &mimetype) {
@@ -455,7 +455,7 @@ pub async fn upload_asset(
             let temp_storage_path = format!("uploads/{}", temp_storage_filename);
             tokio::fs::write(&temp_storage_path, data)
                 .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
             let final_storage_filename = format!("{}.mp4", asset_id);
             let final_storage_path = format!("uploads/{}", final_storage_filename);
@@ -483,7 +483,7 @@ pub async fn upload_asset(
 
             tokio::fs::write(&storage_path, data)
                 .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
             (storage_filename, storage_path, filename.clone(), mimetype.clone())
         };
@@ -528,7 +528,7 @@ pub async fn upload_asset(
     .bind(size_bytes)
     .execute(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(AssetUploadResponse {
         id: asset_id,
@@ -614,7 +614,7 @@ pub async fn list_assets(
         .bind(offset)
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(assets))
 }
@@ -645,7 +645,7 @@ pub async fn list_asset_import_history(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(items))
 }
@@ -664,7 +664,7 @@ pub async fn delete_asset(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Activo no encontrado".to_string()))?;
 
     // 2. Eliminar de la base de datos
@@ -672,7 +672,7 @@ pub async fn delete_asset(
         .bind(id)
         .execute(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 3. Eliminar archivo físico u objeto de S3
     let _ = delete_storage_path(&asset.storage_path).await;
@@ -790,7 +790,7 @@ pub async fn ingest_asset_for_rag(
         .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let source_kind = if asset.mimetype.starts_with("audio/") || asset.mimetype.starts_with("video/") {
         "audio-transcription"
@@ -1435,7 +1435,7 @@ pub async fn import_assets_zip(
 
     tokio::fs::create_dir_all("uploads")
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // ── Phase 2: process entries ───────────────────────────────────────────────
     let mut imported_assets = 0usize;
@@ -1591,7 +1591,7 @@ pub async fn import_assets_zip(
                 let temp_storage_path = format!("uploads/{}", temp_storage_filename);
                 tokio::fs::write(&temp_storage_path, &content)
                     .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
                 let final_storage_filename = format!("{}.mp4", asset_id);
                 let final_storage_path = format!("uploads/{}", final_storage_filename);
