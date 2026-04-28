@@ -503,7 +503,9 @@ pub struct AgsPassbackPayload {
     pub lesson_id: Option<Uuid>,
     pub score: f32,
     pub max_score: Option<f32>,
+    #[allow(dead_code)]
     pub status: Option<String>,
+    #[allow(dead_code)]
     pub metadata: Option<serde_json::Value>,
 }
 
@@ -621,6 +623,7 @@ pub async fn lti_ags_score_passback(
         ags_client_secret: Option<String>,
         ags_token_url: Option<String>,
         ags_lineitem_url: Option<String>,
+        #[allow(dead_code)]
         organization_id: Uuid,
         course_id: Uuid,
     }
