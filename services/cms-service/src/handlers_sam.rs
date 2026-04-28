@@ -65,7 +65,7 @@ pub async fn sync_sam_students(
 
     let sam_pool = sqlx::PgPool::connect(&sam_url)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al conectar con la base de datos SAM: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let mut errors = Vec::new();
     let mut students_synced = 0;
@@ -85,7 +85,7 @@ pub async fn sync_sam_students(
     )
     .fetch_all(&sam_pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener estudiantes de SAM: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Convertir a SamStudentInfo
     let sam_students: Vec<SamStudentInfo> = rows.iter().map(|row| {
@@ -196,7 +196,7 @@ pub async fn sync_sam_assignments(
 
     let sam_pool = sqlx::PgPool::connect(&sam_url)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al conectar con la base de datos SAM: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let mut errors = Vec::new();
     let mut assignments_synced = 0;
@@ -215,7 +215,7 @@ pub async fn sync_sam_assignments(
     )
     .fetch_all(&sam_pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener asignaciones: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Convertir a SamAssignmentInfo
     let sam_assignments: Vec<SamAssignmentInfo> = rows.iter().map(|row| {
@@ -317,7 +317,7 @@ pub async fn list_sam_students(
     let rows = sqlx::query(&query)
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener los estudiantes: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let students: Vec<serde_json::Value> = rows.iter().map(|row| {
         serde_json::json!({
@@ -354,7 +354,7 @@ pub async fn get_sam_student_courses(
     .bind(&sam_student_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener los cursos: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let courses: Vec<serde_json::Value> = rows.iter().map(|row| {
         serde_json::json!({
@@ -386,7 +386,7 @@ pub async fn sync_all_sam(
 
     let sam_pool = sqlx::PgPool::connect(&sam_url)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al conectar con la base de datos SAM: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Sincronizar estudiantes primero
     {
@@ -400,7 +400,7 @@ pub async fn sync_all_sam(
         )
         .fetch_all(&sam_pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener estudiantes de SAM: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         let sam_students: Vec<SamStudentInfo> = rows.iter().map(|row| {
             SamStudentInfo {
@@ -470,7 +470,7 @@ pub async fn sync_all_sam(
         )
         .fetch_all(&sam_pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener asignaciones: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         let sam_assignments: Vec<SamAssignmentInfo> = rows.iter().map(|row| {
             SamAssignmentInfo {

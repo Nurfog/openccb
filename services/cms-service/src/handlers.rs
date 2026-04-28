@@ -33,7 +33,6 @@ use reqwest::header::HeaderMap;
 use uuid::Uuid;
 
 use openidconnect::core::{CoreClient, CoreProviderMetadata, CoreResponseType};
-use openidconnect::reqwest::async_http_client;
 use openidconnect::{
     AuthenticationFlow, AuthorizationCode, ClientId, ClientSecret, CsrfToken, IssuerUrl, Nonce,
     RedirectUrl, Scope, TokenResponse,
@@ -606,7 +605,7 @@ pub async fn update_course(
     let mut tx = pool
         .begin()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Establecer contexto de auditoría
     sqlx::query(
@@ -616,7 +615,7 @@ pub async fn update_course(
     .bind(org_ctx.id.to_string())
     .execute(&mut *tx)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let course = sqlx::query_as::<_, Course>(
         "SELECT * FROM fn_update_course($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
@@ -645,7 +644,7 @@ pub async fn update_course(
 
     tx.commit()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(course))
 }
@@ -1756,7 +1755,7 @@ pub async fn get_grading_categories(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(categories))
 }
@@ -1779,7 +1778,7 @@ pub async fn create_grading_category(
     .bind(payload.tipo_nota_id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(category))
 }
@@ -1816,7 +1815,7 @@ pub async fn delete_grading_category(
         .bind(org_ctx.id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(StatusCode::OK)
 }
@@ -2793,7 +2792,7 @@ pub async fn register(
     
     // Validar formato de email (validación básica)
     let email_regex = regex::Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Email validation error".into()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     if !email_regex.is_match(&payload.email) {
         return Err((StatusCode::BAD_REQUEST, "Formato de email inválido".into()));
     }
@@ -2817,7 +2816,7 @@ pub async fn register(
     let mut tx = pool
         .begin()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let user = sqlx::query_as::<_, User>("SELECT * FROM fn_register_user($1, $2, $3, $4, $5)")
         .bind(&payload.email)
@@ -2837,7 +2836,7 @@ pub async fn register(
 
     tx.commit()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let token = create_jwt(user.id, user.organization_id, &user.role).map_err(|_| {
         (
@@ -3049,7 +3048,7 @@ pub async fn get_course_analytics(
     let analytics = res
         .json::<CourseAnalytics>()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(analytics))
 }
@@ -3097,7 +3096,7 @@ pub async fn get_advanced_analytics(
     let analytics = res
         .json::<common::models::AdvancedAnalytics>()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(analytics))
 }
@@ -3128,7 +3127,7 @@ pub async fn get_lesson_heatmap(
     let heatmap = res
         .json::<Vec<common::models::HeatmapPoint>>()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(heatmap))
 }
@@ -3172,7 +3171,7 @@ pub async fn get_audit_logs(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(logs))
 }
@@ -3247,7 +3246,7 @@ pub async fn get_sso_config(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(config))
 }
@@ -3306,7 +3305,7 @@ pub async fn update_sso_config(
 
     // We use fetch_all + next for slightly better error handling in this complex query
     let config = config
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
         .into_iter()
         .next()
         .ok_or((
@@ -3327,7 +3326,7 @@ pub async fn sso_login_init(
     .bind(org_id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((
         StatusCode::NOT_FOUND,
         "SSO no configurado o deshabilitado para esta organización".to_string(),
@@ -3340,7 +3339,8 @@ pub async fn sso_login_init(
         )
     })?;
 
-    let provider_metadata = CoreProviderMetadata::discover_async(issuer_url, async_http_client)
+    let http_client = reqwest::Client::new();
+    let provider_metadata = CoreProviderMetadata::discover_async(issuer_url, &http_client)
         .await
         .map_err(|e| {
             (
@@ -3359,7 +3359,7 @@ pub async fn sso_login_init(
             "{}/auth/sso/callback",
             env::var("CMS_API_URL").unwrap_or_else(|_| "http://localhost:3001".to_string())
         ))
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?,
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?,
     );
 
     let (auth_url, csrf_token, nonce) = client
@@ -3380,7 +3380,7 @@ pub async fn sso_login_init(
         .bind(nonce.secret())
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(axum::response::Redirect::to(auth_url.as_str()))
 }
@@ -3413,15 +3413,16 @@ pub async fn sso_callback(
     .bind(org_id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 3. Exchange code for token
     let issuer_url = IssuerUrl::new(config.issuer_url.clone())
         .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
 
-    let provider_metadata = CoreProviderMetadata::discover_async(issuer_url, async_http_client)
+    let http_client = reqwest::Client::new();
+    let provider_metadata = CoreProviderMetadata::discover_async(issuer_url, &http_client)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let client = CoreClient::from_provider_metadata(
         provider_metadata,
@@ -3433,12 +3434,13 @@ pub async fn sso_callback(
             "{}/auth/sso/callback",
             env::var("CMS_API_URL").unwrap_or_else(|_| "http://localhost:3001".to_string())
         ))
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?,
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?,
     );
 
     let token_response = client
         .exchange_code(AuthorizationCode::new(params.code))
-        .request_async(async_http_client)
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+        .request_async(&http_client)
         .await
         .map_err(|e| {
             (
@@ -3464,7 +3466,7 @@ pub async fn sso_callback(
         .to_string();
     let name = claims
         .name()
-        .and_then(|n| n.get(None))
+        .and_then(|n| n.get(None::<&openidconnect::LanguageTag>))
         .map(|n| n.to_string())
         .unwrap_or_else(|| email.split('@').next().unwrap_or("User").to_string());
 
@@ -3472,7 +3474,7 @@ pub async fn sso_callback(
     let mut tx = pool
         .begin()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let user = sqlx::query_as::<_, User>(
         "SELECT * FROM users WHERE organization_id = $1 AND lower(email) = lower($2)",
@@ -3481,7 +3483,7 @@ pub async fn sso_callback(
     .bind(&email)
     .fetch_optional(&mut *tx)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let user = match user {
         Some(u) => u,
@@ -3499,13 +3501,13 @@ pub async fn sso_callback(
             .bind("student") // Default role
             .fetch_one(&mut *tx)
             .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
         }
     };
 
     tx.commit()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 6. Generate JWT
     let token =
@@ -3857,7 +3859,7 @@ pub async fn update_user(
         .fetch_one(&pool)
         .await
     }
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     log_action(
         &pool,
@@ -3913,7 +3915,7 @@ pub async fn delete_user(
             .execute(&pool)
             .await
     }
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "User not found".into()));
@@ -3959,7 +3961,7 @@ pub async fn get_webhooks(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(webhooks))
 }
@@ -3987,7 +3989,7 @@ pub async fn create_webhook(
     .bind(payload.secret)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     log_action(
         &pool,
@@ -4018,7 +4020,7 @@ pub async fn delete_webhook(
         .bind(org_ctx.id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Webhook not found".into()));
@@ -4575,7 +4577,7 @@ pub async fn check_course_access(
     .bind(user_id)
     .fetch_one(pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(exists)
 }
@@ -4612,7 +4614,7 @@ pub async fn get_course_team(
     .bind(course_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(team))
 }
@@ -4641,7 +4643,7 @@ pub async fn add_team_member(
         .bind(claims.sub)
         .fetch_one(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     };
 
     if !is_authorized {
@@ -4686,7 +4688,7 @@ pub async fn remove_team_member(
         .bind(claims.sub)
         .fetch_one(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     };
 
     if !is_authorized && claims.sub != user_id {
@@ -4698,7 +4700,7 @@ pub async fn remove_team_member(
         .bind(user_id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -4715,7 +4717,7 @@ pub async fn create_course_preview_token(
     }
 
     let token = create_preview_token(claims.sub, claims.org, id)
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(json!({ "token": token })))
 }

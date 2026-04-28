@@ -102,7 +102,7 @@ pub async fn list_course_study_rooms(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let rooms = rows
         .into_iter()
@@ -212,7 +212,7 @@ pub async fn create_study_room(
     .bind(now)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok((
         StatusCode::CREATED,
@@ -259,7 +259,7 @@ pub async fn join_study_room(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Sala no encontrada".to_string()))?;
 
     if room.status == "ended" {
@@ -322,7 +322,7 @@ pub async fn end_study_room(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Sala no encontrada".to_string()))?;
 
     // Solo el creador puede terminar la sala
@@ -351,7 +351,7 @@ pub async fn end_study_room(
     .bind(room_id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(EndStudyRoomResponse {
         room_id,
@@ -373,7 +373,7 @@ pub async fn delete_study_room(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Sala no encontrada".to_string()))?;
 
     if claims.sub != created_by {
@@ -384,7 +384,7 @@ pub async fn delete_study_room(
         .bind(room_id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -417,7 +417,7 @@ pub async fn get_study_room_recordings(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .flatten()
     .ok_or((StatusCode::NOT_FOUND, "Sala no encontrada o sin ID BBB".to_string()))?;
 

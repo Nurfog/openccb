@@ -92,7 +92,7 @@ async fn connect_mysql_pool(env_var: &str) -> Result<sqlx::MySqlPool, (StatusCod
     use sqlx::mysql::MySqlPoolOptions;
 
     let mysql_url = std::env::var(env_var)
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, format!("{} no configurada", env_var)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let mut last_error = String::new();
 
@@ -379,7 +379,7 @@ pub async fn create_question(
     .bind(media_type.as_deref())
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(question))
 }
@@ -501,7 +501,7 @@ pub async fn list_questions(
         .fetch_all(&pool)
         .await
     }
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(questions))
 }
@@ -627,7 +627,7 @@ pub async fn delete_question(
     .bind(org_ctx.id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Pregunta no encontrada".to_string()));
@@ -690,7 +690,7 @@ pub async fn import_from_mysql(
     )
     .fetch_all(&mysql_pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener los cursos: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     tracing::info!("Se obtuvieron {} cursos de MySQL", mysql_courses.len());
 
@@ -698,7 +698,7 @@ pub async fn import_from_mysql(
     tracing::info!("Guardando planes y cursos en PostgreSQL...");
     save_mysql_courses_and_plans(&pool, org_ctx.id, mysql_plans, mysql_courses)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al guardar cursos/planes: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Obtener preguntas de MySQL
     let mysql_questions: Vec<MySqlQuestion> = if payload.import_all.unwrap_or(false) {
@@ -718,7 +718,7 @@ pub async fn import_from_mysql(
         )
         .fetch_all(&mysql_pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener las preguntas: {}", e)))?
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     } else if let Some(course_id) = payload.mysql_course_id {
         // Importar todas las preguntas para un curso específico (sin límite)
         sqlx::query_as(
@@ -737,7 +737,7 @@ pub async fn import_from_mysql(
         .bind(course_id)
         .fetch_all(&mysql_pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener las preguntas: {}", e)))?
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     } else if let Some(question_ids) = payload.question_ids {
         // Obtener IDs de preguntas específicas - usar enfoque simple
         let mut imported_questions: Vec<QuestionBank> = vec![];
@@ -758,7 +758,7 @@ pub async fn import_from_mysql(
             .bind(q_id)
             .fetch_optional(&mysql_pool)
             .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener la pregunta {}: {}", q_id, e)))?;
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
             
             if let Some(question) = mq {
                 // Mapear el tipo de pregunta de MySQL al tipo de pregunta de la plataforma
@@ -806,7 +806,7 @@ pub async fn import_from_mysql(
                 .bind(&source_metadata)
                 .fetch_one(&pool)
                 .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al importar la pregunta {}: {}", question.id_pregunta, e)))?;
+                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
                 
                 imported_questions.push(qb);
             }
@@ -837,7 +837,7 @@ pub async fn import_from_mysql(
         .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al comprobar existencia: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         if exists.0 {
             skipped_count += 1;
@@ -893,7 +893,7 @@ pub async fn import_from_mysql(
         .bind(mq.id_cursos)
         .fetch_one(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al importar la pregunta {}: {}", mq.id_pregunta, e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         imported_questions.push(question);
     }
@@ -1041,7 +1041,7 @@ pub async fn list_mysql_courses(
     )
     .fetch_all(&mysql_pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener los cursos: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     mysql_pool.close().await;
     
@@ -1067,7 +1067,7 @@ pub async fn get_mysql_plans(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener los planes: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Respaldo compatible con versiones anteriores: si el reflejo SAM está vacío, usar el reflejo de metadatos heredado.
     if plans.is_empty() {
@@ -1084,7 +1084,7 @@ pub async fn get_mysql_plans(
         .bind(org_ctx.id)
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener los planes heredados: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     }
 
     // Auto-sincronización de último recurso: si sigue vacío, obtener metadatos de MySQL y persistirlos.
@@ -1208,7 +1208,7 @@ pub async fn get_mysql_courses_by_plan(
     .bind(filters.plan_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener los cursos: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Intentar refrescar desde MySQL (fuente SAM) para evitar listas incompletas por espejo desactualizado.
     if let Ok(mysql_pool) = connect_mysql_pool("MYSQL_DATABASE_URL").await {
@@ -1315,7 +1315,7 @@ pub async fn get_mysql_courses_by_plan(
         .bind(filters.plan_id)
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener los cursos heredados: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     }
 
     Ok(Json(courses))
@@ -1408,7 +1408,7 @@ pub async fn import_all_from_mysql(
     )
     .fetch_all(&mysql_pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener los cursos: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     tracing::info!("Se obtuvieron {} cursos de MySQL", mysql_courses.len());
 
@@ -1416,7 +1416,7 @@ pub async fn import_all_from_mysql(
     tracing::info!("Guardando planes y cursos en PostgreSQL...");
     save_mysql_courses_and_plans(&pool, org_ctx.id, mysql_plans.clone(), mysql_courses.clone())
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al guardar cursos/planes: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Si solo se solicita la importación de metadatos, salir antes
     if import_metadata_only {
@@ -1477,7 +1477,7 @@ pub async fn import_all_from_mysql(
     )
     .fetch_all(&mysql_pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener las preguntas: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     mysql_pool.close().await;
 
@@ -1505,7 +1505,7 @@ pub async fn import_all_from_mysql(
         .bind(org_ctx.id)
         .fetch_optional(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Fallo en la comprobación: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
         
         match existing {
             Some((id, is_active)) => {
@@ -1724,14 +1724,14 @@ pub async fn ai_generate_question(
         }))
         .send()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("La solicitud de IA falló: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !response.status().is_success() {
-        return Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Error de la API de IA: {}", response.status())));
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()));
     }
 
     let result: serde_json::Value = response.json().await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al analizar la respuesta de la IA: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Extraer contenido de la respuesta de Ollama
     let content = result
@@ -1742,7 +1742,7 @@ pub async fn ai_generate_question(
 
     // Analizar la respuesta de la IA como JSON
     let ai_question: AIQuestionResponse = serde_json::from_str(content)
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al analizar el JSON de la pregunta: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(ai_question))
 }
@@ -1801,7 +1801,7 @@ pub async fn import_course_from_mysql(
         if let sqlx::Error::RowNotFound = e {
             (StatusCode::NOT_FOUND, format!("Curso con ID {} no encontrado en MySQL", payload.mysql_course_id))
         } else {
-            (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener el curso de MySQL: {}", e))
+            (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string())
         }
     })?;
 
@@ -1809,7 +1809,7 @@ pub async fn import_course_from_mysql(
 
     // Iniciar transacción
     let mut tx = pool.begin().await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al iniciar la transacción: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Determinar el tipo y nivel del curso para la generación de la estructura
     let course_type = calculate_course_type_from_duration(mysql_course.duracion);
@@ -1845,7 +1845,7 @@ pub async fn import_course_from_mysql(
     .bind(mysql_course.id_cursos)
     .fetch_one(&mut *tx)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al crear el curso: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     tracing::info!("Curso creado en PostgreSQL: {}", new_course.id);
 
@@ -1863,7 +1863,7 @@ pub async fn import_course_from_mysql(
 
     // Confirmar transacción
     tx.commit().await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al confirmar la transacción: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     tracing::info!(
         "Curso {} importado con éxito con {} módulos y {} lecciones",

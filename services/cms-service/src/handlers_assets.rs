@@ -234,7 +234,7 @@ async fn maybe_push_local_file_to_s3(
 
     let bytes = tokio::fs::read(local_path)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al leer el archivo local: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let client = build_s3_client(&settings).await?;
     let key = build_s3_object_key(org_id, course_id, storage_filename);
@@ -339,13 +339,13 @@ pub async fn public_s3_proxy(
         header::CONTENT_TYPE,
         "application/octet-stream"
             .parse()
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Cabecera inválida: {}", e)))?,
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?,
     );
     headers.insert(
         header::CACHE_CONTROL,
         "public, max-age=3600"
             .parse()
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Cabecera inválida: {}", e)))?,
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?,
     );
 
     Ok((headers, bytes))
@@ -375,7 +375,7 @@ async fn read_storage_bytes(storage_path: &str) -> Result<Vec<u8>, (StatusCode, 
 
     tokio::fs::read(storage_path)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error de lectura: {}", e)))
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))
 }
 
 /// POST /api/assets/upload - Subir un archivo a la biblioteca global
@@ -408,7 +408,7 @@ pub async fn upload_asset(
             data = field
                 .bytes()
                 .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
                 .to_vec();
         } else if name == "course_id" {
             if let Ok(txt) = field.text().await {
@@ -447,7 +447,7 @@ pub async fn upload_asset(
     // Asegurar que el directorio de subidas existe
     tokio::fs::create_dir_all("uploads")
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let (storage_filename, storage_path, stored_filename, stored_mimetype) =
         if is_flv_media(&filename, &mimetype) {
@@ -455,7 +455,7 @@ pub async fn upload_asset(
             let temp_storage_path = format!("uploads/{}", temp_storage_filename);
             tokio::fs::write(&temp_storage_path, data)
                 .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
             let final_storage_filename = format!("{}.mp4", asset_id);
             let final_storage_path = format!("uploads/{}", final_storage_filename);
@@ -483,7 +483,7 @@ pub async fn upload_asset(
 
             tokio::fs::write(&storage_path, data)
                 .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
             (storage_filename, storage_path, filename.clone(), mimetype.clone())
         };
@@ -528,7 +528,7 @@ pub async fn upload_asset(
     .bind(size_bytes)
     .execute(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(AssetUploadResponse {
         id: asset_id,
@@ -614,7 +614,7 @@ pub async fn list_assets(
         .bind(offset)
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(assets))
 }
@@ -645,7 +645,7 @@ pub async fn list_asset_import_history(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(items))
 }
@@ -664,7 +664,7 @@ pub async fn delete_asset(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Activo no encontrado".to_string()))?;
 
     // 2. Eliminar de la base de datos
@@ -672,7 +672,7 @@ pub async fn delete_asset(
         .bind(id)
         .execute(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 3. Eliminar archivo físico u objeto de S3
     let _ = delete_storage_path(&asset.storage_path).await;
@@ -790,7 +790,7 @@ pub async fn ingest_asset_for_rag(
         .bind(org_ctx.id)
         .fetch_one(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let source_kind = if asset.mimetype.starts_with("audio/") || asset.mimetype.starts_with("video/") {
         "audio-transcription"
@@ -1214,17 +1214,17 @@ pub async fn import_assets_zip(
             let temp_name = format!("uploads/tmp/import-{}.zip", Uuid::new_v4());
             tokio::fs::create_dir_all("uploads/tmp")
                 .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to create temp dir: {}", e)))?;
+                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
             let mut temp_file = tokio::fs::File::create(&temp_name)
                 .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to create temp zip file: {}", e)))?;
+                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
             let mut received_bytes: u64 = 0;
 
             while let Some(chunk) = field
                 .chunk()
                 .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to read upload chunk: {}", e)))?
+                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
             {
                 received_bytes = received_bytes.saturating_add(chunk.len() as u64);
                 if received_bytes > max_upload_bytes {
@@ -1241,13 +1241,13 @@ pub async fn import_assets_zip(
                 temp_file
                     .write_all(&chunk)
                     .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to write temp zip file: {}", e)))?;
+                    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
             }
 
             temp_file
                 .flush()
                 .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to flush temp zip file: {}", e)))?;
+                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
             zip_temp_path = Some(temp_name);
         } else if name == "course_id" {
@@ -1315,7 +1315,7 @@ pub async fn import_assets_zip(
     let source_zip_name = zip_original_name.unwrap_or_else(|| "import.zip".to_string());
 
     let zip_file = std::fs::File::open(&zip_path)
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to open temp zip file: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let mut archive = zip::ZipArchive::new(zip_file)
         .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid ZIP file".to_string()))?;
@@ -1334,7 +1334,7 @@ pub async fn import_assets_zip(
     for i in 0..len {
         let mut file = archive
             .by_index(i)
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("ZIP read error: {}", e)))?;
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         if !file.is_file() {
             continue;
@@ -1377,7 +1377,7 @@ pub async fn import_assets_zip(
 
         let mut content = Vec::new();
         std::io::Read::read_to_end(&mut file, &mut content)
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("ZIP entry read failed: {}", e)))?;
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         let guessed_mimetype = mime_guess::from_path(&safe_filename)
             .first_or_octet_stream()
@@ -1435,7 +1435,7 @@ pub async fn import_assets_zip(
 
     tokio::fs::create_dir_all("uploads")
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // ── Phase 2: process entries ───────────────────────────────────────────────
     let mut imported_assets = 0usize;
@@ -1564,7 +1564,7 @@ pub async fn import_assets_zip(
                 let temp_storage_path = format!("uploads/tmp/{}", temp_storage_filename);
                 tokio::fs::create_dir_all("uploads/tmp")
                     .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error creating temp dir: {}", e)))?;
+                    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
                 if let Err(e) = tokio::fs::write(&temp_storage_path, &content).await {
                     failed_entries.push(format!("{}: local write failed ({})", entry_name, e));
                     continue;
@@ -1573,7 +1573,7 @@ pub async fn import_assets_zip(
                 let storage_path = build_ready_for_rag_path(org_ctx.id, asset_id, &format!("{}.mp4", asset_id));
                 tokio::fs::create_dir_all(StdPath::new(&storage_path).parent().unwrap_or(StdPath::new(".")))
                     .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error creating ready-for-rag dir: {}", e)))?;
+                    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
                 if let Err((_, msg)) = transcode_flv_to_mp4(&temp_storage_path, &storage_path).await {
                     let _ = tokio::fs::remove_file(&temp_storage_path).await;
@@ -1591,7 +1591,7 @@ pub async fn import_assets_zip(
                 let temp_storage_path = format!("uploads/{}", temp_storage_filename);
                 tokio::fs::write(&temp_storage_path, &content)
                     .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+                    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
                 let final_storage_filename = format!("{}.mp4", asset_id);
                 let final_storage_path = format!("uploads/{}", final_storage_filename);
@@ -1609,7 +1609,7 @@ pub async fn import_assets_zip(
                 let storage_path = build_ready_for_rag_path(org_ctx.id, asset_id, &safe_filename);
                 tokio::fs::create_dir_all(StdPath::new(&storage_path).parent().unwrap_or(StdPath::new(".")))
                     .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error creating ready-for-rag dir: {}", e)))?;
+                    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
                 if let Err(e) = tokio::fs::write(&storage_path, &content).await {
                     failed_entries.push(format!("{}: local write failed ({})", entry_name, e));
                     continue;
@@ -2124,7 +2124,7 @@ async fn normalize_flv_asset_for_rag(
 
     tokio::fs::create_dir_all("uploads/tmp")
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error creating temp dir: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let input_path = format!("uploads/tmp/flv-normalize-in-{}.flv", asset.id);
     let output_path = format!("uploads/tmp/flv-normalize-out-{}.mp4", asset.id);
@@ -2132,7 +2132,7 @@ async fn normalize_flv_asset_for_rag(
     let source_bytes = read_storage_bytes(&asset.storage_path).await?;
     tokio::fs::write(&input_path, source_bytes)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error writing temp FLV: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if let Err(e) = transcode_flv_to_mp4(&input_path, &output_path).await {
         let _ = tokio::fs::remove_file(&input_path).await;
@@ -2144,7 +2144,7 @@ async fn normalize_flv_asset_for_rag(
 
     let output_bytes = tokio::fs::read(&output_path)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error reading temp MP4: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     let _ = tokio::fs::remove_file(&output_path).await;
 
     let next_storage_path = replace_last_path_extension(&asset.storage_path, "mp4");
@@ -2172,7 +2172,7 @@ async fn normalize_flv_asset_for_rag(
     } else {
         tokio::fs::write(&next_storage_path, &output_bytes)
             .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error writing normalized MP4: {}", e)))?;
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         if asset.storage_path != next_storage_path {
             let _ = tokio::fs::remove_file(&asset.storage_path).await;
@@ -2199,7 +2199,7 @@ async fn normalize_flv_asset_for_rag(
     .bind(asset.id)
     .execute(pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error updating normalized asset: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     asset.filename = next_filename;
     asset.storage_path = next_storage_path;
@@ -2307,7 +2307,7 @@ async fn ingest_chunks_to_question_bank(
         .bind(unit_number)
         .fetch_one(pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Insert failed: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         if let Ok(embedding_res) = generate_embedding(client, ollama_url, model, chunk).await {
             let pgvector = ai::embedding_to_pgvector(&embedding_res.embedding);
@@ -2371,10 +2371,10 @@ async fn extract_pdf_text_from_bytes(bytes: Vec<u8>) -> Result<String, (StatusCo
     let temp_name = format!("uploads/tmp-pdf-{}.pdf", Uuid::new_v4());
     tokio::fs::create_dir_all("uploads")
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Create temp dir failed: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     tokio::fs::write(&temp_name, bytes)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Write temp pdf failed: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let output = Command::new("pdftotext")
         .arg("-layout")
@@ -2434,7 +2434,7 @@ async fn transcribe_media_bytes_with_override(
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(300))
         .build()
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Whisper HTTP client error: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let mut last_error = String::new();
 
@@ -2466,7 +2466,7 @@ async fn transcribe_media_bytes_with_override(
         let transcription: serde_json::Value = response
             .json()
             .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Invalid Whisper response: {}", e)))?;
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         let text = transcription
             .get("text")

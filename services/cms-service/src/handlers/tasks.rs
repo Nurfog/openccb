@@ -109,7 +109,7 @@ pub async fn retry_task(
         .bind(id)
         .fetch_optional(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if let Some(l) = lesson {
         let pool_clone = pool.clone();
@@ -134,7 +134,7 @@ pub async fn retry_task(
     .bind(id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if let Some(task) = zip_task {
         let zip_batch_id_from_metadata = task
@@ -176,7 +176,7 @@ pub async fn retry_task(
             .bind(task.created_at)
             .fetch_all(&pool)
             .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
             if candidates.len() == 1 {
                 candidates[0].zip_batch_id
@@ -200,7 +200,7 @@ pub async fn retry_task(
         .bind(zip_batch_id)
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         if assets.is_empty() {
             return Err((
@@ -306,7 +306,7 @@ pub async fn cancel_task(
     .bind(id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if lesson_result.rows_affected() > 0 {
         return Ok(StatusCode::NO_CONTENT);
@@ -327,7 +327,7 @@ pub async fn cancel_task(
     .bind(id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if task_result.rows_affected() > 0 {
         return Ok(StatusCode::NO_CONTENT);

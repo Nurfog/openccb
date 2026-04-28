@@ -55,7 +55,7 @@ pub async fn generate_knowledge_embeddings(
         .danger_accept_invalid_certs(true)
         .danger_accept_invalid_hostnames(true)
         .build()
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("HTTP client error: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     let ollama_url = ai::get_ollama_url();
     let model = ai::get_embedding_model();
@@ -73,7 +73,7 @@ pub async fn generate_knowledge_embeddings(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     let _total = entries.len();
     let mut processed = 0;
@@ -144,7 +144,7 @@ pub async fn regenerate_knowledge_embedding(
         .danger_accept_invalid_certs(true)
         .danger_accept_invalid_hostnames(true)
         .build()
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("HTTP client error: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     let ollama_url = ai::get_ollama_url();
     let model = ai::get_embedding_model();
@@ -157,13 +157,13 @@ pub async fn regenerate_knowledge_embedding(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Entrada de la base de conocimientos no encontrada".to_string()))?;
     
     // Generar embedding
     let response = generate_embedding(&client, &ollama_url, &model, &entry.content_chunk)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("AI error: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     let pgvector = ai::embedding_to_pgvector(&response.embedding);
     
@@ -180,7 +180,7 @@ pub async fn regenerate_knowledge_embedding(
     .bind(entry_id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     Ok(StatusCode::OK)
 }
@@ -198,7 +198,7 @@ pub async fn semantic_search_knowledge(
         .danger_accept_invalid_certs(true)
         .danger_accept_invalid_hostnames(true)
         .build()
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("HTTP client error: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     let ollama_url = ai::get_ollama_url();
     let model = ai::get_embedding_model();
@@ -206,7 +206,7 @@ pub async fn semantic_search_knowledge(
     // Generar embedding para la consulta
     let embedding_response = generate_embedding(&client, &ollama_url, &model, &filters.query)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("AI error: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     let pgvector = ai::embedding_to_pgvector(&embedding_response.embedding);
     
@@ -264,7 +264,7 @@ pub async fn semantic_search_knowledge(
     let results = sql_query
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     Ok(Json(results))
 }

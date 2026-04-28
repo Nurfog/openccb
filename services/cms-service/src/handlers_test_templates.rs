@@ -108,7 +108,7 @@ pub async fn create_test_template(
     .bind(payload.tags.as_deref())
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(template))
 }
@@ -198,7 +198,7 @@ pub async fn list_test_templates(
     let templates = sql_query
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(templates))
 }
@@ -240,7 +240,7 @@ pub async fn get_test_template(
     .bind(template_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Obtener preguntas
     let questions: Vec<TestTemplateQuestion> = sqlx::query_as(
@@ -255,7 +255,7 @@ pub async fn get_test_template(
     .bind(template_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(TestTemplateWithQuestions {
         template,
@@ -341,7 +341,7 @@ pub async fn delete_test_template(
     .bind(org_ctx.id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Plantilla no encontrada".to_string()));
@@ -367,7 +367,7 @@ pub async fn create_template_question(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !exists.0 {
         return Err((StatusCode::NOT_FOUND, "Plantilla no encontrada".to_string()));
@@ -396,7 +396,7 @@ pub async fn create_template_question(
     .bind(payload.metadata.as_ref())
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(question))
 }
@@ -428,7 +428,7 @@ pub async fn delete_template_question(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !exists.0 {
         return Err((StatusCode::NOT_FOUND, "Plantilla no encontrada".to_string()));
@@ -444,7 +444,7 @@ pub async fn delete_template_question(
     .bind(template_id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Pregunta no encontrada".to_string()));
@@ -470,7 +470,7 @@ pub async fn create_template_section(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !exists.0 {
         return Err((StatusCode::NOT_FOUND, "Plantilla no encontrada".to_string()));
@@ -494,7 +494,7 @@ pub async fn create_template_section(
     .bind(payload.section_data.as_ref())
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(section))
 }
@@ -525,7 +525,7 @@ pub async fn delete_template_section(
     .bind(template_id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Sección no encontrada".to_string()));
@@ -571,7 +571,7 @@ pub async fn apply_template_to_lesson(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !lesson_exists.0 {
         return Err((StatusCode::NOT_FOUND, "Lección no encontrada".to_string()));
@@ -590,7 +590,7 @@ pub async fn apply_template_to_lesson(
     .bind(template_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if template_questions.is_empty() {
         return Err((StatusCode::BAD_REQUEST, "La plantilla no tiene preguntas".to_string()));
@@ -647,14 +647,14 @@ pub async fn apply_template_to_lesson(
     .bind(org_ctx.id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Incrementar el contador de uso de la plantilla
     sqlx::query("SELECT increment_template_usage($1)")
         .bind(template_id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     tracing::info!(
         "Plantilla '{}' aplicada a la lección '{}' con {} preguntas",
@@ -1019,7 +1019,7 @@ pub async fn generate_questions_with_rag(
             .danger_accept_invalid_certs(true)
             .danger_accept_invalid_hostnames(true)
             .build()
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error del cliente HTTP: {}", e)))?;
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
         
         let ollama_url = ai::get_ollama_url();
         let model = ai::get_embedding_model();
@@ -1070,7 +1070,7 @@ pub async fn generate_questions_with_rag(
                                 .bind(requested_num_questions * 3) // Get more for diversity
                 .fetch_all(&pool)
                 .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("La búsqueda semántica falló: {}", e)))?;
+                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
                 
                 tracing::info!("La búsqueda semántica encontró {} preguntas similares", mysql_questions.len());
 
@@ -1123,7 +1123,7 @@ pub async fn generate_questions_with_rag(
                     .bind(requested_num_questions * 3)
                     .fetch_all(&pool)
                     .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("El recurso a palabras clave falló: {}", e)))?;
+                    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
                     if mysql_questions.is_empty() {
                         tracing::info!(
@@ -1220,7 +1220,7 @@ pub async fn generate_questions_with_rag(
                 .bind(requested_num_questions * 3)
                 .fetch_all(&pool)
                 .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("La búsqueda por palabras clave falló: {}", e)))?;
+                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
                 if mysql_questions.is_empty() {
                     tracing::info!(
@@ -1309,7 +1309,7 @@ pub async fn generate_questions_with_rag(
         .bind(course_id)
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener las preguntas: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     } else {
         // Fetch all imported MySQL questions for this organization
         // NO LIMIT - fetch all questions for better RAG context
@@ -1339,7 +1339,7 @@ pub async fn generate_questions_with_rag(
         .bind(org_ctx.id)
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener las preguntas: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     }
 
     if mysql_questions.is_empty() {
@@ -1487,7 +1487,7 @@ pub async fn generate_questions_with_rag(
     
     let response = request.send().await.map_err(|e| {
         tracing::error!("AI request failed after timeout: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, format!("Ollama timeout - el equipo t-800 está tardando en responder. Intenta nuevamente: {}", e))
+        (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string())
     })?;
 
     tracing::info!("Estado de la respuesta de Ollama: {}", response.status());

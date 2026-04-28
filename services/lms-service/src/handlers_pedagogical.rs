@@ -88,7 +88,7 @@ pub async fn get_lesson_quality_metrics(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if enrolled == 0 {
         return Ok(Json(CourseQualityMetrics {
@@ -146,7 +146,7 @@ pub async fn get_lesson_quality_metrics(
     .bind(enrolled)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let lessons = rows
         .into_iter()
@@ -211,7 +211,7 @@ pub async fn get_quiz_discrimination_index(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if rows.is_empty() {
         return Ok(Json(CourseDiscriminationReport {
@@ -300,7 +300,7 @@ pub async fn get_curricular_suggestions(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if enrolled < 5 {
         return Ok(Json(CurricularSuggestionsReport {
@@ -335,7 +335,7 @@ pub async fn get_curricular_suggestions(
     .bind(enrolled)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let mut suggestions: Vec<CurricularSuggestion> = vec![];
 

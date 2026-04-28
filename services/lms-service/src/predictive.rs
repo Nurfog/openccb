@@ -20,7 +20,7 @@ pub async fn get_course_dropout_risks(
     }
 
     calculate_risks_for_course(&pool, course_id, claims.org).await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let rows = sqlx::query(
         r#"
@@ -34,7 +34,7 @@ pub async fn get_course_dropout_risks(
     .bind(claims.org)
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener los riesgos: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let risks: Vec<DropoutRisk> = rows.into_iter().map(|row| {
         DropoutRisk {

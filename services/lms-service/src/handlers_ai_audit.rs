@@ -283,7 +283,7 @@ pub async fn list_ai_audit_logs(
     .bind(offset)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al listar auditoría de IA: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let mut items = Vec::new();
 
@@ -371,7 +371,7 @@ pub async fn review_ai_audit_log(
     .bind(note_or_null)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al actualizar auditoría IA: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if updated.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Registro de auditoría no encontrado".to_string()));
@@ -437,7 +437,7 @@ pub async fn get_ai_audit_metrics(
     .bind(days)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error métricas de auditoría: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let total_chat_logs: i64 = totals.get("total_chat");
     let total_reviewed: i64 = totals.get("reviewed");
@@ -456,7 +456,7 @@ pub async fn get_ai_audit_metrics(
     .bind(days)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error escaneando logs: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let mut signal_counts: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
     let mut total_flagged: i64 = 0;

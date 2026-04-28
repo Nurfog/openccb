@@ -49,7 +49,7 @@ async fn ensure_announcement_author_exists(
         .bind(user_id)
         .fetch_one(pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if exists {
         return Ok(());
@@ -71,7 +71,7 @@ async fn ensure_announcement_author_exists(
     .bind(normalized_role)
     .execute(pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("No se pudo provisionar usuario LMS: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(())
 }
@@ -97,7 +97,7 @@ pub async fn list_announcements(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Adjuntar cohort_ids a cada anuncio
     for a in &mut announcements {
@@ -107,7 +107,7 @@ pub async fn list_announcements(
         .bind(a.id)
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         if !cohorts.is_empty() {
             a.cohort_ids = Some(cohorts.into_iter().map(|c| c.0).collect());
@@ -136,7 +136,7 @@ pub async fn create_announcement(
     let mut tx = pool
         .begin()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 1. Crear anuncio
     let mut announcement = sqlx::query_as::<_, CourseAnnouncement>(
@@ -152,7 +152,7 @@ pub async fn create_announcement(
     .bind(payload.is_pinned.unwrap_or(false))
     .fetch_one(&mut *tx)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 2. Vincular cohortes si se proporcionan
     if let Some(ref cohort_ids) = payload.cohort_ids {
@@ -164,14 +164,14 @@ pub async fn create_announcement(
             .bind(cohort_id)
             .execute(&mut *tx)
             .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
         }
         announcement.cohort_ids = Some(cohort_ids.clone());
     }
 
     tx.commit()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 3. Obtener estudiantes objetivo para notificaciones
     let enrolled_students = if let Some(ref cohort_ids) = payload.cohort_ids {
@@ -207,7 +207,7 @@ pub async fn create_announcement(
         .fetch_all(&pool)
         .await
     }
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Crear notificación para cada estudiante inscrito
     for (student_id,) in enrolled_students {
@@ -276,7 +276,7 @@ pub async fn update_announcement(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(announcement))
 }
@@ -302,7 +302,7 @@ pub async fn delete_announcement(
     .bind(org_ctx.id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(StatusCode::OK)
 }

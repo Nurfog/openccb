@@ -18,7 +18,7 @@ pub async fn get_public_profile(
         .bind(user_id)
         .fetch_optional(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
         .ok_or((StatusCode::NOT_FOUND, "Usuario no encontrado".to_string()))?;
 
     let is_public: bool = user.get("is_public_profile");
@@ -44,13 +44,13 @@ pub async fn get_public_profile(
     .bind(user_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let completed_courses: i64 = sqlx::query("SELECT COUNT(*) FROM enrollments WHERE user_id = $1 AND progress >= 100")
         .bind(user_id)
         .fetch_one(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
         .get(0);
 
     Ok(Json(PublicProfile {
@@ -87,7 +87,7 @@ pub async fn get_my_badges(
     .bind(claims.sub)
     .fetch_all(&pool)
     .await
-    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(badges))
 }
@@ -106,7 +106,7 @@ pub async fn award_badge(
         .bind(payload.badge_id)
         .execute(&pool)
         .await
-        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(StatusCode::CREATED)
 }

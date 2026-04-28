@@ -56,7 +56,7 @@ pub async fn generate_question_embeddings(
         .danger_accept_invalid_certs(true)
         .danger_accept_invalid_hostnames(true)
         .build()
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error del cliente HTTP: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     let ollama_url = ai::get_ollama_url();
     let model = ai::get_embedding_model();
@@ -74,7 +74,7 @@ pub async fn generate_question_embeddings(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     let _total = questions.len();
     let mut processed = 0;
@@ -168,7 +168,7 @@ pub async fn regenerate_question_embedding(
         .danger_accept_invalid_certs(true)
         .danger_accept_invalid_hostnames(true)
         .build()
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error del cliente HTTP: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     let ollama_url = ai::get_ollama_url();
     let model = ai::get_embedding_model();
@@ -181,7 +181,7 @@ pub async fn regenerate_question_embedding(
     .bind(org_ctx.id)
     .fetch_optional(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Pregunta no encontrada".to_string()))?;
     
     // Generar texto de la incrustación
@@ -209,7 +209,7 @@ pub async fn regenerate_question_embedding(
     // Generar incrustación
     let response = generate_embedding(&client, &ollama_url, &model, &embedding_text)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error de IA: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     let pgvector = ai::embedding_to_pgvector(&response.embedding);
     
@@ -226,7 +226,7 @@ pub async fn regenerate_question_embedding(
     .bind(question_id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     Ok(StatusCode::OK)
 }
@@ -244,7 +244,7 @@ pub async fn semantic_search(
         .danger_accept_invalid_certs(true)
         .danger_accept_invalid_hostnames(true)
         .build()
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error del cliente HTTP: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     let ollama_url = ai::get_ollama_url();
     let model = ai::get_embedding_model();
@@ -252,7 +252,7 @@ pub async fn semantic_search(
     // Generar incrustación para la consulta
     let embedding_response = generate_embedding(&client, &ollama_url, &model, &filters.query)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error de IA: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     let pgvector = ai::embedding_to_pgvector(&embedding_response.embedding);
     
@@ -310,7 +310,7 @@ pub async fn semantic_search(
     let results = sql_query
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     Ok(Json(results))
 }
@@ -348,7 +348,7 @@ pub async fn find_similar_questions(
     .bind(limit)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .into_iter()
     .filter(|r| r.similarity >= threshold)
     .collect();

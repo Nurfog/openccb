@@ -20,7 +20,7 @@ pub async fn list_cohorts(
     .bind(org_ctx.id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(cohorts))
 }
@@ -43,7 +43,7 @@ pub async fn create_cohort(
     .bind(payload.description)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(cohort))
 }
@@ -63,7 +63,7 @@ pub async fn add_cohort_member(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !exists {
         return Err((StatusCode::NOT_FOUND, "Cohorte no encontrada".to_string()));
@@ -81,7 +81,7 @@ pub async fn add_cohort_member(
     .bind(payload.user_id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(member))
 }
@@ -100,7 +100,7 @@ pub async fn remove_cohort_member(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !exists {
         return Err((StatusCode::NOT_FOUND, "Cohorte no encontrada".to_string()));
@@ -111,7 +111,7 @@ pub async fn remove_cohort_member(
         .bind(user_id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -130,7 +130,7 @@ pub async fn get_cohort_members(
     .bind(org_ctx.id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if !exists {
         return Err((StatusCode::NOT_FOUND, "Cohorte no encontrada".to_string()));
@@ -140,7 +140,7 @@ pub async fn get_cohort_members(
         .bind(cohort_id)
         .fetch_all(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(members))
 }

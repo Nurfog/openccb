@@ -51,7 +51,7 @@ pub async fn create_payment_preference(
     .bind(&course.currency)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // 3. Llamar a la API de Mercado Pago
     let mp_access_token = std::env::var("MP_ACCESS_TOKEN").unwrap_or_default();
@@ -125,7 +125,7 @@ pub async fn create_payment_preference(
         .bind(transaction_id)
         .execute(&pool)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(PaymentPreferenceResponse {
         preference_id,

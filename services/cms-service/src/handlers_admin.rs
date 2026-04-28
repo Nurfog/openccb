@@ -40,7 +40,7 @@ pub async fn get_token_usage(
     )
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener el uso: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Calcular estadísticas
     let total_tokens: i64 = usage.iter().map(|u| u.total_tokens).sum();
@@ -123,7 +123,7 @@ pub async fn get_ai_usage_dashboard(
     .bind(filters.end_date.clone())
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener el uso diario: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Obtener uso por punto de conexión/función
     let by_endpoint: Vec<UsageByEndpoint> = sqlx::query_as(
@@ -149,7 +149,7 @@ pub async fn get_ai_usage_dashboard(
     .bind(filters.end_date.clone())
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener el uso del punto de conexión: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Obtener usuarios principales
     let top_users: Vec<TopUserUsage> = sqlx::query_as(
@@ -179,7 +179,7 @@ pub async fn get_ai_usage_dashboard(
     .bind(filters.end_date.clone())
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener los usuarios principales: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Calcular estadísticas de resumen
     let total_tokens: i64 = daily_usage.iter().map(|d| d.total_tokens).sum();
@@ -256,7 +256,7 @@ pub async fn get_ai_usage_logs(
     .bind(offset as i64)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener los logs: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Obtener el conteo total para la paginación
     let count: (i64,) = sqlx::query_as(
@@ -274,7 +274,7 @@ pub async fn get_ai_usage_logs(
     .bind(filters.user_id.clone())
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al contar los logs: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(UsageLogsResponse {
         logs,
@@ -459,7 +459,7 @@ pub async fn get_ai_usage_global(
     .bind(filters.end_date.clone())
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener el uso diario: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Obtener uso por punto de conexión/función
     let by_endpoint: Vec<UsageByEndpoint> = sqlx::query_as(
@@ -483,7 +483,7 @@ pub async fn get_ai_usage_global(
     .bind(filters.end_date.clone())
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener el uso del punto de conexión: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Obtener uso por organización
     let by_organization: Vec<UsageByOrganization> = sqlx::query_as(
@@ -509,7 +509,7 @@ pub async fn get_ai_usage_global(
     .bind(filters.end_date.clone())
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener el uso de la organización: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Obtener usuarios principales en todas las organizaciones
     let top_users: Vec<TopUserUsage> = sqlx::query_as(
@@ -539,7 +539,7 @@ pub async fn get_ai_usage_global(
     .bind(filters.end_date.clone())
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener los usuarios principales: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Obtener uso por tipo de solicitud (para gráfico circular)
     let by_request_type: Vec<UsageByRequestType> = sqlx::query_as(
@@ -560,7 +560,7 @@ pub async fn get_ai_usage_global(
     .bind(filters.end_date.clone())
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener el uso del tipo de solicitud: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Calcular estadísticas de resumen
     let total_tokens: i64 = daily_usage.iter().map(|d| d.total_tokens).sum();
@@ -593,7 +593,7 @@ pub async fn get_ai_usage_global(
     .bind(filters.end_date.clone())
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al contar los usuarios: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Calcular uso específico por estudiante (interacciones de chat)
     let student_chat_usage: Vec<StudentChatUsage> = sqlx::query_as(
@@ -623,7 +623,7 @@ pub async fn get_ai_usage_global(
     .bind(filters.end_date.clone())
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener el uso de chat de estudiantes: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     // Calcular totales de chat de estudiantes
     let total_student_chat_tokens: i64 = student_chat_usage.iter().map(|s| s.total_tokens).sum();
@@ -757,7 +757,7 @@ pub async fn set_user_token_limit(
     .bind(user_id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al establecer el límite: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     Ok(StatusCode::OK)
 }
@@ -792,7 +792,7 @@ pub async fn get_user_token_usage(
     .bind(user_id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al obtener el uso: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     Ok(Json(usage))
 }
@@ -810,7 +810,7 @@ pub async fn check_user_token_limit(
     .bind(user_id)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to check limit: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     
     Ok(Json(result))
 }

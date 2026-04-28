@@ -194,7 +194,7 @@ pub async fn import_faq_candidates(
     .bind(limit)
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al importar candidatos FAQ: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let imported: i64 = row.get("imported");
     let skipped: i64 = row.get("skipped");
@@ -250,7 +250,7 @@ pub async fn list_faq_review_queue(
     .bind(offset)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al listar la cola FAQ: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let total: i64 = sqlx::query_scalar(
         r#"
@@ -264,7 +264,7 @@ pub async fn list_faq_review_queue(
     .bind(filters.status.clone())
     .fetch_one(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al contar cola FAQ: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(FaqReviewQueueResponse {
         items,
@@ -292,7 +292,7 @@ pub async fn answer_faq_review_item(
     let mut tx = pool
         .begin()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("No se pudo iniciar transacción FAQ: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     let queue_item: (String, String) = sqlx::query_as(
         "SELECT status, question_text FROM faq_review_queue WHERE id = $1 AND organization_id = $2"
@@ -301,7 +301,7 @@ pub async fn answer_faq_review_item(
     .bind(org_ctx.id)
     .fetch_optional(&mut *tx)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al buscar item FAQ: {}", e)))?
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?
     .ok_or((StatusCode::NOT_FOUND, "Item de revisión no encontrado".to_string()))?;
 
     if queue_item.0 == "dismissed" {
@@ -335,7 +335,7 @@ pub async fn answer_faq_review_item(
         .bind(claims.sub)
         .fetch_one(&mut *tx)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al crear FAQ: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
         sqlx::query(
             r#"
@@ -358,7 +358,7 @@ pub async fn answer_faq_review_item(
         .bind(org_ctx.id)
         .execute(&mut *tx)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al actualizar cola FAQ: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     } else {
         sqlx::query(
             r#"
@@ -379,12 +379,12 @@ pub async fn answer_faq_review_item(
         .bind(org_ctx.id)
         .execute(&mut *tx)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al responder cola FAQ: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
     }
 
     tx.commit()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("No se pudo confirmar transacción FAQ: {}", e)))?;
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(StatusCode::OK)
 }
@@ -416,7 +416,7 @@ pub async fn dismiss_faq_review_item(
     .bind(org_ctx.id)
     .execute(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al descartar item FAQ: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     if result.rows_affected() == 0 {
         return Err((StatusCode::NOT_FOUND, "Item de revisión no encontrado".to_string()));
@@ -475,7 +475,7 @@ pub async fn list_faq_entries(
     .bind(offset)
     .fetch_all(&pool)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error al listar FAQ: {}", e)))?;
+    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Error interno del servidor".to_string()))?;
 
     Ok(Json(rows))
 }
