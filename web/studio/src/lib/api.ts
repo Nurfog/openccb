@@ -1622,6 +1622,12 @@ export const questionBankApi = {
     },
     delete: (id: string): Promise<void> =>
         apiFetch(`/question-bank/${id}`, { method: 'DELETE' }, false),
+    importFromExcel: async (file: File): Promise<{ imported: number; skipped: number; error?: string }> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const result = await apiFetch('/question-bank/import-excel', { method: 'POST', body: formData }, false);
+        return result as { imported: number; skipped: number; error?: string };
+    },
     importFromMySQL: async (courseId?: number, questionIds?: number[], importAll?: boolean): Promise<QuestionBank[]> => {
         const questions = await apiFetch('/question-bank/import-mysql', { method: 'POST', body: JSON.stringify({ mysql_course_id: courseId, question_ids: questionIds, import_all: importAll }) }, false);
         return (questions as QuestionBank[]).map(normalizeQuestionBank);

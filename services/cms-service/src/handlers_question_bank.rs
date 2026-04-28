@@ -1618,6 +1618,181 @@ pub struct ImportResult {
 //     unimplemented!()
 // }
 
+/// POST /question-bank/import-excel - Importar preguntas desde archivo Excel (.xlsx/.xls)
+pub async fn import_from_excel(
+    Org(org_ctx): Org,
+    _claims: Claims,
+    State(pool): State<PgPool>,
+    mut multipart: axum::extract::Multipart,
+) -> Result<Json<ImportResult>, (StatusCode, String)> {
+    use calamine::{open_workbook_auto_from_rs, Reader};
+    use std::io::Cursor;
+
+    const MAX_FILE_SIZE: usize = 10 * 1024 * 1024; // 10 MB
+
+    // Extraer el campo "file" del multipart
+    let mut file_bytes: Option<Vec<u8>> = None;
+    while let Some(field) = multipart.next_field().await.map_err(|_| {
+        (StatusCode::BAD_REQUEST, "Error leyendo multipart".to_string())
+    })? {
+        let name = field.name().unwrap_or("").to_string();
+        if name == "file" {
+            let bytes = field.bytes().await.map_err(|_| {
+                (StatusCode::BAD_REQUEST, "Error leyendo bytes del archivo".to_string())
+            })?;
+            if bytes.len() > MAX_FILE_SIZE {
+                return Err((StatusCode::PAYLOAD_TOO_LARGE, "El archivo supera el límite de 10MB".to_string()));
+            }
+            file_bytes = Some(bytes.to_vec());
+            break;
+        }
+    }
+
+    let bytes = file_bytes.ok_or((StatusCode::BAD_REQUEST, "No se recibió ningún archivo".to_string()))?;
+
+    // Parsear el workbook
+    let cursor = Cursor::new(bytes);
+    let mut workbook = open_workbook_auto_from_rs(cursor).map_err(|_| {
+        (StatusCode::BAD_REQUEST, "Archivo Excel inválido o no soportado".to_string())
+    })?;
+
+    let sheet_names = workbook.sheet_names().to_vec();
+    let first_name = sheet_names.first().ok_or((StatusCode::BAD_REQUEST, "El archivo no contiene hojas".to_string()))?;
+    let range = workbook.worksheet_range(first_name).map_err(|_| {
+        (StatusCode::BAD_REQUEST, "No se pudo leer la hoja de cálculo".to_string())
+    })?;
+
+    let mut rows = range.rows();
+    let header_row = rows.next().ok_or((StatusCode::BAD_REQUEST, "El archivo está vacío".to_string()))?;
+
+    // Mapear índices de columnas por nombre (case-insensitive)
+    let headers: Vec<String> = header_row.iter()
+        .map(|c| c.to_string().trim().to_lowercase())
+        .collect();
+
+    let col = |name: &str| -> Option<usize> {
+        headers.iter().position(|h| h == name)
+    };
+
+    let idx_question_text  = col("question_text");
+    let idx_question_type  = col("question_type");
+    let idx_options        = col("options");
+    let idx_correct_answer = col("correct_answer");
+    let idx_explanation    = col("explanation");
+    let idx_difficulty     = col("difficulty");
+    let idx_tags           = col("tags");
+    let idx_points         = col("points");
+
+    let get_cell = |row: &[calamine::Data], idx: Option<usize>| -> String {
+        idx.and_then(|i| row.get(i))
+            .map(|c: &calamine::Data| c.to_string().trim().to_string())
+            .unwrap_or_default()
+    };
+
+    let to_question_type = |s: &str| -> Option<&'static str> {
+        match s.to_lowercase().as_str() {
+            "multiple-choice" | "multiple choice" | "mcq" => Some("multiple-choice"),
+            "true-false" | "true false" | "boolean"       => Some("true-false"),
+            "short-answer" | "short answer"                => Some("short-answer"),
+            "essay"                                        => Some("essay"),
+            "matching"                                     => Some("matching"),
+            "ordering"                                     => Some("ordering"),
+            "fill-in-the-blanks" | "fill in the blanks"   => Some("fill-in-the-blanks"),
+            "audio-response" | "audio response"            => Some("audio-response"),
+            "hotspot"                                      => Some("hotspot"),
+            "code-lab" | "code lab"                        => Some("code-lab"),
+            _                                              => None,
+        }
+    };
+
+    let mut imported = 0i32;
+    let mut skipped  = 0i32;
+
+    for row in rows {
+        let question_text = get_cell(row, idx_question_text);
+        let question_type_raw = get_cell(row, idx_question_type);
+        let Some(question_type) = to_question_type(&question_type_raw) else {
+            skipped += 1;
+            continue;
+        };
+        if question_text.is_empty() {
+            skipped += 1;
+            continue;
+        }
+
+        let options_raw     = get_cell(row, idx_options);
+        let correct_raw     = get_cell(row, idx_correct_answer);
+        let explanation_raw = get_cell(row, idx_explanation);
+        let difficulty_raw  = get_cell(row, idx_difficulty);
+        let tags_raw        = get_cell(row, idx_tags);
+        let points_raw      = get_cell(row, idx_points);
+
+        let difficulty = match difficulty_raw.to_lowercase().as_str() {
+            "easy" | "hard" => difficulty_raw.to_lowercase(),
+            _               => "medium".to_string(),
+        };
+
+        let options: serde_json::Value = if question_type == "true-false" {
+            serde_json::json!(["Verdadero", "Falso"])
+        } else if options_raw.starts_with('[') {
+            serde_json::from_str(&options_raw).unwrap_or(serde_json::Value::Null)
+        } else if !options_raw.is_empty() {
+            let parts: Vec<&str> = options_raw.split(',').map(str::trim).collect();
+            serde_json::json!(parts)
+        } else {
+            serde_json::Value::Null
+        };
+
+        let correct_answer: serde_json::Value = if question_type == "true-false" {
+            let lower = correct_raw.to_lowercase();
+            if lower == "verdadero" || lower == "true" {
+                serde_json::json!(0)
+            } else {
+                serde_json::json!(1)
+            }
+        } else if correct_raw.starts_with('[') || correct_raw.starts_with('{') {
+            serde_json::from_str(&correct_raw).unwrap_or(serde_json::Value::Null)
+        } else if let Ok(n) = correct_raw.parse::<i64>() {
+            serde_json::json!(n)
+        } else {
+            serde_json::json!(correct_raw)
+        };
+
+        let tags: Option<Vec<String>> = if tags_raw.is_empty() {
+            None
+        } else {
+            Some(tags_raw.split(',').map(|t: &str| t.trim().to_string()).filter(|t: &String| !t.is_empty()).collect())
+        };
+
+        let points: i32 = points_raw.parse::<i32>().unwrap_or(1).max(1);
+
+        let result = sqlx::query(
+            r#"INSERT INTO question_bank
+               (organization_id, question_text, question_type, options, correct_answer,
+                explanation, difficulty, tags, points, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())"#
+        )
+        .bind(org_ctx.id)
+        .bind(&question_text)
+        .bind(question_type)
+        .bind(&options)
+        .bind(&correct_answer)
+        .bind(if explanation_raw.is_empty() { None } else { Some(explanation_raw) })
+        .bind(&difficulty)
+        .bind(tags.as_deref().map(|t| serde_json::json!(t)))
+        .bind(points)
+        .execute(&pool)
+        .await;
+
+        match result {
+            Ok(_) => imported += 1,
+            Err(_) => skipped += 1,
+        }
+    }
+
+    Ok(Json(ImportResult { imported, skipped, updated: 0, error: None }))
+}
+
 #[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
 pub struct MySqlQuestionFull {
     pub id_pregunta: i32,

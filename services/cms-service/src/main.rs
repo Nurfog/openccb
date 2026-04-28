@@ -482,6 +482,10 @@ async fn main() {
             "/question-bank/ai-generate",
             post(handlers_question_bank::ai_generate_question),
         )
+        .route(
+            "/question-bank/import-excel",
+            post(handlers_question_bank::import_from_excel),
+        )
         // Rutas de embeddings para búsqueda semántica
         .route(
             "/question-bank/embeddings/generate",

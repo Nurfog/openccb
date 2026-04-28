@@ -1,35 +1,40 @@
 # Security Triage
 
-Fecha de última actualización: 2026-04-28
+Fecha de última actualización: 2026-04-28 (P2+P3 completados)
 
 ---
 
 ## Estado actual (post-remediación)
 
 ### Rust (cargo audit)
-- Vulnerabilidades: 4 (todas en dependencias transitivas de terceros sin fix directo)
-- Warnings: 4
+- Vulnerabilidades: 4 (todas en dependencias transitivas via AWS SDK, sin fix directo)
+- Warnings: 1
 
 #### Vulnerabilidades activas
 
 1. RUSTSEC-2023-0071 (rsa 0.9.9)
+
+   #### Nota sobre lru (nuevo)
+   - RUSTSEC-2026-0104 (lru 0.12.5): IterMut viola Stacked Borrows
+   - Cadena: aws-sdk-s3 → lru
+   - Bloqueado por AWS SDK. Monitorear con `cargo update && cargo audit`.
    - Severidad: media (Marvin Attack)
    - Cadena: sqlx-mysql → rsa
    - Fix upstream: no disponible
    - Estado: aceptación de riesgo temporal
 
 2. RUSTSEC-2026-0098 (rustls-webpki 0.101.7)
-   - Nombre: URI name constraints incorrectly accepted
+   - Nombre: RUSTSEC-2026-0098 URI name constraints incorrectly accepted
    - Cadena: aws-sdk-s3/aws-config → aws-smithy-http-client → rustls 0.21 → rustls-webpki 0.101.7
    - Fix: requiere AWS SDK 1.x actualice su stack TLS a rustls >=0.22
    - Estado: bloqueado por tercero (AWS SDK)
 
 3. RUSTSEC-2026-0099 (rustls-webpki 0.101.7)
-   - Nombre: wildcard name constraints incorrectly accepted
+   - Nombre: RUSTSEC-2026-0099 wildcard name constraints incorrectly accepted
    - Misma cadena que 0098
 
 4. RUSTSEC-2026-0104 (rustls-webpki 0.101.7)
-   - Nombre: panic alcanzable en CRL parsing
+   - Nombre: RUSTSEC-2026-0104 panic alcanzable en CRL parsing
    - Misma cadena que 0098
 
 #### Nota: openidconnect ya NO es un vector
@@ -43,17 +48,15 @@ Fecha de última actualización: 2026-04-28
 
 #### Studio
 - Pre-remediación: 1 critical, 12 high, 1 moderate (total 14)
-- Post-remediación: 0 critical, 2 high, 3 moderate (total 5)
-- Resuelto: dompurify critical + toda la cadena d3/mermaid/dagre-d3 (via upgrade mermaid 9 → 11.14.0)
-- Restante high: xlsx (2 advisories, sin fix disponible)
-- Restante moderate: next + postcss (requieren Next major upgrade)
+- Post-remediación: **0 high**, 4 moderate (total 4) ✅
+- Resuelto: mermaid upgrade (9→11.14.0), xlsx eliminado (parseo movido a backend Rust con calamine), Next.js 14→15.5.15
+- Restante moderate: postcss bundled en Next (sin fix sin downgrade), uuid via mermaid (sin fix sin downgrade mermaid)
 
 #### Experience
 - Pre-remediación: 1 critical, 11 high, 1 moderate (total 13)
-- Post-remediación: 0 critical, 1 high, 3 moderate (total 4)
-- Resuelto: dompurify critical + toda la cadena d3/mermaid/dagre-d3 ✓
-- Restante high: next (requiere Next major upgrade)
-- Restante moderate: next postcss + uuid (moderate, via mermaid 11; revertir a mermaid 9 empeoraría)
+- Post-remediación: **0 high**, 4 moderate (total 4) ✅
+- Resuelto: mermaid upgrade, Next.js 14→15.5.15
+- Restante moderate: postcss bundled en Next, uuid via mermaid (mismas restricciones que studio)
 
 ---
 
