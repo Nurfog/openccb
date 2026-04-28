@@ -54,24 +54,14 @@ export default function AdminTokenTracking() {
 
     const loadTokenUsage = async () => {
         try {
-            const token = localStorage.getItem('studio_token');
-            
-            if (!token) {
-                console.error('[TokenUsage] No authentication token found!');
-                alert('No authentication token found. Please login again.');
-                window.location.href = '/auth/login';
-                return;
-            }
-            
             const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_API_URL || 'http://localhost:3001'}/admin/token-usage`, {
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
             });
 
             if (response.status === 401) {
-                console.error('[TokenUsage] Unauthorized - Token may be expired');
                 alert('Session expired. Please login again.');
                 window.location.href = '/auth/login';
                 return;
@@ -88,11 +78,7 @@ export default function AdminTokenTracking() {
                     try {
                         const limitResp = await fetch(
                             `${process.env.NEXT_PUBLIC_CMS_API_URL || 'http://localhost:3001'}/admin/users/${user.user_id}/token-limit/check`,
-                            {
-                                headers: {
-                                    'Authorization': `Bearer ${localStorage.getItem('studio_token')}`,
-                                },
-                            }
+                            { credentials: 'include' }
                         );
                         if (limitResp.ok) {
                             const limitData = await limitResp.json();
@@ -127,13 +113,13 @@ export default function AdminTokenTracking() {
                 {
                     method: 'PUT',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('studio_token')}`,
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
                         monthly_token_limit: editValue,
                         token_limit_reset_day: 1,
                     }),
+                    credentials: 'include',
                 }
             );
 
@@ -141,11 +127,7 @@ export default function AdminTokenTracking() {
                 // Reload limits
                 const limitResp = await fetch(
                     `${process.env.NEXT_PUBLIC_CMS_API_URL || 'http://localhost:3001'}/admin/users/${userId}/token-limit/check`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('studio_token')}`,
-                        },
-                    }
+                    { credentials: 'include' }
                 );
                 if (limitResp.ok) {
                     const limitData = await limitResp.json();

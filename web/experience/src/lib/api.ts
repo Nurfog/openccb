@@ -614,7 +614,7 @@ export const getToken = () => {
         return previewToken;
     }
 
-    return sessionStorage.getItem('preview_token') || localStorage.getItem('experience_token');
+    return sessionStorage.getItem('preview_token') || null;
 };
 
 const OFFLINE_QUEUE_KEY = 'experience_offline_mutation_queue_v1';
@@ -854,7 +854,7 @@ const apiFetch = async (url: string, options: RequestInit = {}, isCMS: boolean =
     const baseUrl = isCMS ? getCmsApiUrl() : getLmsApiUrl();
     const headers = buildApiHeaders(options);
 
-    const response = await fetch(`${baseUrl}${url}`, { ...options, headers });
+    const response = await fetch(`${baseUrl}${url}`, { ...options, headers, credentials: 'include' });
     if (!response.ok) {
         const error = await response.json().catch(() => ({ message: response.statusText }));
         throw new Error(error.message || 'An error occurred');
@@ -1091,7 +1091,8 @@ export const lmsApi = {
             headers: {
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {})
             },
-            body: formData
+            body: formData,
+            credentials: 'include'
         }).then(res => res.json());
     },
 
@@ -1163,7 +1164,8 @@ export const lmsApi = {
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                 // Don't set Content-Type for FormData - browser sets it with boundary
             },
-            body: formData
+            body: formData,
+            credentials: 'include'
         }).then(async res => {
             if (!res.ok) {
                 const err = await res.json().catch(() => ({ message: 'Audio evaluation failed' }));

@@ -52,11 +52,7 @@ export default function UsersPage() {
                 try {
                     const resp = await fetch(
                         `${process.env.NEXT_PUBLIC_CMS_API_URL || 'http://localhost:3001'}/admin/users/${user.id}/token-limit/check`,
-                        {
-                            headers: {
-                                'Authorization': `Bearer ${localStorage.getItem('studio_token')}`,
-                            },
-                        }
+                        { credentials: 'include' }
                     );
                     if (resp.ok) {
                         const data = await resp.json();

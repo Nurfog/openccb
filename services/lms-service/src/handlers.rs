@@ -1,9 +1,9 @@
 use axum::{
     Json,
     extract::{Multipart, Path, Query, State},
-    http::{HeaderMap, header::AUTHORIZATION},
+    http::{HeaderMap, HeaderValue, header::AUTHORIZATION},
     http::StatusCode,
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     response::sse::{Event, KeepAlive, Sse},
     Extension,
 };
@@ -13,9 +13,9 @@ use aws_sdk_s3::{
     Client as S3Client,
     config::{Credentials, Region},
 };
-use bcrypt::{DEFAULT_COST, hash, verify};
+use bcrypt::{hash, verify};
 use chrono::{DateTime, Utc};
-use common::auth::{Claims, create_jwt};
+use common::auth::{Claims, create_jwt, auth_cookie_header};
 use common::middleware::Org;
 use common::models::{
     AuthResponse, Course, CourseAnalytics, Enrollment, HeatmapPoint, Lesson, LessonAnalytics,
@@ -800,11 +800,27 @@ pub struct InteractionPayload {
     pub metadata: Option<serde_json::Value>,
 }
 
+pub async fn logout() -> Response {
+    use common::auth::auth_cookie_clear_header;
+    let mut response = axum::http::Response::builder()
+        .status(axum::http::StatusCode::OK)
+        .body(axum::body::Body::empty())
+        .unwrap();
+    response.headers_mut().insert(
+        axum::http::header::SET_COOKIE,
+        HeaderValue::from_static(auth_cookie_clear_header()),
+    );
+    response
+}
+
 pub async fn register(
     State(pool): State<PgPool>,
     Json(payload): Json<AuthPayload>,
-) -> Result<Json<AuthResponse>, (StatusCode, String)> {
-    let password_hash = hash(payload.password, DEFAULT_COST).map_err(|_| {
+) -> Result<Response, (StatusCode, String)> {
+    if payload.password.len() < 8 {
+        return Err((StatusCode::BAD_REQUEST, "La contraseña debe tener al menos 8 caracteres".into()));
+    }
+    let password_hash = hash(payload.password, 13).map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Error al procesar la contraseña".into(),
@@ -870,7 +886,7 @@ pub async fn register(
         )
     })?;
 
-    Ok(Json(AuthResponse {
+    let auth_response = AuthResponse {
         user: UserResponse {
             id: user.id,
             email: user.email,
@@ -883,14 +899,22 @@ pub async fn register(
             bio: user.bio,
             language: user.language,
         },
-        token,
-    }))
+        token: token.clone(),
+    };
+
+    let mut response = Json(auth_response).into_response();
+    response.headers_mut().insert(
+        axum::http::header::SET_COOKIE,
+        HeaderValue::from_str(&auth_cookie_header(&token))
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Cookie error".into()))?,
+    );
+    Ok(response)
 }
 
 pub async fn login(
     State(pool): State<PgPool>,
     Json(payload): Json<AuthPayload>,
-) -> Result<Json<AuthResponse>, (StatusCode, String)> {
+) -> Result<Response, (StatusCode, String)> {
     let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE email = $1")
         .bind(&payload.email)
         .fetch_one(&pool)
@@ -913,7 +937,7 @@ pub async fn login(
         )
     })?;
 
-    Ok(Json(AuthResponse {
+    let auth_response = AuthResponse {
         user: UserResponse {
             id: user.id,
             email: user.email,
@@ -926,8 +950,16 @@ pub async fn login(
             bio: user.bio,
             language: user.language,
         },
-        token,
-    }))
+        token: token.clone(),
+    };
+
+    let mut response = Json(auth_response).into_response();
+    response.headers_mut().insert(
+        axum::http::header::SET_COOKIE,
+        HeaderValue::from_str(&auth_cookie_header(&token))
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Cookie error".into()))?,
+    );
+    Ok(response)
 }
 
 #[derive(Deserialize)]

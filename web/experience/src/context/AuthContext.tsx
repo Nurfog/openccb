@@ -20,10 +20,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const savedUser = localStorage.getItem('experience_user');
-        const savedToken = localStorage.getItem('experience_token');
-        if (savedUser && savedToken) {
+        if (savedUser) {
             setUser(JSON.parse(savedUser));
-            setToken(savedToken);
         }
         setLoading(false);
     }, []);
@@ -31,15 +29,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = (newUser: User, newToken: string) => {
         setUser(newUser);
         setToken(newToken);
+        // El token JWT se guarda en httpOnly cookie por el backend.
         localStorage.setItem('experience_user', JSON.stringify(newUser));
-        localStorage.setItem('experience_token', newToken);
     };
 
     const logout = () => {
         setUser(null);
         setToken(null);
         localStorage.removeItem('experience_user');
-        localStorage.removeItem('experience_token');
+        // Borrar la httpOnly cookie desde el backend
+        fetch('/lms-api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
     };
 
     return (

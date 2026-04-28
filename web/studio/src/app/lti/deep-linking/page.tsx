@@ -20,7 +20,8 @@ function DeepLinkingPickerContent() {
 
     useEffect(() => {
         if (token) {
-            localStorage.setItem("studio_token", token);
+            // El token JWT llega como cookie httpOnly del backend SSO/LTI.
+            // No se persiste en localStorage.
         }
         loadCourses();
     }, [token]);

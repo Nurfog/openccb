@@ -73,10 +73,9 @@ export default function QuestionBankEditor({ question, onSuccess, onCancel }: Qu
                 
                 const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_CMS_API_URL || 'http://localhost:3001'}/assets/upload`, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    },
+                    headers: {},
                     body: audioFormData,
+                    credentials: 'include',
                 });
                 
                 if (uploadResponse.ok) {
@@ -166,19 +165,17 @@ export default function QuestionBankEditor({ question, onSuccess, onCancel }: Qu
         try {
             setGeneratingAI(true);
 
-            // AI generation con el nuevo endpoint de question bank
-            const token = localStorage.getItem('studio_token');
             const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_API_URL || 'http://localhost:3001'}/question-bank/ai-generate`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     question_text: formData.question_text,
                     difficulty: formData.difficulty,
                     skill: randomSkill,
                 }),
+                credentials: 'include',
             });
 
             if (!response.ok) {

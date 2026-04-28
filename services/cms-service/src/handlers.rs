@@ -5,7 +5,8 @@ pub mod tasks;
 use axum::{
     Json,
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{StatusCode, HeaderValue},
+    response::{IntoResponse, Response},
 };
 use aws_config::BehaviorVersion;
 use aws_config::meta::region::RegionProviderChain;
@@ -13,11 +14,11 @@ use aws_sdk_s3::{
     Client as S3Client,
     config::{Credentials, Region},
 };
-use bcrypt::{DEFAULT_COST, hash, verify};
+use bcrypt::{hash, verify};
 use chrono::{DateTime, Utc};
 pub use common::auth::Claims;
 pub use common::middleware::Org;
-use common::auth::{create_jwt, create_preview_token};
+use common::auth::{create_jwt, create_preview_token, auth_cookie_header};
 use common::models::{
     AuthResponse, Course, CourseAnalytics, Lesson, Module, Organization, PublishedCourse,
     PublishedModule, User, UserResponse, CourseInstructor,
@@ -2778,15 +2779,18 @@ pub struct AdminCreateUserPayload {
 pub async fn register(
     State(pool): State<PgPool>,
     Json(payload): Json<AuthPayload>,
-) -> Result<Json<AuthResponse>, (StatusCode, String)> {
+) -> Result<Response, (StatusCode, String)> {
     if payload.email.trim().is_empty() || payload.password.trim().is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
             "El email y la contraseña son obligatorios".into(),
         ));
     }
+    if payload.password.len() < 8 {
+        return Err((StatusCode::BAD_REQUEST, "La contraseña debe tener al menos 8 caracteres".into()));
+    }
 
-    let password_hash = hash(payload.password, DEFAULT_COST)
+    let password_hash = hash(payload.password, 13)
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Hashing failed".into()))?;
 
     let full_name = payload.full_name.unwrap_or_else(|| {
@@ -2834,7 +2838,7 @@ pub async fn register(
         )
     })?;
 
-    Ok(Json(AuthResponse {
+    let auth_response = AuthResponse {
         user: UserResponse {
             id: user.id,
             email: user.email,
@@ -2847,8 +2851,16 @@ pub async fn register(
             bio: user.bio,
             language: user.language,
         },
-        token,
-    }))
+        token: token.clone(),
+    };
+
+    let mut response = Json(auth_response).into_response();
+    response.headers_mut().insert(
+        axum::http::header::SET_COOKIE,
+        HeaderValue::from_str(&auth_cookie_header(&token))
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Cookie error".into()))?,
+    );
+    Ok(response)
 }
 
 pub async fn admin_create_user(
@@ -2865,7 +2877,7 @@ pub async fn admin_create_user(
         return Err((StatusCode::BAD_REQUEST, "Invalid role".into()));
     }
 
-    let password_hash = hash(payload.password, DEFAULT_COST)
+    let password_hash = hash(payload.password, 13)
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Hashing failed".into()))?;
 
     let is_super_admin = claims.role == "admin"
@@ -2906,10 +2918,23 @@ pub async fn admin_create_user(
     }))
 }
 
+pub async fn logout() -> Response {
+    use common::auth::auth_cookie_clear_header;
+    let mut response = axum::http::Response::builder()
+        .status(StatusCode::OK)
+        .body(axum::body::Body::empty())
+        .unwrap();
+    response.headers_mut().insert(
+        axum::http::header::SET_COOKIE,
+        HeaderValue::from_static(auth_cookie_clear_header()),
+    );
+    response
+}
+
 pub async fn login(
     State(pool): State<PgPool>,
     Json(payload): Json<AuthPayload>,
-) -> Result<Json<AuthResponse>, (StatusCode, String)> {
+) -> Result<Response, (StatusCode, String)> {
     tracing::info!("Login attempt for email: {}", payload.email);
 
     let user = sqlx::query_as::<_, User>("SELECT * FROM fn_get_user_by_email($1)")
@@ -2949,7 +2974,7 @@ pub async fn login(
 
     tracing::info!("Login successful for user: {}", user.email);
 
-    Ok(Json(AuthResponse {
+    let auth_response = AuthResponse {
         user: UserResponse {
             id: user.id,
             email: user.email,
@@ -2962,8 +2987,16 @@ pub async fn login(
             bio: user.bio,
             language: user.language,
         },
-        token,
-    }))
+        token: token.clone(),
+    };
+
+    let mut response = Json(auth_response).into_response();
+    response.headers_mut().insert(
+        axum::http::header::SET_COOKIE,
+        HeaderValue::from_str(&auth_cookie_header(&token))
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Cookie error".into()))?,
+    );
+    Ok(response)
 }
 pub async fn get_course_analytics(
     Org(org_ctx): Org,

@@ -85,13 +85,12 @@ export default function GradebookPage() {
 
     const exportCSV = async () => {
         try {
-            const token = localStorage.getItem('studio_token');
             const selectedOrgId = localStorage.getItem('studio_selected_org_id');
             const res = await fetch(lmsApi.exportGradesUrl(id), {
                 headers: {
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                     ...(selectedOrgId ? { 'X-Organization-Id': selectedOrgId } : {})
-                }
+                },
+                credentials: 'include'
             });
             if (!res.ok) throw new Error('Export failed');
             const blob = await res.blob();

@@ -1,5 +1,5 @@
 use axum::{Json, extract::State, http::StatusCode};
-use bcrypt::{DEFAULT_COST, hash};
+use bcrypt::hash;
 use lettre::message::Mailbox;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
@@ -293,7 +293,7 @@ pub async fn reset_password(
     };
 
     // Hashear nueva contraseña
-    let password_hash = hash(&payload.new_password, DEFAULT_COST).map_err(|_| {
+    let password_hash = hash(&payload.new_password, 13).map_err(|_| {
         (StatusCode::INTERNAL_SERVER_ERROR, "Error al procesar contraseña".to_string())
     })?;
 

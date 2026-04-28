@@ -14,9 +14,7 @@ function CallbackHandler() {
     useEffect(() => {
         const token = searchParams.get("token");
         if (token) {
-            // Temporarily store token so getMe can use it
-            localStorage.setItem('experience_token', token);
-
+            // El token JWT viene como cookie httpOnly del backend.
             lmsApi.getMe()
                 .then((user) => {
                     login(user, token);
@@ -24,7 +22,6 @@ function CallbackHandler() {
                 })
                 .catch((err) => {
                     console.error("SSO Error:", err);
-                    localStorage.removeItem('experience_token');
                     router.push("/auth/login?error=sso_failed");
                 });
         } else {

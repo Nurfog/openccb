@@ -39,8 +39,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(newUser);
         setToken(newToken);
         setSelectedOrgId(newUser.organization_id || null);
+        // El token JWT se guarda en httpOnly cookie por el backend.
+        // Solo se persiste el usuario (sin datos sensibles de auth) y el orgId.
         localStorage.setItem('studio_user', JSON.stringify(newUser));
-        localStorage.setItem('studio_token', newToken);
         if (newUser.organization_id) {
             localStorage.setItem('studio_selected_org_id', newUser.organization_id);
         }
@@ -51,8 +52,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(null);
         setSelectedOrgId(null);
         localStorage.removeItem('studio_user');
-        localStorage.removeItem('studio_token');
         localStorage.removeItem('studio_selected_org_id');
+        // Borrar la httpOnly cookie desde el backend
+        fetch('/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
     };
 
     const setOrganizationId = (id: string | null) => {

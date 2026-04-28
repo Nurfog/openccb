@@ -438,27 +438,20 @@ export default function TestTemplateForm({ templateId, onSuccess, onCancel }: Te
             return;
         }
 
-        const token = localStorage.getItem('studio_token');
-        if (!token) {
-            alert('No hay sesión activa. Por favor inicia sesión nuevamente.');
-            return;
-        }
-
         try {
             setGeneratingAI(true);
 
-            // Usar el endpoint RAG de generación de preguntas desde banco MySQL
             const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_API_URL || 'http://localhost:3001'}/test-templates/generate-with-rag`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     topic: aiContext,
                     num_questions: aiQuestionCount,
                     question_type: aiQuestionType,
                 }),
+                credentials: 'include',
             });
 
             if (!response.ok) {

@@ -979,7 +979,7 @@ export const apiFetch = (url: string, options: ApiFetchOptions = {}, isLms: bool
         }
     }
 
-    return fetch(finalUrl, { ...options, headers }).then(async res => {
+    return fetch(finalUrl, { ...options, headers, credentials: 'include' }).then(async res => {
         if (!res.ok) {
             const text = await res.text();
             try {
@@ -1261,6 +1261,7 @@ export const cmsApi = {
 
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `${API_BASE_URL}/api/assets/import-zip`);
+                xhr.withCredentials = true;
 
                 const token = getToken();
                 if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
@@ -1327,6 +1328,7 @@ export const cmsApi = {
 
             const xhr = new XMLHttpRequest();
             xhr.open('POST', `${API_BASE_URL}/api/assets/upload`);
+            xhr.withCredentials = true;
 
             const token = getToken();
             if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);

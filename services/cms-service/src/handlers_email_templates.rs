@@ -62,7 +62,7 @@ pub async fn list_organization_email_templates(
     .fetch_all(&pool)
     .await
     .map_err(|e: sqlx::Error| {
-        eprintln!("Error fetching email templates: {:?}", e);
+        tracing::error!("Error fetching email templates: {:?}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to fetch email templates".to_string(),
@@ -112,7 +112,7 @@ pub async fn create_organization_email_template(
     .fetch_one(&pool)
     .await
     .map_err(|e: sqlx::Error| {
-        eprintln!("Error creating email template: {:?}", e);
+        tracing::error!("Error creating email template: {:?}", e);
         if e.to_string().contains("duplicate key") {
             (
                 StatusCode::CONFLICT,
@@ -182,7 +182,7 @@ pub async fn update_organization_email_template(
     .fetch_optional(&pool)
     .await
     .map_err(|e: sqlx::Error| {
-        eprintln!("Error updating email template: {:?}", e);
+        tracing::error!("Error updating email template: {:?}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to update email template".to_string(),
@@ -239,7 +239,7 @@ pub async fn delete_organization_email_template(
     .execute(&pool)
     .await
     .map_err(|e: sqlx::Error| {
-        eprintln!("Error deleting email template: {:?}", e);
+        tracing::error!("Error deleting email template: {:?}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to delete email template".to_string(),

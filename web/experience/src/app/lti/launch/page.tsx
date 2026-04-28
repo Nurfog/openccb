@@ -22,16 +22,13 @@ function LtiLaunchContent() {
             }
 
             try {
-                // 1. Temporarily save token so api client can use it for getMe
-                localStorage.setItem("experience_token", token);
-
-                // 2. Fetch user details
+                // Fetch user details - la cookie httpOnly se envía automáticamente
                 const user = await lmsApi.getMe();
 
-                // 3. Initialize session in AuthContext
+                // Initialize session in AuthContext
                 login(user, token);
 
-                // 4. Redirect to final destination
+                // Redirect to final destination
                 router.replace(target);
             } catch (err: any) {
                 console.error("LTI Launch Error:", err);

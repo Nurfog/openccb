@@ -28,17 +28,34 @@ pub async fn org_extractor_middleware(
     let token = if let Some(token_str) = auth_header.and_then(|s: &str| s.strip_prefix("Bearer ")) {
         token_str.to_string()
     } else {
-        // Verificar si hay preview_token en la cadena de consulta
-        let query = req.uri().query().unwrap_or_default();
-        let preview_token = query
-            .split('&')
-            .find(|part| part.starts_with("preview_token="))
-            .and_then(|part| part.split('=').nth(1));
+        // Intentar leer el token desde la httpOnly cookie
+        let cookie_token = req
+            .headers()
+            .get("cookie")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|cookie_str| {
+                cookie_str.split(';').find_map(|part| {
+                    let part = part.trim();
+                    part.strip_prefix("auth_token=")
+                })
+            })
+            .map(|t| t.to_string());
 
-        if let Some(token) = preview_token {
-            token.to_string()
+        if let Some(token) = cookie_token {
+            token
         } else {
-            return Err(StatusCode::UNAUTHORIZED);
+            // Verificar si hay preview_token en la cadena de consulta
+            let query = req.uri().query().unwrap_or_default();
+            let preview_token = query
+                .split('&')
+                .find(|part| part.starts_with("preview_token="))
+                .and_then(|part| part.split('=').nth(1));
+
+            if let Some(token) = preview_token {
+                token.to_string()
+            } else {
+                return Err(StatusCode::UNAUTHORIZED);
+            }
         }
     };
 

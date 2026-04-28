@@ -170,6 +170,13 @@ async fn main() {
 
     let governor_conf = Arc::new(governor_conf.finish().unwrap());
 
+    // Rate limiter estricto para rutas de autenticación (brute-force protection)
+    let mut auth_governor_conf = GovernorConfigBuilder::default()
+        .const_per_second(1)
+        .const_burst_size(5)
+        .key_extractor(SmartIpKeyExtractor);
+    let auth_governor_conf = Arc::new(auth_governor_conf.finish().unwrap());
+
     // Rutas protegidas que requieren autenticación y contexto de organización
     let protected_routes = Router::new()
         .route(
@@ -572,12 +579,14 @@ async fn main() {
     let auth_routes = Router::new()
         .route("/auth/register", post(handlers::register))
         .route("/auth/login", post(handlers::login))
+        .route("/auth/logout", post(handlers::logout))
         .route("/auth/sso/login/{org_id}", get(handlers::sso_login_init))
         .route("/auth/sso/callback", get(handlers::sso_callback))
         .route(
             "/branding",
             get(handlers_branding::get_organization_branding),
-        );
+        )
+        .route_layer(GovernorLayer { config: auth_governor_conf });
 
         let public_routes = Router::new()
                 .route("/api-docs/openapi.json", get(|| async {

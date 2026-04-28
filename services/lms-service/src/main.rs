@@ -134,6 +134,13 @@ async fn main() {
 
     let governor_conf = Arc::new(governor_conf.finish().unwrap());
 
+    // Rate limiter estricto para rutas de autenticación (brute-force protection)
+    let mut auth_governor_conf = GovernorConfigBuilder::default()
+        .const_per_second(1)
+        .const_burst_size(5)
+        .key_extractor(SmartIpKeyExtractor);
+    let auth_governor_conf = Arc::new(auth_governor_conf.finish().unwrap());
+
     // Rate limiter solo para rutas protegidas (después del middleware de autenticación)
     let protected_routes = Router::new()
         .route("/auth/me", get(handlers::get_me))
@@ -507,10 +514,15 @@ async fn main() {
         .merge(health::health_routes(pool.clone()).with_state(health_state))
         .route("/catalog", get(handlers::get_course_catalog))
         .route("/ingest", post(handlers::ingest_course))
-        .route("/auth/register", post(handlers::register))
-        .route("/auth/login", post(handlers::login))
-        .route("/auth/forgot-password", post(handlers_email::forgot_password))
-        .route("/auth/reset-password", post(handlers_email::reset_password))
+        .merge(
+            Router::new()
+                .route("/auth/register", post(handlers::register))
+                .route("/auth/login", post(handlers::login))
+                .route("/auth/logout", post(handlers::logout))
+                .route("/auth/forgot-password", post(handlers_email::forgot_password))
+                .route("/auth/reset-password", post(handlers_email::reset_password))
+                .route_layer(GovernorLayer { config: auth_governor_conf }),
+        )
         .route("/xapi/statements", post(handlers_scorm::track_xapi_statement))
         .route("/search", get(handlers_search::global_search))
         .route(

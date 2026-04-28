@@ -132,7 +132,7 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
         return rawUrl;
     };
 
-    const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('experience_token') : null;
+    const getToken = () => null; // Token se envía automáticamente via httpOnly cookie
     const selectedOrgId = typeof window !== 'undefined' ? localStorage.getItem('experience_selected_org_id') : null;
 
     // Construct VTT URLs with auth if possible, or assume public/handled by backend

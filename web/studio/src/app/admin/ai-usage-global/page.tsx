@@ -229,7 +229,7 @@ export default function GlobalAiControl() {
                         </a>
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-                        Token en localStorage: {localStorage.getItem('studio_token') ? '✓ Existe' : '✗ No existe'}
+                        Por favor verifica que tu sesión esté activa.
                     </p>
                 </div>
             </div>

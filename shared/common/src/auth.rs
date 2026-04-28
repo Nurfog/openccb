@@ -3,6 +3,20 @@ use jsonwebtoken::{EncodingKey, Header, encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+/// Genera el valor del header `Set-Cookie` para el token JWT como httpOnly cookie.
+/// Usa SameSite=Strict y Secure para producción.
+pub fn auth_cookie_header(token: &str) -> String {
+    format!(
+        "auth_token={}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600",
+        token
+    )
+}
+
+/// Genera el valor del header `Set-Cookie` para eliminar la cookie de auth.
+pub fn auth_cookie_clear_header() -> &'static str {
+    "auth_token=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0"
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
     pub sub: Uuid,
@@ -19,7 +33,7 @@ pub fn create_jwt(
     role: &str,
 ) -> Result<String, jsonwebtoken::errors::Error> {
     let expiration = Utc::now()
-        .checked_add_signed(Duration::hours(24))
+        .checked_add_signed(Duration::hours(1))
         .expect("valid timestamp")
         .timestamp();
 
