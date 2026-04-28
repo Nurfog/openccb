@@ -903,6 +903,9 @@ export interface CourseSubmission {
     lesson_id: string;
     content: string;
     submitted_at: string;
+    final_score?: number | null;
+    review_count: number;
+    status: 'pending' | 'under_review' | 'graded';
 }
 
 export interface PeerReview {
@@ -911,7 +914,24 @@ export interface PeerReview {
     reviewer_id: string;
     score: number;
     feedback: string;
+    is_instructor_review: boolean;
     created_at: string;
+}
+
+export interface PeerReviewSettings {
+    id: string;
+    lesson_id: string;
+    required_reviews: number;
+    peer_weight: number;
+    instructor_weight: number;
+    rubric_id?: string | null;
+    auto_assign: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface PeerReviewWithFlag extends PeerReview {
+    is_instructor_review: boolean;
 }
 
 export interface CourseInstructor {
@@ -1116,11 +1136,39 @@ export const cmsApi = {
         return apiFetch(`/courses/${id}/analytics/advanced${query}`, {}, true);
     },
     getLessonHeatmap: (lessonId: string): Promise<{ second: number, count: number }[]> => apiFetch(`/lessons/${lessonId}/heatmap`),
-    exportCourse: (id: string): Promise<Record<string, unknown>> => apiFetch(`/courses/${id}/export`),
-    importCourse: (data: Record<string, unknown>): Promise<Course> => apiFetch(`/courses/import`, {
-        method: 'POST',
-        body: JSON.stringify(data)
-    }),
+    exportCourse: (id: string): Promise<Blob> => {
+        const token = getToken();
+        const orgId = getSelectedOrgId();
+        return fetch(`${API_BASE_URL}/courses/${id}/export`, {
+            headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                ...(orgId ? { 'X-Organization-Id': orgId } : {}),
+            },
+        }).then(res => {
+            if (!res.ok) return Promise.reject(new Error('Export failed'));
+            return res.blob();
+        });
+    },
+    importCourse: (file: File): Promise<Course> => {
+        const token = getToken();
+        const orgId = getSelectedOrgId();
+        const formData = new FormData();
+        formData.append('file', file);
+        return fetch(`${API_BASE_URL}/courses/import`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                ...(orgId ? { 'X-Organization-Id': orgId } : {}),
+            },
+        }).then(async res => {
+            if (!res.ok) {
+                const text = await res.text();
+                return Promise.reject(new Error(text || 'Import failed'));
+            }
+            return res.json();
+        });
+    },
 
     // Course Templates
     listCourseTemplates: (): Promise<CourseTemplateSummary[]> => apiFetch('/course-templates'),
@@ -1668,6 +1716,11 @@ export const lmsApi = {
     },
     bulkEnroll: (courseId: string, emails: string[]): Promise<BulkEnrollResponse> =>
         apiFetch('/bulk-enroll', { method: 'POST', body: JSON.stringify({ course_id: courseId, emails }) }, true),
+    notifyStudent: (courseId: string, studentId: string, title: string, message: string, linkUrl?: string): Promise<void> =>
+        apiFetch(`/courses/${courseId}/students/${studentId}/notify`, {
+            method: 'POST',
+            body: JSON.stringify({ title, message, link_url: linkUrl ?? null }),
+        }, true),
     // Peer Assessment
     submitAssignment: (courseId: string, lessonId: string, content: string): Promise<CourseSubmission> =>
         apiFetch(`/courses/${courseId}/lessons/${lessonId}/submit`, { method: 'POST', body: JSON.stringify({ content }) }, true),
@@ -1681,6 +1734,15 @@ export const lmsApi = {
         apiFetch(`/courses/${courseId}/lessons/${lessonId}/submissions`, {}, true),
     getSubmissionReviews: (submissionId: string): Promise<PeerReview[]> =>
         apiFetch(`/peer-reviews/submissions/${submissionId}/reviews`, {}, true),
+    // 41-F: Peer Review Mejorado
+    getPeerReviewSettings: (courseId: string, lessonId: string): Promise<PeerReviewSettings | null> =>
+        apiFetch(`/courses/${courseId}/lessons/${lessonId}/peer-settings`, {}, true),
+    upsertPeerReviewSettings: (courseId: string, lessonId: string, payload: Partial<PeerReviewSettings>): Promise<PeerReviewSettings> =>
+        apiFetch(`/courses/${courseId}/lessons/${lessonId}/peer-settings`, { method: 'POST', body: JSON.stringify(payload) }, true),
+    autoAssignPeerReviews: (courseId: string, lessonId: string): Promise<{ submissions_processed: number; assignments_created: number }> =>
+        apiFetch(`/courses/${courseId}/lessons/${lessonId}/auto-assign-reviews`, { method: 'POST' }, true),
+    instructorGradeSubmission: (courseId: string, lessonId: string, submissionId: string, score: number, feedback: string): Promise<PeerReviewWithFlag> =>
+        apiFetch(`/courses/${courseId}/lessons/${lessonId}/instructor-grade`, { method: 'POST', body: JSON.stringify({ submission_id: submissionId, score, feedback }) }, true),
 
     // Announcements
     listAnnouncements: (courseId: string): Promise<AnnouncementWithAuthor[]> =>
@@ -1857,6 +1919,17 @@ export const lmsApi = {
         apiFetch(`/courses/${courseId}/study-rooms/${roomId}/recordings`, {}, true),
         updateLessonCollaborativeDoc: (lessonId: string, payload: UpdateCollaborativeDocPayload): Promise<UpdateCollaborativeDocResponse> =>
             apiFetch(`/lessons/${lessonId}/collaborative-doc`, { method: 'PUT', body: JSON.stringify(payload) }, true),
+
+    // Fase 41-C: Mentoría
+    listCourseMentorships: (courseId: string): Promise<StudioMentorshipView[]> =>
+        apiFetch(`/courses/${courseId}/mentorships`, {}, true),
+    assignMentor: (courseId: string, mentorId: string, studentId: string, notes?: string): Promise<StudioMentorshipView> =>
+        apiFetch(`/courses/${courseId}/mentorships`, {
+            method: 'POST',
+            body: JSON.stringify({ mentor_id: mentorId, student_id: studentId, notes: notes ?? null }),
+        }, true),
+    deleteMentorship: (courseId: string, mentorshipId: string): Promise<void> =>
+        apiFetch(`/courses/${courseId}/mentorships/${mentorshipId}`, { method: 'DELETE' }, true),
     };
 
 export interface StudyRoom {
@@ -2392,4 +2465,20 @@ export async function updateLessonCollaborativeDoc(
         method: 'PUT',
         body: JSON.stringify(payload),
     }, true);
+}
+
+// Fase 41-C: Mentoría
+export interface StudioMentorshipView {
+    id: string;
+    course_id: string;
+    notes: string | null;
+    created_at: string;
+    mentor_id: string;
+    mentor_name: string;
+    mentor_email: string;
+    mentor_avatar: string | null;
+    student_id: string;
+    student_name: string;
+    student_email: string;
+    student_avatar: string | null;
 }

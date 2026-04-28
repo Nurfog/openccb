@@ -2,309 +2,448 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { lmsApi, cmsApi, StudentGradeReport, Cohort, User } from "@/lib/api";
+import { lmsApi, cmsApi, StudentGradeReport, User } from "@/lib/api";
 import {
-    Users,
     UserPlus,
     Search,
-    ArrowLeft,
     Loader2,
     X,
     Filter,
     CheckCircle2,
-    Trash2,
     Mail,
     Plus,
     UserCircle,
-    MoreHorizontal,
-    ChevronRight
+    Bell,
+    TrendingDown,
+    AlertTriangle,
+    Clock,
+    BarChart2,
 } from "lucide-react";
 import CourseEditorLayout from "@/components/CourseEditorLayout";
+
+function riskLevel(student: StudentGradeReport): "critical" | "high" | "medium" | "ok" {
+    const daysInactive = student.last_active_at
+        ? Math.floor((Date.now() - new Date(student.last_active_at).getTime()) / 86400000)
+        : 999;
+    const avgScore = student.average_score ?? null;
+    if (daysInactive >= 14 || (avgScore !== null && avgScore * 100 < 40)) return "critical";
+    if (daysInactive >= 7 || (avgScore !== null && avgScore * 100 < 60)) return "high";
+    if (daysInactive >= 3 || (avgScore !== null && avgScore * 100 < 70)) return "medium";
+    return "ok";
+}
+
+function RiskBadge({ level }: { level: ReturnType<typeof riskLevel> }) {
+    const map = {
+        critical: { label: "Crítico", cls: "bg-red-500/10 text-red-500 border-red-500/20" },
+        high: { label: "Alto", cls: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
+        medium: { label: "Medio", cls: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
+        ok: { label: "Bien", cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
+    };
+    const { label, cls } = map[level];
+    return (
+        <span className={`inline-flex items-center px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest ${cls}`}>
+            {label}
+        </span>
+    );
+}
 
 export default function CourseStudentsPage() {
     const { id } = useParams() as { id: string };
     const router = useRouter();
     const [students, setStudents] = useState<StudentGradeReport[]>([]);
-    const [cohorts, setCohorts] = useState<Cohort[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
-    const [selectedCohortId, setSelectedCohortId] = useState<string>("all");
+    const [riskFilter, setRiskFilter] = useState<"all" | "critical" | "high" | "medium">("all");
+
     const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
     const [allOrgUsers, setAllOrgUsers] = useState<User[]>([]);
     const [orgUsersLoading, setOrgUsersLoading] = useState(false);
     const [enrollSearch, setEnrollSearch] = useState("");
 
+    const [notifyTarget, setNotifyTarget] = useState<StudentGradeReport | null>(null);
+    const [notifyTitle, setNotifyTitle] = useState("");
+    const [notifyMessage, setNotifyMessage] = useState("");
+    const [notifySending, setNotifySending] = useState(false);
+    const [notifySuccess, setNotifySuccess] = useState(false);
+
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
-            const [gradesData, cohortsData] = await Promise.all([
-                lmsApi.getCourseGrades(id),
-                lmsApi.getCohorts()
-            ]);
+            const gradesData = await lmsApi.getCourseGrades(id);
             setStudents(gradesData);
-            setCohorts(cohortsData);
         } catch (error) {
-            console.error("Error fetching students and cohorts:", error);
+            console.error("Error fetching students:", error);
         } finally {
             setLoading(false);
         }
     }, [id]);
 
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    const loadOrgUsers = async () => {
-        try {
-            setOrgUsersLoading(true);
-            const users = await cmsApi.getAllUsers();
-            // Filter out those already enrolled
-            const enrolledIds = new Set(students.map(s => s.user_id));
-            setAllOrgUsers(users.filter(u => u.role === 'student' && !enrolledIds.has(u.id)));
-        } catch (error) {
-            console.error("Error loading org users:", error);
-        } finally {
-            setOrgUsersLoading(false);
-        }
-    };
+    useEffect(() => { fetchData(); }, [fetchData]);
 
     useEffect(() => {
-        if (isEnrollModalOpen) {
-            loadOrgUsers();
-        }
+        if (!isEnrollModalOpen) return;
+        setOrgUsersLoading(true);
+        cmsApi.getAllUsers()
+            .then((users: User[]) => {
+                const enrolled = new Set(students.map(s => s.user_id));
+                setAllOrgUsers(users.filter(u => u.role === "student" && !enrolled.has(u.id)));
+            })
+            .catch(console.error)
+            .finally(() => setOrgUsersLoading(false));
     }, [isEnrollModalOpen, students]);
 
     const handleEnroll = async (emails: string[]) => {
-        try {
-            await lmsApi.bulkEnroll(id, emails);
-            fetchData();
-            setIsEnrollModalOpen(false);
-        } catch (error) {
-            console.error("Enrollment failed:", error);
-            alert("Failed to enroll students.");
-        }
+        await lmsApi.bulkEnroll(id, emails);
+        fetchData();
+        setIsEnrollModalOpen(false);
     };
 
-    const handleCohortAssignment = async (userId: string, cohortId: string, remove: boolean = false) => {
+    const openNotify = (student: StudentGradeReport) => {
+        setNotifyTarget(student);
+        setNotifyTitle("");
+        setNotifyMessage("");
+        setNotifySuccess(false);
+    };
+
+    const handleNotify = async () => {
+        if (!notifyTarget || !notifyTitle.trim() || !notifyMessage.trim()) return;
+        setNotifySending(true);
         try {
-            if (remove) {
-                await lmsApi.removeMember(cohortId, userId);
-            } else {
-                await lmsApi.addMember(cohortId, userId);
-            }
-            // In a real app we'd need to refresh specifically which cohorts each student is in.
-            // Since StudentGradeReport doesn't include cohorts, we might need a better API or just a toast.
-            alert(`Student ${remove ? 'removed from' : 'added to'} cohort.`);
-        } catch (error) {
-            console.error("Cohort assignment failed:", error);
+            await lmsApi.notifyStudent(id, notifyTarget.user_id, notifyTitle, notifyMessage);
+            setNotifySuccess(true);
+            setTimeout(() => {
+                setNotifyTarget(null);
+                setNotifyTitle("");
+                setNotifyMessage("");
+                setNotifySuccess(false);
+            }, 1500);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setNotifySending(false);
         }
     };
 
     const filteredStudents = students.filter(s => {
-        const matchesSearch = s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        const matchSearch =
+            s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             s.email.toLowerCase().includes(searchTerm.toLowerCase());
-        // Note: Filtering by cohort is tricky because the grades API doesn't return cohorts per student directly.
-        // For now we'll just implement search. Real cohort filtering would need backend support in getCourseGrades.
-        return matchesSearch;
+        const matchRisk = riskFilter === "all" || riskLevel(s) === riskFilter;
+        return matchSearch && matchRisk;
     });
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-transparent flex items-center justify-center">
-                <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
-            </div>
-        );
-    }
+    const atRisk = students.filter(s => ["critical", "high"].includes(riskLevel(s)));
+
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center">
+            <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+        </div>
+    );
 
     return (
         <>
             <CourseEditorLayout
                 activeTab="students"
                 pageTitle="Estudiantes y Grupos"
-                pageDescription="Gestiona las inscripciones y segmenta a tu audiencia por cohortes."
+                pageDescription="Gestiona inscripciones, monitorea progreso y comunícate con tus alumnos."
                 pageActions={
                     <button
                         onClick={() => setIsEnrollModalOpen(true)}
                         className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-md shadow-blue-600/20 transition-all active:scale-95"
                     >
-                        <UserPlus size={18} />
-                        Inscribir Estudiantes
+                        <UserPlus size={18} /> Inscribir Estudiantes
                     </button>
                 }
             >
                 <div className="space-y-8">
-                    <h2 className="section-title">
-                        <Users className="text-blue-500" />
-                        Listado de Estudiantes
-                    </h2>
-                    {/* Search and Filters */}
-                    <div className="bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-5 rounded-3xl flex flex-col md:flex-row items-center gap-4 shadow-sm">
+                    {/* Alerta de riesgo */}
+                    {atRisk.length > 0 && (
+                        <div className="flex items-start gap-4 p-5 bg-red-500/5 border border-red-500/20 rounded-2xl">
+                            <AlertTriangle size={20} className="text-red-500 shrink-0 mt-0.5" />
+                            <div>
+                                <p className="text-sm font-black text-red-500">
+                                    {atRisk.length} alumno{atRisk.length > 1 ? "s" : ""} necesita{atRisk.length === 1 ? "" : "n"} atención
+                                </p>
+                                <p className="text-xs text-red-400/70 mt-0.5">
+                                    Sin actividad reciente o con calificaciones por debajo del umbral. Usa el botón 🔔 para contactarlos.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Filtros */}
+                    <div className="bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-5 rounded-3xl flex flex-col md:flex-row items-center gap-4">
                         <div className="relative flex-1 w-full">
-                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 w-4 h-4" />
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                             <input
                                 type="text"
-                                placeholder="Search by name or email..."
+                                placeholder="Buscar por nombre o email..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-2xl py-2.5 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-bold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-600 shadow-inner"
+                                onChange={e => setSearchTerm(e.target.value)}
+                                className="w-full bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-2xl py-2.5 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-bold text-slate-900 dark:text-white placeholder-slate-400"
                             />
                         </div>
                         <div className="flex items-center gap-3 w-full md:w-auto">
-                            <Filter size={16} className="text-slate-400 dark:text-gray-400" />
+                            <Filter size={16} className="text-slate-400 shrink-0" />
                             <select
-                                className="bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-2.5 text-xs font-black uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900 dark:text-white min-w-[180px] shadow-sm cursor-pointer"
-                                value={selectedCohortId}
-                                onChange={(e) => setSelectedCohortId(e.target.value)}
+                                value={riskFilter}
+                                onChange={e => setRiskFilter(e.target.value as typeof riskFilter)}
+                                className="bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2.5 text-xs font-black uppercase tracking-widest focus:outline-none text-slate-900 dark:text-white min-w-[160px]"
                             >
-                                <option value="all">All Cohorts</option>
-                                {cohorts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                <option value="all">Todos los alumnos</option>
+                                <option value="critical">⚠ Riesgo Crítico</option>
+                                <option value="high">🟠 Riesgo Alto</option>
+                                <option value="medium">🟡 Riesgo Medio</option>
                             </select>
                         </div>
+                        <span className="text-xs text-slate-400 font-bold whitespace-nowrap">
+                            {filteredStudents.length} de {students.length}
+                        </span>
                     </div>
 
-                    {/* Student List */}
+                    {/* Tabla */}
                     <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.02] overflow-hidden shadow-sm">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/5 font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500">
-                                    <th className="p-6">Student</th>
-                                    <th className="p-6 text-center">Enrollment Status</th>
-                                    <th className="p-6 text-right">Actions</th>
+                                <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/5 text-[10px] uppercase tracking-[0.2em] text-slate-400 font-black">
+                                    <th className="p-5">Alumno</th>
+                                    <th className="p-5 text-center hidden md:table-cell">Progreso</th>
+                                    <th className="p-5 text-center hidden lg:table-cell">Promedio</th>
+                                    <th className="p-5 text-center hidden lg:table-cell">Última Actividad</th>
+                                    <th className="p-5 text-center">Riesgo</th>
+                                    <th className="p-5 text-right">Acción</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                                 {filteredStudents.length === 0 ? (
                                     <tr>
-                                        <td colSpan={3} className="p-12 text-center text-slate-500 dark:text-gray-500 italic">No students found.</td>
+                                        <td colSpan={6} className="p-12 text-center text-slate-400 italic text-sm">
+                                            No se encontraron alumnos.
+                                        </td>
                                     </tr>
-                                ) : filteredStudents.map(student => (
-                                    <tr key={student.user_id} className="hover:bg-white/[0.02] transition-colors group">
-                                        <td className="p-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-blue-500/20">
-                                                    {student.full_name.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <div className="font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors uppercase tracking-tight text-sm">{student.full_name}</div>
-                                                    <div className="text-xs text-slate-400 dark:text-gray-500 flex items-center gap-1.5 mt-1 font-medium italic"><Mail size={12} className="text-blue-400" /> {student.email}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="p-6 text-center">
-                                            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full border border-green-500/20 text-[10px] font-black uppercase tracking-widest">
-                                                <CheckCircle2 size={12} /> Active
-                                            </div>
-                                        </td>
-                                        <td className="p-6 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <div className="relative group/actions">
-                                                    <button className="p-2.5 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all text-slate-400 dark:text-gray-500 active:scale-90">
-                                                        <MoreHorizontal size={20} />
-                                                    </button>
-                                                    <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-[#1a1c1e] border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl invisible group-hover/actions:visible z-10 p-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                                                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-gray-600 px-3 py-2.5 border-b border-slate-100 dark:border-white/5 mb-1.5 flex items-center gap-2">
-                                                            <Filter size={10} /> Move to Cohort
+                                ) : filteredStudents.map(student => {
+                                    const risk = riskLevel(student);
+                                    const daysInactive = student.last_active_at
+                                        ? Math.floor((Date.now() - new Date(student.last_active_at).getTime()) / 86400000)
+                                        : null;
+                                    const progress = Math.min(Math.round(student.progress ?? 0), 100);
+                                    const avgPct = student.average_score != null ? Math.round(student.average_score * 100) : null;
+
+                                    return (
+                                        <tr key={student.user_id} className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
+                                            {/* Alumno */}
+                                            <td className="p-5">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-white text-sm shrink-0">
+                                                        {student.full_name.charAt(0)}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-black text-slate-900 dark:text-white text-sm">{student.full_name}</div>
+                                                        <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                                                            <Mail size={10} /> {student.email}
                                                         </div>
-                                                        {cohorts.map(c => (
-                                                            <button
-                                                                key={c.id}
-                                                                onClick={() => handleCohortAssignment(student.user_id, c.id)}
-                                                                className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-blue-600 dark:hover:text-white rounded-xl transition-all flex items-center justify-between group/item"
-                                                            >
-                                                                {c.name}
-                                                                <ChevronRight size={14} className="opacity-0 group-hover/item:opacity-100 -translate-x-2 group-hover/item:translate-x-0 transition-all" />
-                                                            </button>
-                                                        ))}
-                                                        <button
-                                                            className="w-full text-left px-4 py-2.5 text-xs font-black uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all mt-2 border-t border-slate-100 dark:border-white/5 pt-3"
-                                                            onClick={() => { if (confirm("Unenroll student?")) handleCohortAssignment(student.user_id, "", true) }}
-                                                        >
-                                                            Unenroll Student
-                                                        </button>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+
+                                            {/* Progreso */}
+                                            <td className="p-5 hidden md:table-cell">
+                                                <div className="flex flex-col gap-1.5 min-w-[120px]">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase">Progreso</span>
+                                                        <span className={`text-[10px] font-black ${progress >= 80 ? "text-emerald-500" : progress >= 40 ? "text-blue-400" : "text-slate-400"}`}>{progress}%</span>
+                                                    </div>
+                                                    <div className="w-full h-1.5 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
+                                                        <div
+                                                            className={`h-full rounded-full transition-all duration-700 ${progress >= 80 ? "bg-emerald-500" : progress >= 40 ? "bg-blue-500" : "bg-slate-300 dark:bg-white/20"}`}
+                                                            style={{ width: `${progress}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            {/* Promedio */}
+                                            <td className="p-5 text-center hidden lg:table-cell">
+                                                {avgPct !== null ? (
+                                                    <span className={`text-sm font-black ${avgPct >= 70 ? "text-emerald-500" : avgPct >= 50 ? "text-orange-400" : "text-red-500"}`}>
+                                                        {avgPct}%
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-slate-300 dark:text-white/20">—</span>
+                                                )}
+                                            </td>
+
+                                            {/* Última actividad */}
+                                            <td className="p-5 text-center hidden lg:table-cell">
+                                                {daysInactive !== null ? (
+                                                    <div className={`flex items-center justify-center gap-1 text-xs font-bold ${daysInactive >= 14 ? "text-red-400" : daysInactive >= 7 ? "text-orange-400" : "text-slate-500 dark:text-gray-400"}`}>
+                                                        <Clock size={12} />
+                                                        {daysInactive === 0 ? "Hoy" : daysInactive === 1 ? "Ayer" : `Hace ${daysInactive}d`}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-slate-300 dark:text-white/20">Sin datos</span>
+                                                )}
+                                            </td>
+
+                                            {/* Riesgo */}
+                                            <td className="p-5 text-center">
+                                                <RiskBadge level={risk} />
+                                            </td>
+
+                                            {/* Acciones */}
+                                            <td className="p-5 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => openNotify(student)}
+                                                        title="Enviar notificación"
+                                                        className="p-2 rounded-xl bg-blue-500/10 hover:bg-blue-600 text-blue-500 hover:text-white transition-all active:scale-95"
+                                                    >
+                                                        <Bell size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => router.push(`/courses/${id}/grades`)}
+                                                        title="Ver libro de notas"
+                                                        className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-all active:scale-95"
+                                                    >
+                                                        <BarChart2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
+                    </div>
+
+                    {/* Leyenda */}
+                    <div className="flex flex-wrap items-center gap-4 px-1">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Indicador de riesgo:</span>
+                        <span className="flex items-center gap-1.5 text-[10px] text-slate-500"><TrendingDown size={12} className="text-red-500" /> Crítico — inactivo ≥14d o promedio &lt;40%</span>
+                        <span className="flex items-center gap-1.5 text-[10px] text-slate-500"><TrendingDown size={12} className="text-orange-400" /> Alto — inactivo ≥7d o promedio &lt;60%</span>
+                        <span className="flex items-center gap-1.5 text-[10px] text-slate-500"><TrendingDown size={12} className="text-yellow-400" /> Medio — inactivo ≥3d o promedio &lt;70%</span>
+                        <span className="flex items-center gap-1.5 text-[10px] text-slate-500"><CheckCircle2 size={12} className="text-emerald-500" /> Bien</span>
                     </div>
                 </div>
             </CourseEditorLayout>
 
-            {/* Enroll Modal */}
-            {
-                isEnrollModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-                        <div className="bg-white dark:bg-[#16181b] border border-slate-200 dark:border-white/10 rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl scale-in-center">
-                            <div className="p-8 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/50 dark:bg-transparent">
-                                <div>
-                                    <h2 className="text-2xl font-black flex items-center gap-3 text-slate-900 dark:text-white">
-                                        <UserPlus className="text-blue-600 dark:text-blue-500" />
-                                        Enroll Students
-                                    </h2>
-                                    <p className="text-xs text-slate-400 dark:text-gray-500 font-bold uppercase tracking-widest mt-1">Select from organization directory</p>
-                                </div>
-                                <button onClick={() => setIsEnrollModalOpen(false)} className="p-3 hover:bg-slate-200 dark:hover:bg-white/10 rounded-2xl transition-all group active:scale-90">
-                                    <X size={20} className="text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white" />
-                                </button>
+            {/* Modal: Inscribir */}
+            {isEnrollModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#16181b] border border-slate-200 dark:border-white/10 rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl">
+                        <div className="p-8 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-black flex items-center gap-3 text-slate-900 dark:text-white">
+                                    <UserPlus className="text-blue-600" /> Inscribir Estudiantes
+                                </h2>
+                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Directorio de la organización</p>
                             </div>
-                            <div className="p-8 space-y-8">
-                                <div className="relative">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 w-5 h-5" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search by name or email..."
-                                        value={enrollSearch}
-                                        onChange={(e) => setEnrollSearch(e.target.value)}
-                                        className="w-full bg-slate-100 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-[1.5rem] py-4 pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-bold text-slate-900 dark:text-white shadow-inner"
-                                    />
-                                </div>
-
-                                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                                    {orgUsersLoading ? (
-                                        <div className="flex justify-center p-12 text-blue-500 items-center flex-col gap-4">
-                                            <Loader2 className="w-10 h-10 animate-spin" />
-                                            <span className="text-xs font-black uppercase tracking-widest text-slate-400">Fetching Directory...</span>
-                                        </div>
-                                    ) : allOrgUsers.filter(u => u.full_name.toLowerCase().includes(enrollSearch.toLowerCase())).length === 0 ? (
-                                        <div className="text-center p-12 text-slate-400 dark:text-gray-500 italic font-medium">No remaining students found in organization directory.</div>
-                                    ) : (
-                                        allOrgUsers.filter(u => u.full_name.toLowerCase().includes(enrollSearch.toLowerCase())).map(user => (
-                                            <div key={user.id} className="flex items-center justify-between p-5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl group/user hover:bg-white dark:hover:bg-white/[0.08] transition-all shadow-sm">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 rounded-2xl bg-white dark:bg-black/20 border border-slate-100 dark:border-white/10 flex items-center justify-center shadow-sm">
-                                                        <UserCircle className="text-slate-400 dark:text-gray-500" size={24} />
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-black text-slate-900 dark:text-white text-sm tracking-tight group-hover/user:text-blue-600 dark:group-hover/user:text-blue-400 transition-colors uppercase">{user.full_name}</div>
-                                                        <div className="text-xs text-slate-400 dark:text-gray-500 font-medium flex items-center gap-1.5 mt-0.5 italic"><Mail size={10} className="text-blue-400" /> {user.email}</div>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleEnroll([user.email])}
-                                                    className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-md shadow-blue-500/20 active:scale-95"
-                                                >
-                                                    Enroll
-                                                </button>
+                            <button onClick={() => setIsEnrollModalOpen(false)} className="p-3 hover:bg-slate-100 dark:hover:bg-white/10 rounded-2xl transition-all">
+                                <X size={20} className="text-slate-400" />
+                            </button>
+                        </div>
+                        <div className="p-8 space-y-6">
+                            <div className="relative">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar por nombre o email..."
+                                    value={enrollSearch}
+                                    onChange={e => setEnrollSearch(e.target.value)}
+                                    className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-2xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-bold text-slate-900 dark:text-white"
+                                />
+                            </div>
+                            <div className="space-y-3 max-h-[360px] overflow-y-auto">
+                                {orgUsersLoading ? (
+                                    <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
+                                ) : allOrgUsers.filter(u => u.full_name.toLowerCase().includes(enrollSearch.toLowerCase())).length === 0 ? (
+                                    <p className="text-center p-10 text-slate-400 italic text-sm">No hay más estudiantes disponibles.</p>
+                                ) : allOrgUsers.filter(u => u.full_name.toLowerCase().includes(enrollSearch.toLowerCase())).map(u => (
+                                    <div key={u.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-white dark:bg-black/20 border border-slate-100 dark:border-white/10 flex items-center justify-center">
+                                                <UserCircle size={22} className="text-slate-400" />
                                             </div>
-                                        ))
-                                    )}
-                                </div>
-
-                                <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 p-5 rounded-3xl flex gap-4 shadow-sm">
-                                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-black/20 flex items-center justify-center shrink-0 shadow-sm">
-                                        <Plus size={20} className="text-blue-600 dark:text-blue-400" />
+                                            <div>
+                                                <div className="font-black text-slate-900 dark:text-white text-sm">{u.full_name}</div>
+                                                <div className="text-xs text-slate-400 flex items-center gap-1"><Mail size={10} /> {u.email}</div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleEnroll([u.email])}
+                                            className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all active:scale-95"
+                                        >
+                                            Inscribir
+                                        </button>
                                     </div>
-                                    <div className="text-xs text-blue-800/80 dark:text-blue-300 leading-relaxed font-bold uppercase tracking-wide">
-                                        You can also enroll external students by going to the <strong>Gradebook</strong> and using the Bulk Enroll feature.
-                                    </div>
-                                </div>
+                                ))}
+                            </div>
+                            <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 p-4 rounded-2xl flex gap-3 text-xs text-blue-700 dark:text-blue-300 font-medium">
+                                <Plus size={16} className="text-blue-500 shrink-0 mt-0.5" />
+                                También puedes inscribir alumnos externos desde el <strong>Libro de Notas</strong> con la función de inscripción masiva.
                             </div>
                         </div>
                     </div>
-                )}
+                </div>
+            )}
+
+            {/* Modal: Notificar alumno */}
+            {notifyTarget && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#16181b] border border-slate-200 dark:border-white/10 rounded-[2rem] w-full max-w-lg shadow-2xl">
+                        <div className="p-7 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-lg font-black flex items-center gap-2 text-slate-900 dark:text-white">
+                                    <Bell size={18} className="text-blue-500" /> Notificar Alumno
+                                </h2>
+                                <p className="text-xs text-slate-400 mt-0.5">{notifyTarget.full_name} · {notifyTarget.email}</p>
+                            </div>
+                            <button onClick={() => setNotifyTarget(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all">
+                                <X size={18} className="text-slate-400" />
+                            </button>
+                        </div>
+                        <div className="p-7 space-y-5">
+                            {notifySuccess ? (
+                                <div className="flex flex-col items-center gap-3 py-8">
+                                    <CheckCircle2 size={40} className="text-emerald-500" />
+                                    <p className="font-black text-emerald-500">Notificación enviada</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Título</label>
+                                        <input
+                                            type="text"
+                                            value={notifyTitle}
+                                            onChange={e => setNotifyTitle(e.target.value)}
+                                            placeholder="Ej: Recordatorio de actividad pendiente"
+                                            className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Mensaje</label>
+                                        <textarea
+                                            value={notifyMessage}
+                                            onChange={e => setNotifyMessage(e.target.value)}
+                                            placeholder="Escribe el mensaje para el alumno..."
+                                            rows={4}
+                                            className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleNotify}
+                                        disabled={notifySending || !notifyTitle.trim() || !notifyMessage.trim()}
+                                        className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-sm uppercase tracking-widest rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2"
+                                    >
+                                        {notifySending ? <Loader2 size={16} className="animate-spin" /> : <Bell size={16} />}
+                                        {notifySending ? "Enviando..." : "Enviar Notificación"}
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

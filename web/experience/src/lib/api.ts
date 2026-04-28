@@ -350,6 +350,9 @@ export interface CourseSubmission {
     lesson_id: string;
     content: string;
     submitted_at: string;
+    final_score?: number | null;
+    review_count: number;
+    status: 'pending' | 'under_review' | 'graded';
 }
 
 export interface PeerReview {
@@ -358,7 +361,20 @@ export interface PeerReview {
     reviewer_id: string;
     score: number;
     feedback: string;
+    is_instructor_review: boolean;
     created_at: string;
+}
+
+export interface PeerReviewSettings {
+    id: string;
+    lesson_id: string;
+    required_reviews: number;
+    peer_weight: number;
+    instructor_weight: number;
+    rubric_id?: string | null;
+    auto_assign: boolean;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface User {
@@ -1297,8 +1313,18 @@ export const lmsApi = {
     async getMySubmissionFeedback(courseId: string, lessonId: string): Promise<PeerReview[]> {
         return apiFetch(`/courses/${courseId}/lessons/${lessonId}/feedback`);
     },
+    // 41-F: Peer Review Mejorado
+    async getMySubmission(courseId: string, lessonId: string): Promise<CourseSubmission | null> {
+        return apiFetch(`/courses/${courseId}/lessons/${lessonId}/my-submission`);
+    },
+    async getPeerReviewSettings(courseId: string, lessonId: string): Promise<PeerReviewSettings | null> {
+        return apiFetch(`/courses/${courseId}/lessons/${lessonId}/peer-settings`);
+    },
     async getProgressStats(courseId: string): Promise<ProgressStats> {
         return apiFetch(`/courses/${courseId}/progress-stats`);
+    },
+    async getCourseProgress(courseId: string): Promise<{ progress_percentage: number; completed_lessons: number; total_lessons: number; completed: boolean }> {
+        return apiFetch(`/courses/${courseId}/progress`);
     },
     async toggleBookmark(lessonId: string): Promise<void> {
         return apiFetch(`/lessons/${lessonId}/bookmark`, { method: 'POST' });
@@ -1306,6 +1332,37 @@ export const lmsApi = {
     async getBookmarks(courseId?: string): Promise<UserBookmark[]> {
         const query = courseId ? `?cohort_id=${courseId}` : '';
         return apiFetch(`/bookmarks${query}`);
+    },
+
+    // Anotaciones en Lecciones (Fase 41-B)
+    async getLessonAnnotations(lessonId: string): Promise<LessonAnnotation[]> {
+        return apiFetch(`/lessons/${lessonId}/annotations`);
+    },
+    async createLessonAnnotation(lessonId: string, payload: CreateAnnotationPayload): Promise<LessonAnnotation> {
+        return apiFetch(`/lessons/${lessonId}/annotations`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    },
+    async updateLessonAnnotation(lessonId: string, annotationId: string, payload: CreateAnnotationPayload): Promise<LessonAnnotation> {
+        return apiFetch(`/lessons/${lessonId}/annotations/${annotationId}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+        });
+    },
+    async deleteLessonAnnotation(lessonId: string, annotationId: string): Promise<void> {
+        return apiFetch(`/lessons/${lessonId}/annotations/${annotationId}`, { method: 'DELETE' });
+    },
+    async getMyAnnotations(): Promise<LessonAnnotation[]> {
+        return apiFetch(`/annotations`);
+    },
+
+    // Fase 41-C: Mentoría
+    async getMyMentor(courseId: string): Promise<MentorshipView | null> {
+        return apiFetch(`/courses/${courseId}/my-mentor`);
+    },
+    async getMyMentees(courseId: string): Promise<MentorshipView[]> {
+        return apiFetch(`/courses/${courseId}/my-mentees`);
     },
 
     // Live Learning & Portfolio
@@ -1414,4 +1471,38 @@ export interface UpdateCollaborativeDocResponse {
     conflict: boolean;
     server_content?: string;
     server_revision?: number;
+}
+
+// ─── Anotaciones en Lecciones (Fase 41-B) ────────────────────────────────────
+
+export interface LessonAnnotation {
+    id: string;
+    user_id: string;
+    lesson_id: string;
+    organization_id: string;
+    course_id: string;
+    content: string;
+    position_data: { type: 'timestamp'; value: number } | { type: 'scroll'; value: number } | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateAnnotationPayload {
+    content: string;
+    position_data?: LessonAnnotation['position_data'];
+}
+
+export interface MentorshipView {
+    id: string;
+    course_id: string;
+    notes: string | null;
+    created_at: string;
+    mentor_id: string;
+    mentor_name: string;
+    mentor_email: string;
+    mentor_avatar: string | null;
+    student_id: string;
+    student_name: string;
+    student_email: string;
+    student_avatar: string | null;
 }

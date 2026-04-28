@@ -164,6 +164,7 @@ async fn main() {
             post(handlers_payments::create_payment_preference),
         )
         .route("/courses/{id}/outline", get(handlers::get_course_outline))
+        .route("/courses/{id}/progress", get(handlers::get_course_progress))
         .route("/courses/{id}/progress-stats", get(handlers::get_student_progress_stats))
         .route("/lessons/{id}", get(handlers::get_lesson_content))
         .route(
@@ -186,6 +187,27 @@ async fn main() {
         )
         .route("/lessons/{id}/bookmark", post(handlers::toggle_bookmark))
         .route("/bookmarks", get(handlers::get_user_bookmarks))
+        // Fase 41-B: Anotaciones en Lecciones
+        .route(
+            "/lessons/{id}/annotations",
+            get(handlers::list_lesson_annotations).post(handlers::create_lesson_annotation),
+        )
+        .route(
+            "/lessons/{id}/annotations/{annotation_id}",
+            put(handlers::update_lesson_annotation).delete(handlers::delete_lesson_annotation),
+        )
+        .route("/annotations", get(handlers::get_my_annotations))
+        // Fase 41-C: Mentoría
+        .route(
+            "/courses/{id}/mentorships",
+            get(handlers::list_course_mentorships).post(handlers::assign_mentor),
+        )
+        .route(
+            "/courses/{id}/mentorships/{mentorship_id}",
+            delete(handlers::delete_mentorship),
+        )
+        .route("/courses/{id}/my-mentor", get(handlers::get_my_mentor))
+        .route("/courses/{id}/my-mentees", get(handlers::get_my_mentees))
         .route("/grades", post(handlers::submit_lesson_score))
         .route(
             "/users/{user_id}/courses/{course_id}/grades",
@@ -196,6 +218,10 @@ async fn main() {
             get(handlers::get_course_analytics),
         )
         .route("/courses/{id}/grades", get(handlers::get_course_grades))
+        .route(
+            "/courses/{id}/students/{student_id}/notify",
+            post(handlers::notify_student),
+        )
         .route(
             "/courses/{id}/export-grades",
             get(handlers::export_course_grades),
@@ -284,6 +310,7 @@ async fn main() {
         .route("/lessons/{id}/code-hint", post(handlers::get_code_hint))
         .route("/lessons/{id}/feedback", get(handlers::get_lesson_feedback))
         .route("/notifications", get(handlers::get_notifications))
+        .route("/notifications/stream", get(handlers::stream_notifications))
         .route(
             "/notifications/{id}/read",
             post(handlers::mark_notification_as_read),
@@ -448,6 +475,24 @@ async fn main() {
         .route(
             "/peer-reviews/submissions/{id}/reviews",
             get(handlers_peer_review::get_submission_reviews),
+        )
+        // 41-F: Configuración, asignación automática y calificación del instructor
+        .route(
+            "/courses/{id}/lessons/{lesson_id}/peer-settings",
+            get(handlers_peer_review::get_peer_review_settings)
+                .post(handlers_peer_review::upsert_peer_review_settings),
+        )
+        .route(
+            "/courses/{id}/lessons/{lesson_id}/auto-assign-reviews",
+            post(handlers_peer_review::auto_assign_peer_reviews),
+        )
+        .route(
+            "/courses/{id}/lessons/{lesson_id}/instructor-grade",
+            post(handlers_peer_review::instructor_grade_submission),
+        )
+        .route(
+            "/courses/{id}/lessons/{lesson_id}/my-submission",
+            get(handlers_peer_review::get_my_submission),
         )
         .route_layer(middleware::from_fn(
             common::middleware::org_extractor_middleware,

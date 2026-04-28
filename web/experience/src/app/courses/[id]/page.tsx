@@ -11,6 +11,7 @@ import DiscussionBoard from "@/components/DiscussionBoard";
 import { AnnouncementsList } from "@/components/AnnouncementsList";
 import AboutCourse from "@/components/AboutCourse";
 import CertificateModal from "@/components/CertificateModal";
+import MentorPanel from "@/components/MentorPanel";
 import { CertificateResponse } from "@/lib/api";
 
 export default function CourseOutlinePage({ params }: { params: { id: string } }) {
@@ -53,6 +54,10 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
 
                     if (enrollment) {
                         setProgress(normalizeProgressPercent(enrollment.progress));
+                        // Refrescar con el endpoint ligero para tener el valor más reciente
+                        lmsApi.getCourseProgress(params.id)
+                            .then(p => setProgress(p.progress_percentage))
+                            .catch(() => {});
                     }
                 } else {
                     // Even if not logged in, if there's a preview token, consider "enrolled" for UI
@@ -171,28 +176,48 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
 
     const getStatusIcon = (lessonId: string, isGraded: boolean, allowRetry: boolean) => {
         if (isLessonLocked(lessonId)) {
-            return <Lock size={18} className="text-gray-600" />;
+            return (
+                <span title="Bloqueada — completa el prerrequisito para acceder">
+                    <Lock size={18} className="text-gray-400 dark:text-gray-600" />
+                </span>
+            );
         }
         const grade = userGrades.find((g: UserGrade) => g.lesson_id === lessonId);
         if (!grade) {
-            return <Circle size={18} className="text-black/10 dark:text-white/20" />;
+            return (
+                <span title="No iniciada">
+                    <Circle size={18} className="text-slate-300 dark:text-white/20" />
+                </span>
+            );
         }
 
         if (isGraded) {
             const passing = courseData.passing_percentage || 70;
-            if (grade.score >= passing) {
-                return <CheckCircle2 size={18} className="text-green-500" />;
+            // score es 0.0–1.0, passing_percentage es 0–100
+            if (grade.score * 100 >= passing) {
+                return (
+                    <span title={`Aprobada — ${Math.round(grade.score * 100)}%`}>
+                        <CheckCircle2 size={18} className="text-emerald-500" />
+                    </span>
+                );
             } else {
                 return (
-                    <div className="flex items-center gap-1">
-                        <XCircle size={18} className="text-red-500" />
-                        {allowRetry && <span className="text-[8px] font-black uppercase text-white/40">Repetible</span>}
-                    </div>
+                    <span title={`Reprobada — ${Math.round(grade.score * 100)}% (mínimo ${passing}%)${allowRetry ? ' · Puedes volver a intentarlo' : ''}`}>
+                        <div className="flex items-center gap-1">
+                            <XCircle size={18} className="text-red-500" />
+                            {allowRetry && <span className="text-[8px] font-black uppercase text-red-400/70">Reintentar</span>}
+                        </div>
+                    </span>
                 );
             }
         }
 
-        return <CheckCircle2 size={18} className="text-black/20 dark:text-white/40" />;
+        // Lección sin calificación pero completada (interacción registrada)
+        return (
+            <span title="Completada">
+                <CheckCircle2 size={18} className="text-blue-400" />
+            </span>
+        );
     };
 
 
@@ -293,6 +318,23 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                                         {courseData.modules.reduce((acc, m) => acc + m.lessons.length, 0)}
                                     </span>
                                 </div>
+                                {isEnrolled && (
+                                    <>
+                                        <div className="w-px h-8 bg-black/10 dark:bg-white/10" />
+                                        <div className="flex flex-col gap-2 min-w-[160px]">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-600">Mi Progreso</span>
+                                                <span className="text-[10px] font-black text-blue-500">{Math.round(progress)}%</span>
+                                            </div>
+                                            <div className="w-full h-2 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all duration-1000 ${progress >= 100 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]'}`}
+                                                    style={{ width: `${Math.min(progress, 100)}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             <div className="flex gap-2">
@@ -457,7 +499,34 @@ export default function CourseOutlinePage({ params }: { params: { id: string } }
                             <AnnouncementsList courseId={params.id} isInstructor={user?.role === 'instructor' || user?.role === 'admin'} />
                         </div>
 
+                        {/* Panel de Mentoría */}
+                        {isEnrolled && (
+                            <div className="mb-8">
+                                <MentorPanel courseId={params.id} />
+                            </div>
+                        )}
+
                         <div className="space-y-12">
+                            {isEnrolled && (
+                                <div className="flex flex-wrap items-center gap-4 px-1 mb-2">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-600">Estado de lecciones:</span>
+                                    <span className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400" title="No iniciada">
+                                        <Circle size={14} className="text-slate-300 dark:text-white/20" /> No iniciada
+                                    </span>
+                                    <span className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400" title="Completada (sin calificación)">
+                                        <CheckCircle2 size={14} className="text-blue-400" /> Completada
+                                    </span>
+                                    <span className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400" title="Aprobada">
+                                        <CheckCircle2 size={14} className="text-emerald-500" /> Aprobada
+                                    </span>
+                                    <span className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400" title="Reprobada">
+                                        <XCircle size={14} className="text-red-500" /> Reprobada
+                                    </span>
+                                    <span className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400" title="Bloqueada — completa el prerrequisito">
+                                        <Lock size={14} className="text-gray-400 dark:text-gray-600" /> Bloqueada
+                                    </span>
+                                </div>
+                            )}
                             {courseData.modules.map((module: Module, idx: number) => (
                                 <div key={module.id} className="relative">
                                     <div className="flex items-center gap-4 mb-6">

@@ -63,10 +63,19 @@ async fn main() {
     // Inicializar el estado de salud
     let health_state = HealthState::default();
 
-    sqlx::migrate!("./migrations")
-        .run(&pool)
-        .await
-        .expect("Error al ejecutar las migraciones");
+    if let Err(err) = sqlx::migrate!("./migrations").run(&pool).await {
+        match err {
+            sqlx::migrate::MigrateError::VersionMismatch(version) => {
+                tracing::warn!(
+                    "Se detecto VersionMismatch en migracion {}. Se continua el arranque para no interrumpir el servicio.",
+                    version
+                );
+            }
+            _ => {
+                panic!("Error al ejecutar las migraciones: {}", err);
+            }
+        }
+    }
 
     // Sincronizar la marca de la organización por defecto desde el entorno
     sync_default_organization(&pool).await;

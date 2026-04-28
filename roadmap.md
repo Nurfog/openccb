@@ -146,5 +146,18 @@
 - [x] **api.ts Studio + Experience**: funciones `getLessonCollaborativeDoc`, `updateLessonCollaborativeDoc`, interfaces `CollaborativeDoc`, `UpdateCollaborativeDocPayload`, `UpdateCollaborativeDocResponse`.
 
 **Próximas Prioridades**:
-1. **Notificaciones en tiempo real** — WebSocket o SSE para alertas de actividad del curso (nuevas entregas, mensajes, etc.).
-2. **Progreso del curso** — Endpoint de porcentaje de avance por alumno; barra de progreso en Experience.
+1. ~~**Notificaciones en tiempo real**~~ ✅ — SSE `GET /notifications/stream` en LMS emite actualizaciones cada 3s cuando cambia el recuento de no leídas o llega una nueva notificación. `NotificationCenter.tsx` reemplaza polling de 5 min por `EventSource`; se cierra al desmontar el componente.
+2. ~~**Progreso del curso**~~ ✅ — Endpoint ligero `GET /courses/{id}/progress` en LMS con `progress_percentage`, `completed_lessons`, `total_lessons`. Barra de progreso integrada en la página del curso (visible solo al estar inscrito): muestra % actual, verde al completar 100%. `getCourseProgress()` en `api.ts`.
+
+---
+
+### Fase 41: Operaciones de Instructor y Experiencia del Estudiante 🎓
+
+- [x] **A. Panel de Instructor Operacional** — Vista unificada por curso: lista de alumnos con % de progreso en tiempo real, alertas de "estudiante en riesgo" (sin actividad en X días / bajo rendimiento), acción rápida para enviar notificación. *(Implementado: tabla enriquecida en Studio con progreso, promedio, última actividad, semáforo de riesgo y modal de notificación directa al alumno.)*
+- [x] **B. Anotaciones en Lecciones** — Los alumnos pueden dejar notas privadas en lecciones (timestamp en video, posición en texto). Panel "Mis Notas" para repasar todo el contenido anotado.
+- [x] **C. Sistema de Mentoría** — Asignación de instructor/tutor a grupos de alumnos. Panel de seguimiento con mensajería 1-a-1 y visibilidad del progreso del grupo asignado.
+- [x] **D. Importación/Exportación de Cursos** — Backup completo en JSON portátil (estructura + contenido + preguntas). Restauración/duplicación de cursos.
+- [x] **F. Evaluación entre Pares Mejorada** — Asignación automática con rúbricas configurables. Calificación promediada pares + instructor con peso configurable.
+
+### Fase 42: Dashboard Financiero 💰 (Pendiente)
+- [ ] **Dashboard Financiero (Mercado Pago)** — Resumen de ingresos por curso, conversión inscripción gratuita → paga, reembolsos, proyección mensual. Solo visible para admin.

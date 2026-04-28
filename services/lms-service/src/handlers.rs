@@ -2235,6 +2235,108 @@ pub async fn get_course_analytics(
     }))
 }
 
+#[derive(Debug, serde::Deserialize)]
+pub struct NotifyStudentPayload {
+    pub title: String,
+    pub message: String,
+    #[serde(default)]
+    pub link_url: Option<String>,
+}
+
+/// POST /courses/{id}/students/{student_id}/notify
+pub async fn notify_student(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Path((course_id, student_id)): Path<(Uuid, Uuid)>,
+    Json(payload): Json<NotifyStudentPayload>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let role: Option<String> = sqlx::query_scalar(
+        "SELECT role FROM users WHERE id = $1 AND organization_id = $2",
+    )
+    .bind(claims.sub)
+    .bind(org_ctx.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    match role.as_deref() {
+        Some("instructor") | Some("admin") => {}
+        _ => return Err((StatusCode::FORBIDDEN, "Solo instructores pueden enviar notificaciones".to_string())),
+    }
+
+    let enrolled: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM enrollments WHERE user_id = $1 AND course_id = $2 AND organization_id = $3)",
+    )
+    .bind(student_id)
+    .bind(course_id)
+    .bind(org_ctx.id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if !enrolled {
+        return Err((StatusCode::NOT_FOUND, "El alumno no está inscrito en este curso".to_string()));
+    }
+
+    sqlx::query(
+        "INSERT INTO notifications (organization_id, user_id, title, message, notification_type, link_url)
+         VALUES ($1, $2, $3, $4, 'instructor_message', $5)",
+    )
+    .bind(org_ctx.id)
+    .bind(student_id)
+    .bind(&payload.title)
+    .bind(&payload.message)
+    .bind(&payload.link_url)
+    .execute(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// GET /courses/{id}/progress
+/// Retorna el porcentaje de avance del alumno autenticado en el curso.
+pub async fn get_course_progress(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Path(course_id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let user_id = claims.sub;
+
+    let metrics = calculate_course_completion(&pool, user_id, course_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("get_course_progress: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Error al calcular progreso".to_string())
+        })?;
+
+    // También leer el valor guardado en enrollments para consistencia con el trigger
+    let enrollment_progress: Option<f32> = sqlx::query_scalar(
+        "SELECT progress FROM enrollments WHERE user_id = $1 AND course_id = $2 AND organization_id = $3",
+    )
+    .bind(user_id)
+    .bind(course_id)
+    .bind(org_ctx.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .flatten();
+
+    let progress_percentage = enrollment_progress
+        .map(|p| p as f64)
+        .unwrap_or(metrics.progress_percentage);
+
+    Ok(Json(serde_json::json!({
+        "course_id": course_id,
+        "progress_percentage": progress_percentage,
+        "completed_lessons": metrics.completed_lessons,
+        "total_lessons": metrics.total_lessons,
+        "completed": metrics.completed,
+    })))
+}
+
 pub async fn get_student_progress_stats(
     Org(org_ctx): Org,
     claims: Claims,
@@ -2447,6 +2549,89 @@ pub async fn mark_notification_as_read(
     })?;
 
     Ok(StatusCode::OK)
+}
+
+/// GET /notifications/stream  (SSE)
+/// Emite eventos cuando el recuento de no leídas o la notificación más reciente cambia.
+pub async fn stream_notifications(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+) -> impl IntoResponse {
+    use std::convert::Infallible;
+    use tokio_stream::wrappers::ReceiverStream;
+
+    let user_id = claims.sub;
+    let org_id = org_ctx.id;
+
+    let (tx, rx) = tokio::sync::mpsc::channel::<Result<Event, Infallible>>(32);
+
+    tokio::spawn(async move {
+        #[derive(sqlx::FromRow)]
+        struct NotifSnapshot {
+            unread_count: i64,
+            latest_id: Option<Uuid>,
+        }
+
+        let mut last_unread: i64 = -1;
+        let mut last_latest: Option<Uuid> = None;
+
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+
+            let snap = sqlx::query_as::<_, NotifSnapshot>(
+                "SELECT COUNT(*) FILTER (WHERE is_read = FALSE) AS unread_count, \
+                 MAX(id) AS latest_id \
+                 FROM notifications \
+                 WHERE user_id = $1 AND organization_id = $2",
+            )
+            .bind(user_id)
+            .bind(org_id)
+            .fetch_one(&pool)
+            .await;
+
+            let snap = match snap {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::error!("stream_notifications: poll error: {}", e);
+                    continue;
+                }
+            };
+
+            if snap.unread_count != last_unread || snap.latest_id != last_latest {
+                last_unread = snap.unread_count;
+                last_latest = snap.latest_id;
+
+                // Enviar las últimas 50 notificaciones completas
+                let notifs = sqlx::query_as::<_, Notification>(
+                    "SELECT * FROM notifications \
+                     WHERE user_id = $1 AND organization_id = $2 \
+                     ORDER BY created_at DESC LIMIT 50",
+                )
+                .bind(user_id)
+                .bind(org_id)
+                .fetch_all(&pool)
+                .await;
+
+                match notifs {
+                    Ok(data) => {
+                        let payload = serde_json::json!({
+                            "unread_count": snap.unread_count,
+                            "notifications": data,
+                        });
+                        if tx.send(Ok(Event::default().data(payload.to_string()))).await.is_err() {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("stream_notifications: fetch error: {}", e);
+                    }
+                }
+            }
+        }
+    });
+
+    Sse::new(ReceiverStream::new(rx)).keep_alive(KeepAlive::default())
 }
 
 pub async fn check_deadlines_and_notify(pool: PgPool) {
@@ -5112,4 +5297,377 @@ pub async fn stream_lesson_collaborative_doc(
 
     Ok(Sse::new(ReceiverStream::new(rx))
         .keep_alive(KeepAlive::default()))
+}
+
+// ─────────────────────────────────────────────────────────────
+// Fase 41-B: Anotaciones Privadas en Lecciones
+// ─────────────────────────────────────────────────────────────
+
+#[derive(serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+pub struct LessonAnnotation {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub lesson_id: Uuid,
+    pub organization_id: Uuid,
+    pub course_id: Uuid,
+    pub content: String,
+    pub position_data: Option<serde_json::Value>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(serde::Deserialize)]
+pub struct CreateAnnotationPayload {
+    pub content: String,
+    pub position_data: Option<serde_json::Value>,
+}
+
+#[derive(serde::Deserialize)]
+pub struct UpdateAnnotationPayload {
+    pub content: String,
+    pub position_data: Option<serde_json::Value>,
+}
+
+/// GET /lessons/{id}/annotations
+pub async fn list_lesson_annotations(
+    Org(org_ctx): Org,
+    claims: Claims,
+    Path(lesson_id): Path<Uuid>,
+    State(pool): State<PgPool>,
+) -> Result<Json<Vec<LessonAnnotation>>, (StatusCode, String)> {
+    let rows = sqlx::query_as::<_, LessonAnnotation>(
+        "SELECT * FROM lesson_annotations
+         WHERE user_id = $1 AND lesson_id = $2 AND organization_id = $3
+         ORDER BY created_at ASC",
+    )
+    .bind(claims.sub)
+    .bind(lesson_id)
+    .bind(org_ctx.id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(rows))
+}
+
+/// POST /lessons/{id}/annotations
+pub async fn create_lesson_annotation(
+    Org(org_ctx): Org,
+    claims: Claims,
+    Path(lesson_id): Path<Uuid>,
+    State(pool): State<PgPool>,
+    Json(payload): Json<CreateAnnotationPayload>,
+) -> Result<(StatusCode, Json<LessonAnnotation>), (StatusCode, String)> {
+    if payload.content.trim().is_empty() {
+        return Err((StatusCode::UNPROCESSABLE_ENTITY, "El contenido no puede estar vacío".to_string()));
+    }
+    let course_id: Uuid = sqlx::query_scalar(
+        "SELECT m.course_id FROM lessons l JOIN modules m ON l.module_id = m.id WHERE l.id = $1",
+    )
+    .bind(lesson_id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| (StatusCode::NOT_FOUND, "Lección no encontrada".to_string()))?;
+
+    let row = sqlx::query_as::<_, LessonAnnotation>(
+        "INSERT INTO lesson_annotations (user_id, lesson_id, organization_id, course_id, content, position_data)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING *",
+    )
+    .bind(claims.sub)
+    .bind(lesson_id)
+    .bind(org_ctx.id)
+    .bind(course_id)
+    .bind(payload.content.trim())
+    .bind(payload.position_data)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok((StatusCode::CREATED, Json(row)))
+}
+
+/// PUT /lessons/{id}/annotations/{annotation_id}
+pub async fn update_lesson_annotation(
+    Org(_org_ctx): Org,
+    claims: Claims,
+    Path((lesson_id, annotation_id)): Path<(Uuid, Uuid)>,
+    State(pool): State<PgPool>,
+    Json(payload): Json<UpdateAnnotationPayload>,
+) -> Result<Json<LessonAnnotation>, (StatusCode, String)> {
+    if payload.content.trim().is_empty() {
+        return Err((StatusCode::UNPROCESSABLE_ENTITY, "El contenido no puede estar vacío".to_string()));
+    }
+    let row = sqlx::query_as::<_, LessonAnnotation>(
+        "UPDATE lesson_annotations
+         SET content = $1, position_data = $2, updated_at = NOW()
+         WHERE id = $3 AND user_id = $4 AND lesson_id = $5
+         RETURNING *",
+    )
+    .bind(payload.content.trim())
+    .bind(payload.position_data)
+    .bind(annotation_id)
+    .bind(claims.sub)
+    .bind(lesson_id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| (StatusCode::NOT_FOUND, "Anotación no encontrada o sin permiso".to_string()))?;
+    Ok(Json(row))
+}
+
+/// DELETE /lessons/{id}/annotations/{annotation_id}
+pub async fn delete_lesson_annotation(
+    Org(_org_ctx): Org,
+    claims: Claims,
+    Path((lesson_id, annotation_id)): Path<(Uuid, Uuid)>,
+    State(pool): State<PgPool>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let affected = sqlx::query(
+        "DELETE FROM lesson_annotations WHERE id = $1 AND user_id = $2 AND lesson_id = $3",
+    )
+    .bind(annotation_id)
+    .bind(claims.sub)
+    .bind(lesson_id)
+    .execute(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .rows_affected();
+    if affected == 0 {
+        Err((StatusCode::NOT_FOUND, "Anotación no encontrada".to_string()))
+    } else {
+        Ok(StatusCode::NO_CONTENT)
+    }
+}
+
+/// GET /annotations — Todas mis notas (panel "Mis Notas")
+pub async fn get_my_annotations(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+) -> Result<Json<Vec<LessonAnnotation>>, (StatusCode, String)> {
+    let rows = sqlx::query_as::<_, LessonAnnotation>(
+        "SELECT * FROM lesson_annotations
+         WHERE user_id = $1 AND organization_id = $2
+         ORDER BY updated_at DESC",
+    )
+    .bind(claims.sub)
+    .bind(org_ctx.id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(rows))
+}
+
+// ─── Fase 41-C: Sistema de Mentoría ───────────────────────────────────────────
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+pub struct MentorshipAssignment {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub course_id: Uuid,
+    pub mentor_id: Uuid,
+    pub student_id: Uuid,
+    pub assigned_by: Uuid,
+    pub notes: Option<String>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Vista enriquecida que incluye datos del mentor y del alumno
+#[derive(Debug, serde::Serialize, sqlx::FromRow)]
+pub struct MentorshipView {
+    pub id: Uuid,
+    pub course_id: Uuid,
+    pub notes: Option<String>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    // mentor
+    pub mentor_id: Uuid,
+    pub mentor_name: String,
+    pub mentor_email: String,
+    pub mentor_avatar: Option<String>,
+    // student
+    pub student_id: Uuid,
+    pub student_name: String,
+    pub student_email: String,
+    pub student_avatar: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct AssignMentorPayload {
+    pub mentor_id: Uuid,
+    pub student_id: Uuid,
+    pub notes: Option<String>,
+}
+
+/// POST /courses/{id}/mentorships — Instructor asigna un mentor a un alumno
+pub async fn assign_mentor(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Path(course_id): Path<Uuid>,
+    Json(payload): Json<AssignMentorPayload>,
+) -> Result<Json<MentorshipAssignment>, (StatusCode, String)> {
+    // Verificar que el que asigna es instructor o admin
+    let role: Option<String> = sqlx::query_scalar(
+        "SELECT role FROM users WHERE id = $1 AND organization_id = $2",
+    )
+    .bind(claims.sub)
+    .bind(org_ctx.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    match role.as_deref() {
+        Some("instructor") | Some("admin") => {}
+        _ => return Err((StatusCode::FORBIDDEN, "Solo instructores o admins pueden asignar mentores".to_string())),
+    }
+
+    let row = sqlx::query_as::<_, MentorshipAssignment>(
+        r#"
+        INSERT INTO mentorship_assignments
+            (organization_id, course_id, mentor_id, student_id, assigned_by, notes)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (course_id, mentor_id, student_id) DO UPDATE
+            SET notes = EXCLUDED.notes
+        RETURNING *
+        "#,
+    )
+    .bind(org_ctx.id)
+    .bind(course_id)
+    .bind(payload.mentor_id)
+    .bind(payload.student_id)
+    .bind(claims.sub)
+    .bind(&payload.notes)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(row))
+}
+
+/// GET /courses/{id}/mentorships — Instructor lista todas las asignaciones del curso
+pub async fn list_course_mentorships(
+    Org(org_ctx): Org,
+    State(pool): State<PgPool>,
+    Path(course_id): Path<Uuid>,
+) -> Result<Json<Vec<MentorshipView>>, (StatusCode, String)> {
+    let rows = sqlx::query_as::<_, MentorshipView>(
+        r#"
+        SELECT
+            ma.id, ma.course_id, ma.notes, ma.created_at,
+            ma.mentor_id,
+            um.full_name  AS mentor_name,
+            um.email      AS mentor_email,
+            um.avatar_url AS mentor_avatar,
+            ma.student_id,
+            us.full_name  AS student_name,
+            us.email      AS student_email,
+            us.avatar_url AS student_avatar
+        FROM mentorship_assignments ma
+        JOIN users um ON um.id = ma.mentor_id
+        JOIN users us ON us.id = ma.student_id
+        WHERE ma.course_id = $1 AND ma.organization_id = $2
+        ORDER BY ma.created_at DESC
+        "#,
+    )
+    .bind(course_id)
+    .bind(org_ctx.id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(rows))
+}
+
+/// DELETE /courses/{id}/mentorships/{mentorship_id} — Instructor elimina una asignación
+pub async fn delete_mentorship(
+    Org(org_ctx): Org,
+    State(pool): State<PgPool>,
+    Path((course_id, mentorship_id)): Path<(Uuid, Uuid)>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let affected = sqlx::query(
+        "DELETE FROM mentorship_assignments WHERE id = $1 AND course_id = $2 AND organization_id = $3",
+    )
+    .bind(mentorship_id)
+    .bind(course_id)
+    .bind(org_ctx.id)
+    .execute(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .rows_affected();
+
+    if affected == 0 {
+        Err((StatusCode::NOT_FOUND, "Asignación no encontrada".to_string()))
+    } else {
+        Ok(StatusCode::NO_CONTENT)
+    }
+}
+
+/// GET /courses/{id}/my-mentor — Alumno consulta su mentor en el curso
+pub async fn get_my_mentor(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Path(course_id): Path<Uuid>,
+) -> Result<Json<Option<MentorshipView>>, (StatusCode, String)> {
+    let row = sqlx::query_as::<_, MentorshipView>(
+        r#"
+        SELECT
+            ma.id, ma.course_id, ma.notes, ma.created_at,
+            ma.mentor_id,
+            um.full_name  AS mentor_name,
+            um.email      AS mentor_email,
+            um.avatar_url AS mentor_avatar,
+            ma.student_id,
+            us.full_name  AS student_name,
+            us.email      AS student_email,
+            us.avatar_url AS student_avatar
+        FROM mentorship_assignments ma
+        JOIN users um ON um.id = ma.mentor_id
+        JOIN users us ON us.id = ma.student_id
+        WHERE ma.student_id = $1 AND ma.course_id = $2 AND ma.organization_id = $3
+        LIMIT 1
+        "#,
+    )
+    .bind(claims.sub)
+    .bind(course_id)
+    .bind(org_ctx.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(row))
+}
+
+/// GET /courses/{id}/my-mentees — Mentor consulta sus mentoreados en el curso
+pub async fn get_my_mentees(
+    Org(org_ctx): Org,
+    claims: Claims,
+    State(pool): State<PgPool>,
+    Path(course_id): Path<Uuid>,
+) -> Result<Json<Vec<MentorshipView>>, (StatusCode, String)> {
+    let rows = sqlx::query_as::<_, MentorshipView>(
+        r#"
+        SELECT
+            ma.id, ma.course_id, ma.notes, ma.created_at,
+            ma.mentor_id,
+            um.full_name  AS mentor_name,
+            um.email      AS mentor_email,
+            um.avatar_url AS mentor_avatar,
+            ma.student_id,
+            us.full_name  AS student_name,
+            us.email      AS student_email,
+            us.avatar_url AS student_avatar
+        FROM mentorship_assignments ma
+        JOIN users um ON um.id = ma.mentor_id
+        JOIN users us ON us.id = ma.student_id
+        WHERE ma.mentor_id = $1 AND ma.course_id = $2 AND ma.organization_id = $3
+        ORDER BY us.full_name ASC
+        "#,
+    )
+    .bind(claims.sub)
+    .bind(course_id)
+    .bind(org_ctx.id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(rows))
 }

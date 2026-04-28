@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { lmsApi, Notification } from "@/lib/api";
+import { useState, useEffect, useRef } from "react";
+import { lmsApi, getLmsApiUrl, getToken, Notification } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Bell, X, Calendar, Info, AlertTriangle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
@@ -9,30 +9,42 @@ import Link from "next/link";
 export default function NotificationCenter() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isOpen, setIsOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const sseRef = useRef<EventSource | null>(null);
 
     const { user } = useAuth();
 
-    const fetchNotifications = async () => {
-        if (!user) return;
-        setLoading(true);
-        try {
-            const data = await lmsApi.getNotifications();
-            setNotifications(data);
-        } catch (err) {
-            console.error("Failed to fetch notifications", err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
-        if (user) {
-            fetchNotifications();
-            // Poll every 5 minutes
-            const interval = setInterval(fetchNotifications, 300000);
-            return () => clearInterval(interval);
-        }
+        if (!user) return;
+
+        // Carga inicial
+        lmsApi.getNotifications()
+            .then(setNotifications)
+            .catch(() => {})
+            .finally(() => setLoading(false));
+
+        // SSE: actualizaciones en tiempo real
+        const token = getToken() ?? "";
+        const baseUrl = getLmsApiUrl();
+        const url = `${baseUrl}/notifications/stream${token ? `?preview_token=${encodeURIComponent(token)}` : ""}`;
+        const es = new EventSource(url);
+        sseRef.current = es;
+
+        es.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data as string) as {
+                    unread_count: number;
+                    notifications: Notification[];
+                };
+                setNotifications(data.notifications);
+                setLoading(false);
+            } catch { /* ignorar */ }
+        };
+
+        return () => {
+            es.close();
+            sseRef.current = null;
+        };
     }, [user]);
 
     const markAsRead = async (id: string) => {

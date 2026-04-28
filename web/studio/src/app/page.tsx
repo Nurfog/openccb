@@ -86,15 +86,15 @@ export default function StudioDashboard() {
     e.preventDefault();
     e.stopPropagation();
     try {
-      const data = await cmsApi.exportCourse(courseId);
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const blob = await cmsApi.exportCourse(courseId);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `course_${title.replace(/\s+/g, '_')}.json`;
+      link.download = `course_${title.replace(/\s+/g, '_')}.ccb`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Export failed", err);
       alert("Failed to export course");
@@ -105,19 +105,14 @@ export default function StudioDashboard() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const json = JSON.parse(event.target?.result as string);
-        const newCourse = await cmsApi.importCourse(json);
-        setCourses((prev: Course[]) => [...prev, newCourse]);
-        alert("Course imported successfully!");
-      } catch (err) {
-        console.error("Import failed", err);
-        alert("Failed to import course. Ensure the file is a valid OpenCCB course export.");
-      }
-    };
-    reader.readAsText(file);
+    try {
+      const newCourse = await cmsApi.importCourse(file);
+      setCourses((prev: Course[]) => [...prev, newCourse]);
+      alert("Course imported successfully!");
+    } catch (err) {
+      console.error("Import failed", err);
+      alert("Failed to import course. Ensure the file is a valid .ccb export.");
+    }
   };
 
   const handleDeleteCourse = async (e: React.MouseEvent, courseId: string, title: string) => {
@@ -146,7 +141,7 @@ export default function StudioDashboard() {
           <label className="flex items-center gap-2 px-5 py-2.5 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl font-bold text-sm transition-all cursor-pointer active:scale-95 text-slate-900 dark:text-white">
             <Upload size={16} />
             Importar
-            <input type="file" accept=".json" onChange={handleImport} className="hidden" />
+            <input type="file" accept=".ccb,.zip" onChange={handleImport} className="hidden" />
           </label>
           <button
             onClick={() => setIsAIModalOpen(true)}

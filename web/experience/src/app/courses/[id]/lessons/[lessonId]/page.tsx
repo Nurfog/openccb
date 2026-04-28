@@ -30,6 +30,7 @@ import LessonLockedView from "@/components/LessonLockedView";
 import StudentNotes from "@/components/StudentNotes";
 import CollaborativeWhiteboard from "@/components/CollaborativeWhiteboard";
 import CollaborativeDocEditor from "@/components/CollaborativeDocEditor";
+import LessonAnnotations from "@/components/LessonAnnotations";
 import { ListMusic, StickyNote } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 export default function LessonPlayerPage({ params }: { params: { id: string, lessonId: string } }) {
@@ -640,6 +641,10 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                                     <p className="text-[11px] text-black/40 dark:text-white/40 mt-0.5">Edición compartida en tiempo real con tu grupo</p>
                                 </div>
                                 <CollaborativeDocEditor lessonId={params.lessonId} />
+                            </div>
+
+                            <div className="pt-8 border-t border-black/5 dark:border-white/5 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                                <LessonAnnotations lessonId={params.lessonId} />
                             </div>
                         </article>
                     </div>

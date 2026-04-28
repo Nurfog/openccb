@@ -234,12 +234,11 @@ export default function CourseSettingsPage() {
     const handleExport = async () => {
         setExporting(true);
         try {
-            const data = await cmsApi.exportCourse(id);
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const blob = await cmsApi.exportCourse(id);
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `course_${id}_export.json`;
+            a.download = `course_${id}.ccb`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -258,17 +257,15 @@ export default function CourseSettingsPage() {
 
         setImporting(true);
         try {
-            const text = await file.text();
-            const data = JSON.parse(text);
-            const newCourse = await cmsApi.importCourse(data);
+            const newCourse = await cmsApi.importCourse(file);
             alert(`Curso importado con éxito: ${newCourse.title}`);
             router.push(`/courses/${newCourse.id}/settings`);
         } catch (err) {
             console.error("Import failed", err);
-            alert("Error al importar el curso. Asegúrate de que el formato sea válido.");
+            alert("Error al importar el curso. Asegúrate de que el archivo sea un .ccb válido.");
         } finally {
             setImporting(false);
-            if (e.target) e.target.value = ''; // Reset input
+            if (e.target) e.target.value = '';
         }
     };
 
@@ -654,13 +651,13 @@ export default function CourseSettingsPage() {
                         <div className="space-y-4">
                             <h3 className="text-sm font-black text-slate-800 dark:text-gray-300 uppercase tracking-wider">Import Course</h3>
                             <p className="text-xs text-slate-500 dark:text-gray-500 font-medium">
-                                Upload a previously exported course JSON file. This will create a NEW course
-                                within the current organization based on that data.
+                                Sube un archivo <code>.ccb</code> exportado previamente. Se creará un NUEVO curso
+                                en la organización actual con todos sus módulos, lecciones y categorías de calificación.
                             </p>
                             <div className="relative">
                                 <input
                                     type="file"
-                                    accept=".json"
+                                    accept=".ccb,.zip"
                                     onChange={handleImport}
                                     disabled={importing}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"

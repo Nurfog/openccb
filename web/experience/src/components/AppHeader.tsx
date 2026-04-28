@@ -213,6 +213,9 @@ export default function AppHeader() {
                         <Link href="/bookmarks" className="flex items-center gap-2 text-base font-black uppercase tracking-wider transition-colors text-slate-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white">
                             {t('nav.bookmarks')}
                         </Link>
+                        <Link href="/my-notes" className="flex items-center gap-2 text-base font-black uppercase tracking-wider transition-colors text-slate-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white">
+                            MIS NOTAS
+                        </Link>
 
                         <Link href={`/profile/${user.id}`} className="flex items-center gap-2 text-base font-black uppercase tracking-wider transition-colors text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
                             MI PORTAFOLIO
@@ -327,6 +330,13 @@ export default function AppHeader() {
                                 className="text-sm font-black uppercase tracking-widest text-slate-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white border-l-2 border-transparent hover:border-blue-500 pl-4 py-2 transition-all"
                             >
                                 {t('nav.bookmarks')}
+                            </Link>
+                            <Link
+                                href="/my-notes"
+                                onClick={() => setIsMenuOpen(false)}
+                                className="text-sm font-black uppercase tracking-widest text-slate-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white border-l-2 border-transparent hover:border-blue-500 pl-4 py-2 transition-all"
+                            >
+                                MIS NOTAS
                             </Link>
                             {user && (
                                 <Link

@@ -24,6 +24,7 @@ type TabKey =
     | "team"
     | "peer-reviews"
     | "students"
+    | "mentorships"
     | "sessions"
     | "pedagogical"
     | "lti-tools"
@@ -101,6 +102,7 @@ export default function CourseEditorLayout({
             tabs: [
                 { key: "team", label: "Equipo", icon: Users, href: `/courses/${id}/team` },
                 { key: "students", label: "Estudiantes y Grupos", icon: GraduationCap, href: `/courses/${id}/students` },
+                { key: "mentorships", label: "Mentoría", icon: Award, href: `/courses/${id}/mentorships` },
             ],
         },
         {
