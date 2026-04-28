@@ -94,8 +94,9 @@ async fn main() {
         .allow_origin(AllowOrigin::predicate(|origin: &http::HeaderValue, _request: &http::request::Parts| -> bool {
             let origin_str = origin.to_str().unwrap_or("");
             
-            // Orígenes de desarrollo
+            // Allowlist explícita de orígenes permitidos
             let allowed_origins = [
+                // Desarrollo local
                 "http://localhost:3000",
                 "http://localhost:3003",
                 "http://127.0.0.1:3000",
@@ -103,31 +104,12 @@ async fn main() {
                 "http://192.168.0.254:3000",
                 "http://192.168.0.254:3003",
                 "http://192.168.0.254",
-                // Producción - Dominios de Norteamericano (HTTPS)
+                // Producción - solo HTTPS
                 "https://studio.norteamericano.cl",
                 "https://learning.norteamericano.cl",
             ];
             
-            // Comprobar coincidencias exactas
-            if allowed_origins.contains(&origin_str) {
-                return true;
-            }
-            
-            // Comprobar comodín para subdominios: https://*.norteamericano.cl
-            if origin_str.starts_with("https://") && origin_str.ends_with(".norteamericano.cl") {
-                let subdomain = origin_str
-                    .strip_prefix("https://")
-                    .unwrap_or("")
-                    .strip_suffix(".norteamericano.cl")
-                    .unwrap_or("");
-                
-                // Permitir cualquier subdominio (p. ej., api., cdn., admin., etc.)
-                if !subdomain.is_empty() && !subdomain.contains('/') {
-                    return true;
-                }
-            }
-            
-            false
+            allowed_origins.contains(&origin_str)
         }))
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS, Method::PATCH])
         .allow_headers([

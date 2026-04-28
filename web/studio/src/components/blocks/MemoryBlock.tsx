@@ -28,25 +28,19 @@ export default function MemoryBlock({ id, title, pairs = [], editMode, onChange 
             left: "",
             right: ""
         };
-        console.log('[MemoryBlock] Adding new pair:', newPair);
         onChange({ pairs: [...pairs, newPair] });
     };
 
     const updatePair = (index: number, updates: Partial<MatchingPair>) => {
         const newPairs = [...pairs];
         newPairs[index] = { ...newPairs[index], ...updates };
-        console.log('[MemoryBlock] Updating pair at index', index, ':', updates);
         onChange({ pairs: newPairs });
     };
 
     const removePair = (index: number) => {
-        console.log('[MemoryBlock] Removing pair at index', index);
         const newPairs = pairs.filter((_, i) => i !== index);
         onChange({ pairs: newPairs });
     };
-
-    // Debug: Log pairs on render
-    console.log('[MemoryBlock] Render with pairs:', pairs);
 
     if (!editMode) {
         return (

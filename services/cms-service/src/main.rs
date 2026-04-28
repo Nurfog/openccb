@@ -129,8 +129,9 @@ async fn main() {
         .allow_origin(AllowOrigin::predicate(|origin: &http::HeaderValue, _request: &http::request::Parts| -> bool {
             let origin_str = origin.to_str().unwrap_or("");
             
-            // Orígenes de desarrollo
+            // Allowlist explícita de orígenes permitidos
             let allowed_origins = [
+                // Desarrollo local
                 "http://localhost:3000",
                 "http://localhost:3003",
                 "http://127.0.0.1:3000",
@@ -138,41 +139,14 @@ async fn main() {
                 "http://192.168.0.254:3000",
                 "http://192.168.0.254:3003",
                 "http://192.168.0.254",
-                // Producción - Dominios de Norteamericano (.cl y .com)
-                "http://studio.norteamericano.com",
+                // Producción - solo HTTPS
                 "https://studio.norteamericano.com",
-                "http://learning.norteamericano.com",
                 "https://learning.norteamericano.com",
-                "http://studio.norteamericano.cl",
                 "https://studio.norteamericano.cl",
-                "http://learning.norteamericano.cl",
                 "https://learning.norteamericano.cl",
             ];
             
-            // Comprobar coincidencias exactas
-            if allowed_origins.contains(&origin_str) {
-                return true;
-            }
-            
-            // Comprobar comodín para subdominios en norteamericano.cl/.com sobre HTTP(S)
-            for scheme in ["http://", "https://"] {
-                for domain in [".norteamericano.cl", ".norteamericano.com"] {
-                    if origin_str.starts_with(scheme) && origin_str.ends_with(domain) {
-                        let subdomain = origin_str
-                            .strip_prefix(scheme)
-                            .unwrap_or("")
-                            .strip_suffix(domain)
-                            .unwrap_or("");
-
-                        // Permitir cualquier subdominio (ej., api., cdn., admin., etc.)
-                        if !subdomain.is_empty() && !subdomain.contains('/') {
-                            return true;
-                        }
-                    }
-                }
-            }
-            
-            false
+            allowed_origins.contains(&origin_str)
         }))
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS, Method::PATCH, Method::HEAD])
         .allow_headers([

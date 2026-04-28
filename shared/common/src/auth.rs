@@ -32,7 +32,7 @@ pub fn create_jwt(
         token_type: Some("access".to_string()),
     };
 
-    let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "secret".to_string());
+    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET env var must be set");
     encode(
         &Header::default(),
         &claims,
@@ -59,7 +59,7 @@ pub fn create_preview_token(
         token_type: Some("preview".to_string()),
     };
 
-    let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "secret".to_string());
+    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET env var must be set");
     encode(
         &Header::default(),
         &claims,

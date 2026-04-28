@@ -55,7 +55,6 @@ export default function AdminTokenTracking() {
     const loadTokenUsage = async () => {
         try {
             const token = localStorage.getItem('studio_token');
-            console.log('[TokenUsage] Token from localStorage:', token ? 'Present (studio_token)' : 'Missing');
             
             if (!token) {
                 console.error('[TokenUsage] No authentication token found!');
@@ -70,8 +69,6 @@ export default function AdminTokenTracking() {
                     'Content-Type': 'application/json',
                 },
             });
-
-            console.log('[TokenUsage] API Response status:', response.status);
 
             if (response.status === 401) {
                 console.error('[TokenUsage] Unauthorized - Token may be expired');

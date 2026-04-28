@@ -9,17 +9,20 @@ pub async fn set_session_context(
     event_type: Option<String>,
 ) -> Result<(), sqlx::Error> {
     if let Some(uid) = user_id {
-        sqlx::query(&format!("SET LOCAL app.current_user_id = '{}'", uid))
+        sqlx::query("SELECT set_config('app.current_user_id', $1, true)")
+            .bind(uid.to_string())
             .execute(&mut **tx)
             .await?;
     }
     if let Some(oid) = org_id {
-        sqlx::query(&format!("SET LOCAL app.current_org_id = '{}'", oid))
+        sqlx::query("SELECT set_config('app.current_org_id', $1, true)")
+            .bind(oid.to_string())
             .execute(&mut **tx)
             .await?;
     }
     if let Some(ip_addr) = ip {
-        sqlx::query(&format!("SET LOCAL app.client_ip = '{}'", ip_addr))
+        sqlx::query("SELECT set_config('app.client_ip', $1, true)")
+            .bind(ip_addr)
             .execute(&mut **tx)
             .await?;
     }

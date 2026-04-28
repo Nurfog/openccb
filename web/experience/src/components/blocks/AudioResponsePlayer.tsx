@@ -89,7 +89,6 @@ export default function AudioResponsePlayer({
         }
 
         try {
-            console.log('[AudioResponse] Requesting microphone access...');
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: {
                     echoCancellation: true,
@@ -97,7 +96,6 @@ export default function AudioResponsePlayer({
                     sampleRate: 44100
                 } 
             });
-            console.log('[AudioResponse] Microphone access granted');
             
             const mediaRecorder = new MediaRecorder(stream, {
                 mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm'
@@ -108,15 +106,12 @@ export default function AudioResponsePlayer({
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     audioChunksRef.current.push(event.data);
-                    console.log('[AudioResponse] Data available, chunk size:', event.data.size);
                 }
             };
 
             mediaRecorder.onstop = () => {
-                console.log('[AudioResponse] Recording stopped, creating blob...');
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
                 setAudioBlob(audioBlob);
-                console.log('[AudioResponse] Blob created, size:', audioBlob.size, 'bytes');
                 stream.getTracks().forEach(track => track.stop());
             };
 
@@ -128,14 +123,12 @@ export default function AudioResponsePlayer({
             mediaRecorder.start();
             setIsRecording(true);
             setRecordingTime(0);
-            console.log('[AudioResponse] Recording started');
 
             // Start speech recognition
             if (!isGraded && recognitionRef.current) {
                 setTranscript("");
                 try {
                     recognitionRef.current.start();
-                    console.log('[AudioResponse] Speech recognition started');
                 } catch (err) {
                     console.warn('[AudioResponse] Could not start speech recognition:', err);
                 }
@@ -146,7 +139,6 @@ export default function AudioResponsePlayer({
                 setRecordingTime(prev => {
                     const newTime = prev + 1;
                     if (timeLimit && newTime >= timeLimit) {
-                        console.log('[AudioResponse] Time limit reached, stopping...');
                         stopRecording();
                     }
                     return newTime;

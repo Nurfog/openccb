@@ -145,8 +145,6 @@ export default function LessonPlayerPage({ params }: { params: { id: string, les
                     }
                     return [...prev, res];
                 });
-                console.log(`Score for block ${blockId} submitted: ${score}`);
-            } catch (err) {
                 console.error(`Failed to submit score for block ${blockId}`, err);
             }
         }

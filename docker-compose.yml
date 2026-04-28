@@ -35,7 +35,7 @@ services:
       - html:/usr/share/nginx/html
       - ./nginx/certs-data:/etc/acme.sh:rw
     environment:
-      - DEFAULT_EMAIL=admin@norteamericano.com
+      - DEFAULT_EMAIL=${ACME_EMAIL:?ACME_EMAIL env var must be set}
       - NGINX_PROXY_CONTAINER=nginx-proxy
       - LETSENCRYPT_STAGING=${LETSENCRYPT_STAGING:-true}
     depends_on:
@@ -52,7 +52,7 @@ services:
     container_name: openccb-db
     environment:
       POSTGRES_USER: user
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD env var must be set}
       POSTGRES_DB: openccb
     volumes:
       - postgres_data:/var/lib/postgresql/data

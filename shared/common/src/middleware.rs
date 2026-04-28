@@ -42,8 +42,7 @@ pub async fn org_extractor_middleware(
         }
     };
 
-    // NOTA: El secreto debe venir de una variable de entorno en producción.
-    let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "secret".to_string());
+    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET env var must be set");
 
     let claims = decode::<Claims>(
         &token,

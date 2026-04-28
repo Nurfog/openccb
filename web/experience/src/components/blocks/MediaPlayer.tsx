@@ -256,7 +256,6 @@ export default function MediaPlayer({ id, lessonId, title, url, media_type, conf
                                             setFeedback({ isCorrect });
                                             setA11yStatus(isCorrect ? "Respuesta correcta." : "Respuesta incorrecta.");
                                             // Save answer to backend (mocked for now)
-                                            console.log(`Submitted answer for marker at ${activeMarker}: ${isCorrect ? 'Correct' : 'Wrong'}`);
 
                                             setTimeout(() => {
                                                 setFeedback(null);

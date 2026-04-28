@@ -133,10 +133,7 @@ export default function GlobalAiControl() {
                 startDate.setDate(startDate.getDate() - 90);
             }
 
-            console.log('Loading AI usage from', startDate.toISOString().split('T')[0], 'to', endDate.toISOString().split('T')[0]);
-            
             const token = localStorage.getItem('studio_token');
-            console.log('Token from localStorage:', token ? 'EXISTS' : 'NULL');
             
             if (!token) {
                 console.error('No token found. Please login again.');
@@ -150,7 +147,6 @@ export default function GlobalAiControl() {
                 endDate.toISOString().split('T')[0]
             );
             
-            console.log('Data loaded:', jsonData);
             setData(jsonData);
             setAuthError(false);
         } catch (error) {
